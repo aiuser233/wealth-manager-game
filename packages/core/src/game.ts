@@ -118,6 +118,45 @@ export class Game {
     certs: [] as string[],
   };
 
+  /** 月度结算：新客户开发（知名度与口碑驱动），20 年客户池不再枯竭 */
+  private developClients(snap: MarketSnapshot) {
+    const fame = this.player.attrs.fame;
+    const rep = this.player.attrs.rep;
+    // 概率：fame 越高越容易来新客户（月度 0-2 位）
+    const chance = Math.min(0.75, 0.1 + fame / 400 + rep / 2000);
+    if (!this.rng.chance(chance)) return;
+    const tierRoll = this.rng.next();
+    const tier = tierRoll < 0.5 ? 'mass' : tierRoll < 0.8 ? 'wealth' : tierRoll < 0.95 ? 'vip' : 'private';
+    const depositsBase = tier === 'mass' ? this.rng.range(5, 50) : tier === 'wealth' ? this.rng.range(50, 300) : tier === 'vip' ? this.rng.range(300, 600) : this.rng.range(600, 2000);
+    const cashBase = depositsBase * this.rng.range(0.2, 0.6);
+    const id = `cli_gen_${snap.date}_${Math.floor(this.rng.next() * 1e6)}`;
+    const name = this.rng.pick(GENERATED_NAMES) + (this.clients.filter((c) => c.id.startsWith('cli_gen')).length + 1);
+    const riskLevel = (this.rng.int(1, Math.min(5, 2 + this.player.grade)) as 1 | 2 | 3 | 4 | 5);
+    this.clients.push({
+      id,
+      name,
+      age_2006: this.rng.int(24, 58),
+      occupation: this.rng.pick(['企业职员', '个体经营', '公务员', '医生', '教师', '自由职业', '退休返聘', '工程师']),
+      tier,
+      risk: { level: riskLevel, tested_at: snap.date },
+      behaviors: this.rng.chance(0.5) ? ['yield_chasing'] : ['risk_averse'],
+      finance: {
+        deposits: Math.round(depositsBase * 10000),
+        wealth_mgmt: 0,
+        funds: 0,
+        insurance: 0,
+        loans: 0,
+        annual_cashflow: Math.round(cashBase * 10000),
+      },
+      family: this.rng.chance(0.6) ? '已婚' : '未婚',
+      trust: this.rng.range(20, 40),
+      teach_tags: [],
+      holdings: [],
+      status: 'active',
+    });
+    this.log.push({ date: snap.date, text: `【新客户】${name}（${{ mass: '大众', wealth: '财富', vip: '贵宾', private: '私行' }[tier]}客户）慕名而来，已建档。` });
+  }
+
   clients: Array<
     ClientDef & {
       holdings: Array<{ productId: string; amount: number; nav_at_buy: number; bought_at: IsoDate }>;
@@ -160,6 +199,7 @@ export class Game {
   /** 推进 n 个交易日（执行完今日行动后调用） */
   advanceDays(n: number) {
     for (let i = 0; i < n; i++) {
+      this.apUsed = 0;
       const snap = this.sim.stepToNext();
       this.lastSnap = snap;
       for (const nw of this.sim.newsFeed) {
@@ -298,16 +338,21 @@ export class Game {
     const y = Number(snap.date.slice(0, 4));
     const m = Number(snap.date.slice(5, 7));
     const growth = y - 2006;
+    // 先对上月 KPI 评级，再重置（评级读的是重置前的 done/target）
+    const prevKpi = { ...this.kpi };
+    // 年代货架校准：当年代缺产品时目标归零（评分自动补偿）
+    const shelf = this.products.filter((p) => productOnShelf(p, snap.date));
+    const hasCat = (cat: string) => shelf.some((p) => p.category === cat);
     this.kpi = {
       year: y,
       month: m,
       deposit_target: 300_000 * (1 + growth * 0.15),
       deposit_done: 0,
-      wm_target: 500_000 * (1 + growth * 0.18),
+      wm_target: hasCat('wealth_mgmt') ? 500_000 * (1 + growth * 0.18) : 0,
       wm_done: 0,
-      fund_target: 300_000 * (1 + growth * 0.2),
+      fund_target: hasCat('fund') ? 300_000 * (1 + growth * 0.2) : 0,
       fund_done: 0,
-      ins_target: 100_000 * (1 + growth * 0.22),
+      ins_target: hasCat('insurance') ? 100_000 * (1 + growth * 0.22) : 0,
       ins_done: 0,
     };
     // 客户月度情绪结算：持仓浮亏侵蚀信任，浮盈修复信任（长线客户经营的核心循环）
@@ -326,8 +371,14 @@ export class Game {
         if (c.trust - before > 1) notes.push(`${c.name} 对收益很满意，介绍朋友来网点（信任 +${(c.trust - before).toFixed(0)}）。`);
       }
     }
-    // KPI 评级与绩效
-    const score = monthlyKpiScore(this.kpi);
+    // 资金再平衡：客户月度工资/经营现金流回补可投资池（现实中的持续流入），高信任客户每月有新增资金
+    for (const c of this.clients) {
+      if (c.status !== 'active') continue;
+      const inflow = (c.finance.annual_cashflow / 12) * (0.5 + c.trust / 200);
+      c.finance.deposits += inflow;
+    }
+    // KPI 评级与绩效（用上月完成度评级）
+    const score = monthlyKpiScore(prevKpi);
     const grade = kpiGradeName(score);
     const opening = isOpeningSeason(m);
     const gained = aumGainBuffer.reduce((s, v) => s + v, 0);
@@ -335,13 +386,14 @@ export class Game {
     const salary = 4500 + this.player.grade * 1500;
     this.monthScores.push(score);
     if (this.monthScores.length > 6) this.monthScores.shift();
-    this.violations = this.violations; // 占位：违规记录由合规系统维护
 
     this.log.push({
       date: snap.date,
       text: `【${y}年${m}月】月度考核 ${grade}（${score} 分）${opening ? '，开门红冲刺中！' : ''}。工资 ${fmtMoney(salary)} + 绩效 ${fmtMoney(bonus)}。${notes.slice(0, 3).join(' ')}`,
     });
     aumGainBuffer.length = 0;
+    // 新客户开发：知名度驱动的月度获客
+    this.developClients(snap);
   }
 
   /** 近 6 月平均考核分（晋升用） */
@@ -525,10 +577,16 @@ export class Game {
     return { text: `${c.name} 到访咨询，你认真解答了疑问，虽未成交但留下了好印象。`, trust_delta: 1 };
   }
 
-  private dealAmount(c: ClientDef): number {
+  private dealAmount(c: (typeof this.clients)[number]): number {
     const base = c.finance.deposits + c.finance.annual_cashflow * 0.5;
+    const already = c.holdings.reduce((s, h) => s + h.amount, 0);
+    const poolCap = (c.finance.deposits + c.finance.wealth_mgmt + c.finance.funds + c.finance.annual_cashflow * 0.5) * 0.85;
+    const remaining = Math.max(0, poolCap - already);
     const r = this.rng.range(0.1, 0.45);
-    return Math.max(10000, Math.round((base * r) / 1000) * 1000);
+    const want = base * r;
+    // 剩余额度不足时降到可成交的最小合理额；完全没有额度则小额续投（资金再配置）
+    const amt = remaining >= want ? want : remaining > 5000 ? remaining * this.rng.range(0.3, 0.7) : Math.min(10000, remaining);
+    return Math.max(10000, Math.round(amt / 1000) * 1000);
   }
 
   /** 客户在我行总持仓现值（盯市） */
@@ -598,6 +656,9 @@ function inEra(p: ProductDef, date: IsoDate): boolean {
 
 /** 月度新增 AUM 累计（供薪资绩效） */
 export const aumGainBuffer: number[] = [];
+
+/** 随机生成客户的姓氏池 */
+const GENERATED_NAMES = ['张', '王', '李', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗'];
 
 export function fmtMoney(n: number): string {
   if (n >= 100000000) return `${(n / 100000000).toFixed(2)} 亿`;

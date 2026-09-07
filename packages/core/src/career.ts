@@ -92,7 +92,7 @@ function fmtWan(n: number): string {
   return `${(n / 10_000).toFixed(0)} 万`;
 }
 
-/** 月度 KPI 综合评级（0-100）：四项完成率加权 */
+/** 月度 KPI 综合评级（0-100）：四项完成率加权（早期年代缺失品类按其他项补足） */
 export function monthlyKpiScore(kpi: {
   deposit_done: number; deposit_target: number;
   wm_done: number; wm_target: number;
@@ -100,10 +100,18 @@ export function monthlyKpiScore(kpi: {
   ins_done: number; ins_target: number;
 }): number {
   const rate = (d: number, t: number) => Math.min(1.3, t > 0 ? d / t : 1);
-  const total = rate(kpi.deposit_done, kpi.deposit_target) * 0.3
-    + rate(kpi.wm_done, kpi.wm_target) * 0.35
-    + rate(kpi.fund_done, kpi.fund_target) * 0.25
-    + rate(kpi.ins_done, kpi.ins_target) * 0.1;
+  const rDep = rate(kpi.deposit_done, kpi.deposit_target);
+  const rWm = rate(kpi.wm_done, kpi.wm_target);
+  const rFund = rate(kpi.fund_done, kpi.fund_target);
+  const rIns = rate(kpi.ins_done, kpi.ins_target);
+  // 品类缺失补偿：某品类目标为 0（年代货架尚未出现）时，其权重摊入其他品类
+  const hasWm = kpi.wm_target > 0;
+  const hasFund = kpi.fund_target > 0;
+  const hasIns = kpi.ins_target > 0;
+  let wDep = 0.3, wWm = hasWm ? 0.35 : 0, wFund = hasFund ? 0.25 : 0, wIns = hasIns ? 0.1 : 0;
+  const totalW = wDep + wWm + wFund + wIns;
+  wDep /= totalW; wWm /= totalW; wFund /= totalW; wIns /= totalW;
+  const total = rDep * wDep + rWm * wWm + rFund * wFund + rIns * wIns;
   return Math.round((total / 1.0) * 76.9); // 全部 100% 完成 ≈ 77 → B；130% 完成 ≈ 100 → S
 }
 

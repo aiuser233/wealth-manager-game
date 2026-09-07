@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sim": "tsx src/simulate.ts"
+    "sim": "tsx src/simulate.ts",
+    "bot": "tsx src/bot.ts"
   },
   "dependencies": {
     "@fm/core": "*",
