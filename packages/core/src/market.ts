@@ -276,10 +276,13 @@ export class MarketSim {
         const driftTbl = yearDrift[f.id];
         const drift = driftTbl ? (driftTbl[year] ?? 0) / 250 : (f.drift_pa ?? 0) / 250;
         const anchor = f.anchor ?? f.start;
-        const mr = (f.mean_revert ?? 0.0005) * Math.log(anchor / this.factorState[f.id]) * 0.3;
+        // 零起点因子（如 sentiment_dom=0）无对数回复意义，跳过均值回复项
+        const cur = this.factorState[f.id];
+        const mr = anchor > 0 && cur > 0 && Number.isFinite(cur) ? (f.mean_revert ?? 0.0005) * Math.log(anchor / cur) * 0.3 : 0;
         ret = drift + mr + this.rng.gauss() * f.sigma_daily;
         ret += this.takeShocks(f.id);
-        this.factorState[f.id] = Math.max(0.01, this.factorState[f.id] * Math.exp(ret));
+        const next = Math.max(0.01, cur * Math.exp(ret));
+        this.factorState[f.id] = Number.isFinite(next) ? next : Math.max(0.01, cur);
         rets[f.id] = ret; // 对数收益率
       }
     }

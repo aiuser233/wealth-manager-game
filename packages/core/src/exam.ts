@@ -72,9 +72,15 @@ export function buildPaper(exam: ExamDef, bank: ExamQuestion[], rng: Rng): ExamP
   const pool = bank.filter((q) => q.subject === exam.id);
   if (pool.length === 0) throw new Error(`科目 ${exam.id} 题库为空`);
   const count = Math.min(rng.int(exam.question_count[0], exam.question_count[1]), pool.length);
-  const nMulti = Math.round(count * 0.25);
-  const nJudge = Math.round(count * 0.15);
-  const nSingle = count - nMulti - nJudge;
+  // 题型配比受题库实际库存约束：多选 25% / 判断 15%，不足时回补单选
+  let nMulti = Math.round(count * 0.25);
+  let nJudge = Math.round(count * 0.15);
+  const availMulti = pool.filter((q) => q.type === 'multiple').length;
+  const availJudge = pool.filter((q) => q.type === 'judge').length;
+  nMulti = Math.min(nMulti, availMulti);
+  nJudge = Math.min(nJudge, availJudge);
+  const nSingle = Math.min(count - nMulti - nJudge, pool.filter((q) => q.type === 'single').length);
+  const actual = nSingle + nMulti + nJudge;
 
   const byType = (t: QuestionType) => rng.shuffle(pool.filter((q) => q.type === t));
   const singles = byType('single').slice(0, nSingle);
@@ -89,6 +95,7 @@ export function buildPaper(exam: ExamDef, bank: ExamQuestion[], rng: Rng): ExamP
     if (multis[i]) questions.push(multis[i]);
     if (judges[i]) questions.push(judges[i]);
   }
+  void actual;
 
   const scores = questions.map(questionScore);
   return { examId: exam.id, questions, scores, totalScore: scores.reduce((a, b) => a + b, 0) };

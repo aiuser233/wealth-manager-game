@@ -2,10 +2,10 @@ import { reactive, computed } from 'vue';
 import {
   GameCalendar, MarketSim, Game, Rng, Reception,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
-  type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession,
+  type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession, type ExamQuestion,
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, examBank, randomEvents } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll } from '@fm/content';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -235,7 +235,7 @@ export function startExam(examId: string): boolean {
   if (!exam) return false;
   if (game.player.certs.includes(exam.name)) return false;
   rngExam ??= new Rng(game.rngNextInt());
-  const paper = buildPaper(exam, examBank, rngExam);
+  const paper = buildPaper(exam, examBankAll, rngExam);
   state.examPaper = paper;
   state.examAnswers = paper.questions.map((q) => (q.type === 'multiple' ? [] : -1));
   state.examIdx = 0;
@@ -257,6 +257,7 @@ export function submitExam() {
   state.examResult = res;
   state.examScreen = 'result';
   const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
+  pushWrongQuestions(state.examPaper, res.perQuestion);
   if (res.passed && exam && !game.player.certs.includes(exam.name)) {
     game.player.certs.push(exam.name);
     game.player.attrs.pro += 5;
@@ -286,6 +287,64 @@ export function toggleMulti(idx: number, opt: number) {
   if (pos >= 0) arr.splice(pos, 1);
   else arr.push(opt);
   state.examAnswers[idx] = arr;
+}
+
+// ================= 错题本与每日一题 =================
+
+export interface WrongQuestion {
+  questionId: string;
+  examName: string;
+  stem: string;
+  correctAnswer: string;
+  explanation: string;
+  wrongAt: string;
+}
+
+/** 错题本（按 questionId 去重） */
+export function wrongBook(): WrongQuestion[] {
+  const raw = localStorage.getItem('fm_wrong_book');
+  return raw ? JSON.parse(raw) : [];
+}
+
+function pushWrongQuestions(paper: ExamPaper, per: number[]) {
+  const book = wrongBook();
+  const exam = EXAM_DEFS.find((e) => e.id === paper.examId);
+  paper.questions.forEach((q, i) => {
+    if (per[i] >= 1 || book.some((w) => w.questionId === q.id)) return;
+    book.unshift({
+      questionId: q.id,
+      examName: exam?.name ?? '',
+      stem: q.stem,
+      correctAnswer: q.type === 'multiple' ? (q.answer as number[]).map((x) => String.fromCharCode(65 + x)).join('、') : String.fromCharCode(65 + (q.answer as number)),
+      explanation: q.explanation,
+      wrongAt: game.date,
+    });
+  });
+  localStorage.setItem('fm_wrong_book', JSON.stringify(book.slice(0, 200)));
+}
+
+/** 每日一题（按日期确定性抽取，情绪加成） */
+export function dailyQuestion(): { q: ExamQuestion; done: boolean } | null {
+  const pool = examBankAll.filter((q) => q.subject === 'exam_bank_law' || q.subject === 'exam_bank_pf');
+  if (pool.length === 0) return null;
+  const dateKey = Number(game.date.replace(/-/g, ''));
+  const idx = dateKey % pool.length;
+  const done = localStorage.getItem(`fm_daily_${game.date}`) === '1';
+  return { q: pool[idx], done };
+}
+
+/** 完成每日一题（答对给情绪加成） */
+export function finishDaily(correct: boolean): string {
+  localStorage.setItem(`fm_daily_${game.date}`, '1');
+  if (correct) {
+    game.player.attrs.stress = Math.max(0, game.player.attrs.stress - 2);
+    game.player.attrs.pro += 0.3;
+    pushLog('【每日一题】答对了！神清气爽（压力 -2，专业力 +0.3）。');
+    return '答对了！神清气爽，压力 -2。';
+  }
+  game.player.attrs.stress += 1;
+  pushLog('【每日一题】答错了……记入错题本（压力 +1）。');
+  return '答错了，已记入错题本。下次一定！';
 }
 
 // ================= 接待对话 =================

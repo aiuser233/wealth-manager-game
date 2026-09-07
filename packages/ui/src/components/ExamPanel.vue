@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti } from '../state';
+import { computed, ref } from 'vue';
+import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily } from '../state';
 import { EXAM_DEFS } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
@@ -12,6 +12,28 @@ const total = computed(() => paper.value?.questions.length ?? 0);
 const answeredCount = computed(() =>
   state.examAnswers.filter((a) => (Array.isArray(a) ? a.length > 0 : a >= 0)).length,
 );
+
+/** 错题本与每日一题 */
+const wrongList = ref(wrongBook());
+const showWrong = ref(false);
+const daily = computed(() => dailyQuestion());
+const dailyAnswer = ref<number | null>(null);
+const dailyFeedback = ref('');
+
+function refreshWrong() {
+  wrongList.value = wrongBook();
+}
+
+function submitDaily() {
+  if (daily.value && dailyAnswer.value !== null) {
+    dailyFeedback.value = finishDaily(dailyAnswer.value === daily.value.q.answer);
+  }
+}
+
+function clearWrong() {
+  localStorage.removeItem('fm_wrong_book');
+  refreshWrong();
+}
 
 function prevQ() { if (state.examIdx > 0) state.examIdx -= 1; }
 function nextQ() { if (state.examIdx < total.value - 1) state.examIdx += 1; }
@@ -35,6 +57,36 @@ function jump(i: number) { state.examIdx = i; }
         <p v-if="certs.length === 0" class="dim">还没有证书。证书是晋升硬门槛，加油！</p>
         <p v-for="c in certs" :key="c"><span class="tag gold" style="color:var(--gold)">{{ c }}</span></p>
       </div>
+
+      <!-- 每日一题 -->
+      <div v-if="daily" class="daily">
+        <h4>每日一题 <span v-if="daily.done" class="gold">今日已完成 ✓</span></h4>
+        <template v-if="!daily.done">
+          <p class="stem">{{ daily.q.stem }}</p>
+          <div class="daily-opts">
+            <button v-for="(opt, oi) in daily.q.options" :key="oi" class="opt" :class="{ picked: dailyAnswer === oi }" @click="dailyAnswer = oi">
+              {{ String.fromCharCode(65 + oi) }}. {{ opt }}
+            </button>
+          </div>
+          <button class="primary" :disabled="dailyAnswer === null" @click="submitDaily">提交（答对压力 -2）</button>
+        </template>
+        <p v-if="dailyFeedback" class="gold">{{ dailyFeedback }}</p>
+      </div>
+
+      <div class="tools">
+        <button @click="showWrong = !showWrong; refreshWrong()">错题本（{{ wrongList.length }}）</button>
+      </div>
+      <div v-if="showWrong" class="wrong-book">
+        <div class="head"><h4>错题回顾</h4><button @click="clearWrong">清空</button></div>
+        <div v-for="w in wrongList" :key="w.questionId" class="wrong-item">
+          <p class="stem"><span class="dim">{{ w.examName }} · {{ w.wrongAt }}</span></p>
+          <p class="stem">{{ w.stem }}</p>
+          <p class="down">正确答案：{{ w.correctAnswer }}</p>
+          <p class="dim">{{ w.explanation }}</p>
+        </div>
+        <p v-if="wrongList.length === 0" class="dim">错题本空空如也，继续保持！</p>
+      </div>
+
       <div class="exams">
         <div v-for="e in EXAM_DEFS" :key="e.id" class="exam-card" :class="{ locked: !availableExams().some((a) => a.id === e.id) }">
           <div class="info">
@@ -120,6 +172,15 @@ h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .list { overflow-y: auto; padding: 14px 16px; }
 .certs { margin-bottom: 14px; }
 .exams { display: flex; flex-direction: column; gap: 8px; }
+.daily { background: rgba(240, 180, 41, 0.06); border: 1px dashed var(--gold); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.daily .stem { font-size: 13px; line-height: 1.7; margin: 6px 0; }
+.daily-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
+.daily-opts .opt { padding: 6px 10px; font-size: 12px; text-align: left; }
+.daily-opts .opt.picked { border-color: var(--accent); background: rgba(79, 140, 255, 0.15); }
+.tools { margin-bottom: 10px; }
+.wrong-book { background: var(--bg2); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; max-height: 260px; overflow-y: auto; }
+.wrong-item { border-bottom: 1px solid var(--bg2); padding: 6px 0; }
+.wrong-item .stem { font-size: 12px; line-height: 1.6; }
 .exam-card { display: flex; justify-content: space-between; gap: 16px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
 .exam-card.locked { opacity: 0.5; }
 .info b { font-size: 14px; }

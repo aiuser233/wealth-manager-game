@@ -160,7 +160,6 @@ export class Game {
   /** 推进 n 个交易日（执行完今日行动后调用） */
   advanceDays(n: number) {
     for (let i = 0; i < n; i++) {
-      this.apUsed = 0;
       const snap = this.sim.stepToNext();
       this.lastSnap = snap;
       for (const nw of this.sim.newsFeed) {
@@ -267,11 +266,12 @@ export class Game {
     return Math.max(1, all.length - idx - 1);
   }
 
-  /** 纯推进（不改 AP/帧状态），返回当日快照数组 */
+  /** 纯推进（不改帧状态），重置 AP 并返回当日快照数组 */
   private advanceDaysRaw(n: number): MarketSnapshot[] {
     const out: MarketSnapshot[] = [];
     for (let i = 0; i < n; i++) {
       if (this.sim.cursor >= this.cal.count) break;
+      this.apUsed = 0;
       const before = this.sim.firedEvents.length;
       const snap = this.sim.stepToNext();
       this.lastSnap = snap;
