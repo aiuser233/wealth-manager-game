@@ -1,0 +1,81 @@
+:root {
+  --bg: #0d1220;
+  --bg2: #131a2c;
+  --panel: #182136;
+  --panel2: #1e2941;
+  --line: #2a3654;
+  --text: #dbe4f5;
+  --text-dim: #8b98b8;
+  --accent: #4f8cff;
+  --accent2: #7c5cff;
+  --up: #ff5a5a;
+  --down: #3dcf8e;
+  --gold: #f0b429;
+  --warn: #ff7a45;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #app { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+button:hover:not(:disabled) { background: #263354; border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover:not(:disabled) { background: #66a0ff; }
+button.warn { background: transparent; border-color: var(--warn); color: var(--warn); }
+button.warn:hover:not(:disabled) { background: rgba(255, 122, 69, 0.12); }
+
+input, select {
+  font-family: inherit;
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.up { color: var(--up); }
+.down { color: var(--down); }
+.dim { color: var(--text-dim); }
+.gold { color: var(--gold); }
+
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+.tag.risk { color: var(--warn); border-color: var(--warn); }
