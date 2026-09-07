@@ -6,6 +6,7 @@ import { directorEvents } from './events';
 import { products } from './products';
 import { clients } from './clients';
 import { eraDrift, eraLevel } from './macro';
+import { examBank } from './exams';
 
 export const contentBundle: ContentBundle = {
   factors,
@@ -16,4 +17,4 @@ export const contentBundle: ContentBundle = {
   clients,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel };
+export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank };

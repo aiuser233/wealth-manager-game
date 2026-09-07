@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { state, gameReady, getGame } from '../state';
 import { GRADE_NAMES } from '@fm/core';
 
@@ -7,18 +6,21 @@ const g = computed(() => (gameReady.value ? getGame() : null));
 const dateStr = computed(() => g.value?.date ?? '----');
 const grade = computed(() => (g.value ? GRADE_NAMES[g.value.player.grade] : ''));
 
-const tabs = [
-  { id: 'workbench', label: '工作台' },
-  { id: 'market', label: '行情终端' },
-  { id: 'clients', label: '客户档案' },
-  { id: 'help', label: '手册' },
-] as const;
+defineProps<{
+  tabs: ReadonlyArray<{ id: string; label: string }>;
+  title: string;
+}>();
 
 const newsCount = computed(() => state.news.length);
 
 function switchTab(id: string) {
-  state.screen = id;
+  state.screen = id as typeof state.screen;
 }
+</script>
+
+<script lang="ts">
+import { computed } from 'vue';
+export default {};
 </script>
 
 <template>

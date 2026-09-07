@@ -27,6 +27,11 @@ export class MarketSim {
   private events: GameEventDef[];
   private cal: GameCalendar;
 
+  /** 全量导演事件表（只读暴露，供金手指记忆等系统查询未来事件） */
+  get eventsList(): readonly GameEventDef[] {
+    return this.events;
+  }
+
   /** 因子当前状态 */
   factorState: Record<string, number> = {};
   industryState: Record<string, number> = {};

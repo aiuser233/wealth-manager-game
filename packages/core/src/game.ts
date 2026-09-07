@@ -1,7 +1,21 @@
-import type { ProductDef, ClientDef, IsoDate, MarketSnapshot, ActionResult, ActionType } from './types';
+import type { ProductDef, ClientDef, IsoDate, MarketSnapshot, ActionResult, ActionType, TimeFrame, GameEventDef } from './types';
 import { GRADE_NAMES } from './types';
 import { Rng } from './rng';
 import { MarketSim } from './market';
+
+/** 各帧的行动点上限（规划书 3.2：日 4 / 周 10 / 月 32-40，取 36） */
+export const AP_PER_FRAME: Record<TimeFrame, number> = { day: 4, week: 10, month: 36 };
+
+/** 一帧结算结果 */
+export interface FrameAdvanceResult {
+  daysAdvanced: number;
+  /** 途中触发 force_day 重大事件而被中断 */
+  interrupted: boolean;
+  interruptDate?: IsoDate;
+  interruptEvent?: GameEventDef;
+  /** 本次推进的逐日快照（供 UI 缓存口径基准） */
+  snaps: MarketSnapshot[];
+}
 
 export interface GameUIHooks {
   onNews?: (n: { date: IsoDate; title: string; body: string }) => void;
@@ -22,6 +36,10 @@ export class Game {
   rng: Rng;
   hooks: GameUIHooks = {};
 
+  /** 供 UI 层派生独立随机流（考试抽题等），不干扰主 rng 序列 */
+  rngNextInt(): number {
+    return Math.floor(this.rng.next() * 0x7fffffff);
+  }
   player = {
     name: '林奇安',
     gender: 'm' as 'm' | 'f',
@@ -49,9 +67,13 @@ export class Game {
   };
 
   log: Array<{ date: IsoDate; text: string }> = [];
-  /** 今日已用行动点 */
+  /** 当前时间帧（规划书 3：日/周/月，职级解锁 + 事件强制降帧） */
+  frame: TimeFrame = 'day';
+  /** 事件强制降帧的剩余天数（>0 期间锁定日帧） */
+  forceDayDays = 0;
+  /** 本帧已用行动点 */
   apUsed = 0;
-  apMax = 4;
+  apMax = AP_PER_FRAME.day;
   /** 最近快照（UI 展示） */
   lastSnap: MarketSnapshot | null = null;
   /** 上次查看行情的快照（用于"距上次查看"涨跌） */
@@ -80,12 +102,129 @@ export class Game {
       for (const r of this.sim.releaseLog) {
         if (r.date === snap.date) this.hooks.onRelease?.(r);
       }
+      this.checkForceDayEvents(snap);
       // 月切换时重置 KPI
       const prev = this.cal.at(Math.max(0, this.sim.cursor - 2));
       if (prev && prev.slice(0, 7) !== snap.date.slice(0, 7)) {
         this.rollMonth(snap);
       }
     }
+  }
+
+  /** 重大事件强制切回日帧（规划书 3.3 事件驱动） */
+  private checkForceDayEvents(snap: MarketSnapshot) {
+    const fired = this.sim.firedEvents;
+    const today = fired.filter((f) => f.date === snap.date);
+    for (const { ev } of today) {
+      if (ev.force_day) {
+        this.forceDayDays = Math.max(this.forceDayDays, ev.duration_days ?? 1);
+        this.log.push({ date: snap.date, text: `【突发】${ev.title}——需要逐日应对，已切换为日帧。` });
+      }
+    }
+  }
+
+  /** 当前是否允许切到某帧（force_day 期间只允许日帧） */
+  canSetFrame(f: TimeFrame): boolean {
+    if (this.forceDayDays > 0) return f === 'day';
+    // 职级驱动：见习=日帧 → 普通=周帧 → 私行=月帧
+    const maxFrame: TimeFrame = this.player.grade >= 3 ? 'month' : this.player.grade >= 1 ? 'week' : 'day';
+    const order: TimeFrame[] = ['day', 'week', 'month'];
+    return order.indexOf(f) <= order.indexOf(maxFrame);
+  }
+
+  /** 切换时间帧（成功返回 true） */
+  setFrame(f: TimeFrame): boolean {
+    if (!this.canSetFrame(f)) return false;
+    this.frame = f;
+    this.apMax = AP_PER_FRAME[f];
+    this.apUsed = 0;
+    this.log.push({ date: this.date, text: `时间帧切换为${f === 'day' ? '日帧' : f === 'week' ? '周帧' : '月帧'}（行动点 ${AP_PER_FRAME[f]}）。` });
+    return true;
+  }
+
+  /**
+   * 按当前帧推进一个完整回合（规划书 3.4）：
+   * - 周帧=5 交易日 / 月帧=至当月末（约 21-23 交易日）
+   * - 途中遇 force_day 事件中断，切回日帧，处理完由玩家继续
+   */
+  advanceFrame(daysOverride?: number): FrameAdvanceResult {
+    if (this.forceDayDays > 0 || this.frame === 'day') {
+      const snaps = this.advanceDaysRaw(daysOverride ?? 1);
+      // 日帧同样上报中断（事件刚触发的当天），供 UI 弹出演示
+      let interruptDate: IsoDate | undefined;
+      let interruptEvent: GameEventDef | undefined;
+      for (const s of snaps) {
+        const hit = this.sim.firedEvents.find(
+          (f) => f.date === s.date && f.ev.force_day && !this.handledForceDays.has(`${f.ev.id}@${f.date}`),
+        );
+        if (hit) {
+          interruptDate = s.date;
+          interruptEvent = hit.ev;
+          this.handledForceDays.add(`${hit.ev.id}@${hit.date}`);
+          break;
+        }
+      }
+      return { daysAdvanced: snaps.length, interrupted: !!interruptEvent, interruptDate, interruptEvent, snaps };
+    }
+    const today = this.date;
+    const days = daysOverride ?? (this.frame === 'week' ? 5 : this.restDaysOfMonth(today));
+    const snaps: MarketSnapshot[] = [];
+    let interrupted = false;
+    let interruptDate: IsoDate | undefined;
+    let interruptEvent: GameEventDef | undefined;
+    for (let i = 0; i < days; i++) {
+      const s = this.advanceDaysRaw(1)[0];
+      if (!s) break;
+      snaps.push(s);
+      // 中断检测：当日（或推进途中累积）的 force_day 事件
+      const hit = this.sim.firedEvents.find(
+        (f) => f.date === s.date && f.ev.force_day && !this.handledForceDays.has(`${f.ev.id}@${f.date}`),
+      );
+      if (hit) {
+        interrupted = true;
+        interruptDate = s.date;
+        interruptEvent = hit.ev;
+        this.handledForceDays.add(`${hit.ev.id}@${hit.date}`);
+        break;
+      }
+    }
+    return { daysAdvanced: snaps.length, interrupted, interruptDate, interruptEvent, snaps };
+  }
+
+  /** 已处理过的 force_day 事件（id@date），防止重复中断 */
+  private handledForceDays = new Set<string>();
+
+  private restDaysOfMonth(date: IsoDate): number {
+    const all = this.cal.tradingDaysOfMonth(date);
+    const idx = all.indexOf(date);
+    return Math.max(1, all.length - idx - 1);
+  }
+
+  /** 纯推进（不改 AP/帧状态），返回当日快照数组 */
+  private advanceDaysRaw(n: number): MarketSnapshot[] {
+    const out: MarketSnapshot[] = [];
+    for (let i = 0; i < n; i++) {
+      if (this.sim.cursor >= this.cal.count) break;
+      const before = this.sim.firedEvents.length;
+      const snap = this.sim.stepToNext();
+      this.lastSnap = snap;
+      out.push(snap);
+      for (const nw of this.sim.newsFeed) {
+        if (nw.date === snap.date) this.hooks.onNews?.(nw);
+      }
+      for (const r of this.sim.releaseLog) {
+        if (r.date === snap.date) this.hooks.onRelease?.(r);
+      }
+      const fired = this.sim.firedEvents.slice(before);
+      for (const { ev } of fired) {
+        if (ev.force_day) this.forceDayDays = Math.max(this.forceDayDays, ev.duration_days ?? 1);
+      }
+      const prev = this.cal.at(Math.max(0, this.sim.cursor - 2));
+      if (prev && prev.slice(0, 7) !== snap.date.slice(0, 7)) {
+        this.rollMonth(snap);
+      }
+    }
+    return out;
   }
 
   private rollMonth(snap: MarketSnapshot) {
@@ -114,8 +253,10 @@ export class Game {
 
   /** 执行一次行动 */
   doAction(type: ActionType): ActionResult {
-    if (this.apUsed >= this.apMax) return { text: '今天的时间已经用完了。' };
+    if (this.apUsed >= this.apMax) return { text: this.frame === 'day' ? '今天的时间已经用完了。' : '本帧的行动点已经用完了。' };
     this.apUsed += 1;
+    // 消耗精力：帧越粗单次行动消耗略高
+    this.player.energy = Math.max(0, this.player.energy - (this.frame === 'month' ? 3 : this.frame === 'week' ? 2 : 1));
     const a = this.player.attrs;
     switch (type) {
       case 'reception':
@@ -171,6 +312,34 @@ export class Game {
         return { text: '……' };
     }
   }
+
+  /** 释放记忆碎片（金手指：方向性提示，调用越多越失准） */
+  useMemory(): { text: string; hint: string } {
+    const y = Number(this.date.slice(0, 4));
+    if (y >= 2018) {
+      return { text: '记忆已彻底模糊……', hint: '2018 年之后的前世记忆已归零。外挂会过期，专业不会——靠你自己了。' };
+    }
+    const pending = this.sim.eventsList
+      .filter((e) => e.date && e.date > this.date && (e.type === 'black_swan' || e.force_day))
+      .sort((a, b) => (a.date! < b.date! ? -1 : 1));
+    this.memoryUses += 1;
+    const decay = Math.max(0.25, 1 - this.memoryUses * 0.12);
+    if (pending.length === 0) {
+      return { text: '你闭上眼搜索前世的记忆……', hint: '近期没有什么特别的预感。（无重大事件记忆）' };
+    }
+    const next = pending[0];
+    const directions = ['似乎要出大事', '心里隐隐不安', '总感觉要变盘'];
+    const dir = this.rng.pick(directions);
+    const vague = this.rng.chance(1 - decay) || this.memoryUses > 4;
+    if (vague) {
+      return { text: `记忆碎片闪过：${dir}……但已经想不起细节。`, hint: `模糊预感：${next.title.replace(/「|」/g, '')}前后可能有剧烈波动。（可信度衰减中）` };
+    }
+    return {
+      text: `记忆碎片浮现：${this.date.slice(0, 4)} 年，${dir}。`,
+      hint: `前世记忆：未来某日「${next.title}」。方向性提示，无点位无标的。（第 ${this.memoryUses} 次调用，可信度 ${(decay * 100).toFixed(0)}%）`,
+    };
+  }
+  memoryUses = 0;
 
   private pickClient(problem = false): (typeof this.clients)[number] | null {
     const pool = this.clients.filter((c) => c.status === 'active' && (problem ? c.holdings.length > 0 : true));

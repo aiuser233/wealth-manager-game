@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { state, gameReady, getGame, doAction, advanceDays, pushLog } from '../state';
-import { ACTION_NAMES, ACTION_DESC, fmtMoney, type ActionType } from '@fm/core';
+import { computed } from 'vue';
+import { state, gameReady, getGame, doAction, advanceFrame, pushLog, switchFrame, useMemoryHint, frameLabel } from '../state';
+import { ACTION_NAMES, ACTION_DESC, fmtMoney, type ActionType, type TimeFrame } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
 const actions: ActionType[] = ['reception', 'lobby', 'outreach', 'study', 'review', 'aftersale', 'social', 'rest'];
 
 const apLeft = computed(() => Math.max(0, state.apMax - state.apUsed));
+
+const curFrame = computed<TimeFrame>(() => getGame()?.frame ?? 'day');
+
+const frames: Array<{ id: TimeFrame; label: string }> = [
+  { id: 'day', label: '日帧' },
+  { id: 'week', label: '周帧' },
+  { id: 'month', label: '月帧' },
+];
+
+const advanceLabel = computed(() => {
+  if (apLeft.value > 0) return `${frameLabel()}还有 ${apLeft.value} 点行动未用`;
+  return curFrame.value === 'day' ? '下班结算 → 下一个交易日' : curFrame.value === 'week' ? '周末结算 → 下一周' : '月末结算 → 下个月';
+});
 
 const kpi = computed(() => {
   const k = g.value?.kpi;
@@ -24,10 +37,14 @@ function onAct(a: ActionType) {
   doAction(a, ACTION_NAMES[a]);
 }
 
-function endDay() {
+function endFrame() {
   if (!g.value) return;
-  pushLog(`【下班】${g.value.date} 结算：AUM ${fmtMoney(g.value.player.aum)}，今日行动 ${state.todayActions.length} 项。`);
-  advanceDays(1);
+  const n = advanceFrame();
+  pushLog(`【结算】${state.frameLabel()}推进 ${n} 个交易日：AUM ${fmtMoney(g.value.player.aum)}。`);
+}
+
+function onMemory() {
+  useMemoryHint();
 }
 </script>
 
@@ -36,7 +53,15 @@ function endDay() {
     <!-- 左：行动区 -->
     <section class="panel act">
       <div class="head">
-        <h3>今日行动</h3>
+        <h3>{{ frameLabel() }}行动</h3>
+        <div class="frame-ctrl">
+          <button
+            v-for="f in frames" :key="f.id"
+            :class="{ active: curFrame === f.id }"
+            :disabled="!getGame().canSetFrame(f.id)"
+            @click="switchFrame(f.id)"
+          >{{ f.label }}</button>
+        </div>
         <span class="ap">AP <b>{{ apLeft }}</b> / {{ state.apMax }}</span>
       </div>
       <div class="actions">
@@ -44,13 +69,17 @@ function endDay() {
           {{ ACTION_NAMES[a] }}
         </button>
       </div>
+      <div class="memory" v-if="state.memoryHint">
+        <p class="mem-hint">{{ state.memoryHint }}</p>
+      </div>
       <div class="result">
-        <p v-if="state.todayActions.length === 0" class="dim">今天还没有行动。选择上方的行动开始一天的工作。</p>
+        <p v-if="state.todayActions.length === 0" class="dim">本帧还没有行动。选择上方的行动开始。</p>
         <p v-for="(t, i) in state.todayActions" :key="i" :class="{ latest: i === state.todayActions.length - 1 }">{{ t.text }}</p>
       </div>
       <div class="foot">
-        <button class="primary" :disabled="apLeft > 0" @click="endDay">
-          {{ apLeft > 0 ? `还有 ${apLeft} 点行动未用` : '下班结算 → 下一个交易日' }}
+        <button class="ghost" @click="onMemory" title="调用前世记忆（方向性提示，越用越失准）">重启记忆</button>
+        <button class="primary grow" :disabled="apLeft > 0" @click="endFrame">
+          {{ advanceLabel }}
         </button>
       </div>
     </section>
@@ -110,7 +139,15 @@ h3 { font-size: 15px; }
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
 .result { flex: 1; overflow-y: auto; border-top: 1px dashed var(--line); padding-top: 10px; line-height: 1.7; }
 .result p.latest { color: #fff; }
-.foot { margin-top: 12px; }
+.frame-ctrl { display: flex; gap: 4px; }
+.frame-ctrl button { padding: 3px 10px; font-size: 12px; }
+.frame-ctrl button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.memory { background: rgba(124, 92, 255, 0.12); border: 1px solid var(--accent2); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+.mem-hint { color: #c9b8ff; line-height: 1.6; font-size: 13px; }
+.ghost { border-color: var(--accent2); color: #c9b8ff; background: transparent; }
+.ghost:hover:not(:disabled) { background: rgba(124, 92, 255, 0.12); }
+.foot { margin-top: 12px; display: flex; gap: 8px; }
+.grow { flex: 1; }
 .foot button { width: 100%; padding: 10px; }
 
 .me .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }

@@ -2,8 +2,9 @@ import { reactive, computed } from 'vue';
 import {
   GameCalendar, MarketSim, Game, Rng,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
+  type TimeFrame, type ExamPaper, type ExamResult, buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, examBank } from '@fm/content';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -35,6 +36,18 @@ export const state = reactive({
 
   selectedClientId: '' as string,
   lastResult: '' as string,
+
+  /** 考试系统 */
+  examScreen: 'list' as 'list' | 'taking' | 'result',
+  examPaper: null as ExamPaper | null,
+  examAnswers: [] as Array<number | number[]>,
+  examResult: null as ExamResult | null,
+  examIdx: 0,
+  examSecondsLeft: 0,
+  examTimer: 0 as ReturnType<typeof setInterval> | 0,
+
+  /** 金手指记忆 */
+  memoryHint: '' as string,
 });
 
 let game: Game;
@@ -134,6 +147,36 @@ export function doAction(type: ActionType, name: string): ActionResult {
   return r;
 }
 
+/** 切换时间帧 */
+export function switchFrame(f: TimeFrame): boolean {
+  const ok = game.setFrame(f);
+  if (ok) {
+    state.apUsed = game.apUsed;
+    state.todayActions = [];
+  }
+  return ok;
+}
+
+/** 金手指：调用记忆碎片 */
+export function useMemoryHint() {
+  const r = game.useMemory();
+  state.memoryHint = r.hint;
+  return r;
+}
+
+/** 按当前帧推进一个回合（日=1 天，周=5 天，月=至月末） */
+export function advanceFrame(daysOverride?: number): number {
+  const res = game.advanceFrame(daysOverride);
+  state.apUsed = game.apUsed;
+  state.todayActions = [];
+  state.lastSnap = game.lastSnap;
+  for (const s of res.snaps) cacheSnap(s, 0);
+  if (res.interrupted) {
+    pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
+  }
+  return res.daysAdvanced;
+}
+
 export function pushLog(text: string) {
   state.log.unshift({ date: game.date, text });
   if (state.log.length > 200) state.log.pop();
@@ -143,9 +186,89 @@ export function markViewed() {
   if (game.lastSnap) state.baseSnap.since_view = game.lastSnap;
 }
 
+// ================= 考试系统 =================
+
+/** 当前可报名的科目（按年份解锁） */
+export function availableExams() {
+  const y = Number(game.date.slice(0, 4));
+  return EXAM_DEFS.filter((e) => y >= e.unlock_year);
+}
+
+/** 已获得的证书 */
+export function myCerts(): string[] {
+  return game.player.certs;
+}
+
+let rngExam: Rng | null = null;
+
+/** 开始一场考试：抽卷并进入答题界面 */
+export function startExam(examId: string): boolean {
+  const exam = EXAM_DEFS.find((e) => e.id === examId);
+  if (!exam) return false;
+  if (game.player.certs.includes(exam.name)) return false;
+  rngExam ??= new Rng(game.rngNextInt());
+  const paper = buildPaper(exam, examBank, rngExam);
+  state.examPaper = paper;
+  state.examAnswers = paper.questions.map((q) => (q.type === 'multiple' ? [] : -1));
+  state.examIdx = 0;
+  state.examResult = null;
+  state.examScreen = 'taking';
+  state.examSecondsLeft = exam.time_limit_sec;
+  if (state.examTimer) clearInterval(state.examTimer);
+  state.examTimer = setInterval(() => {
+    state.examSecondsLeft -= 1;
+    if (state.examSecondsLeft <= 0) submitExam();
+  }, 1000);
+  return true;
+}
+
+export function submitExam() {
+  if (!state.examPaper || state.examScreen !== 'taking') return;
+  if (state.examTimer) { clearInterval(state.examTimer); state.examTimer = 0; }
+  const res = gradePaper(state.examPaper, state.examAnswers);
+  state.examResult = res;
+  state.examScreen = 'result';
+  const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
+  if (res.passed && exam && !game.player.certs.includes(exam.name)) {
+    game.player.certs.push(exam.name);
+    game.player.attrs.pro += 5;
+    pushLog(`【考证】通过「${exam.name}」考试（${res.scorePct.toFixed(1)} 分），证书已入库，专业力 +5。`);
+  } else {
+    pushLog(`【考证】「${exam?.name}」成绩 ${res.scorePct.toFixed(1)} 分，未通过。下季度再战。`);
+  }
+  game.player.energy = Math.max(0, game.player.energy - 20);
+  game.player.attrs.stress += 8;
+}
+
+export function quitExam() {
+  if (state.examTimer) { clearInterval(state.examTimer); state.examTimer = 0; }
+  state.examScreen = 'list';
+  state.examPaper = null;
+}
+
+/** 单选题作答 */
+export function answerSingle(idx: number, opt: number) {
+  state.examAnswers[idx] = opt;
+}
+/** 多选题作答（切换勾选） */
+export function toggleMulti(idx: number, opt: number) {
+  const cur = state.examAnswers[idx];
+  const arr = Array.isArray(cur) ? [...cur] : [];
+  const pos = arr.indexOf(opt);
+  if (pos >= 0) arr.splice(pos, 1);
+  else arr.push(opt);
+  state.examAnswers[idx] = arr;
+}
+
 export function fmtPct(v: number | undefined): string {
   if (v === undefined || !isFinite(v)) return '--';
   return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+}
+
+/** 当前帧的中文名 */
+export function frameLabel(): string {
+  const f = game?.frame ?? 'day';
+  return f === 'day' ? '今日' : f === 'week' ? '本周' : '本月';
 }
 
 export function pctClass(v: number | undefined): string {
