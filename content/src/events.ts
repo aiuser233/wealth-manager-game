@@ -1,0 +1,106 @@
+import type { GameEventDef } from '@fm/core';
+
+/**
+ * 导演事件库（M0 核心 55 事件）：以 2006–2025 真实金融史为蓝本（全部架空化演出）。
+ * shocks 单位：价格型因子=累计对数收益；利率型因子=绝对水平变化；均为 duration_days 内分摊施加。
+ * M1 将补充：季节性事件（开门红/月末）、随机事件池（200+）、行业专项事件。
+ */
+export const directorEvents: GameEventDef[] = [
+  // ===== 2006 股改牛 =====
+  { id: 'dir_2006_start', date: '2006-01-04', type: 'director', title: '股改行情加速', news: '新年首个交易日，两市放量上攻，股权分置改革红利持续释放，市场做多热情高涨。', shocks: { equity: 0.12, style_big: 0.08 }, duration_days: 40, sentiment: 1 },
+  { id: 'dir_2006_mid', date: '2006-07-05', type: 'director', title: '人民币升值概念走强', news: '汇率改革预期升温，金融地产板块领涨，大盘稳步走高。', shocks: { equity: 0.14, fx_cny: -0.01 }, duration_days: 50, sentiment: 1 },
+  { id: 'dir_2006_fund', date: '2006-11-15', type: 'director', title: '基金发行火爆，市民排队申购', news: '新基金发行频频爆款，网点出现排队申购盛况，"基民"成为热词。', shocks: { equity: 0.10, sentiment_dom: 0.5 }, duration_days: 30, sentiment: 1.5 },
+  // ===== 2007 疯牛与崩塌 =====
+  { id: 'dir_2007_227', date: '2007-02-27', type: 'black_swan', title: '全球市场剧震', news: '两市罕见近9%暴跌，恐慌蔓延至全球市场。开户狂潮遭遇当头冷水。', shocks: { equity: -0.088, us_equity: -0.03, vix: 0.5 }, duration_days: 1, sentiment: -2 },
+  { id: 'dir_2007_530', date: '2007-05-30', type: 'policy', title: '印花税上调，两市暴跌', news: '深夜突袭的印花税调整引发"5·30"暴跌，大量个股连续跌停。追高的投资者损失惨重。', shocks: { equity: -0.093, style_small: -0.10 }, duration_days: 3, sentiment: -2.5, unlock_knowledge: ['stamp_duty', 'chasing_high'], force_day: true },
+  { id: 'dir_2007_bull2', date: '2007-07-20', type: 'director', title: '蓝筹行情卷土重来', news: '大盘权重股带动指数强劲上攻，市场重回疯狂，"死了都不卖"成为流行语。', shocks: { equity: 0.18, style_big: 0.20 }, duration_days: 45, sentiment: 2 },
+  { id: 'dir_2007_top', date: '2007-10-16', type: 'director', title: '沪指突破 6100 点', news: '沪指盘中创出历史新高，全民炒股热情达到顶点。营业部挤满新开户的市民。', shocks: { sentiment_dom: 0.3 }, duration_days: 1, sentiment: 1.5, unlock_knowledge: ['euphoria_top'] },
+  { id: 'dir_2007_fall', date: '2007-11-01', type: 'director', title: '市场高位回落', news: '获利盘涌出，市场震荡下行，不少新基民的净值明显回撤。', shocks: { equity: -0.06 }, duration_days: 15, sentiment: -1.5 },
+  { id: 'dir_2007_qdii', date: '2007-11-15', type: 'director', title: '首批出海基金集体折戟', news: '海外市场动荡叠加汇率因素，首批出海产品净值大幅回撤，投资者质疑声四起。', shocks: { us_equity: -0.05, equity: -0.02 }, duration_days: 10, sentiment: -1, unlock_knowledge: ['qdii_risk'] },
+  // ===== 2008 次贷危机 =====
+  { id: 'dir_2008_jan', date: '2008-01-14', type: 'black_swan', title: '海外金融风暴升级', news: '海外大型金融机构巨额减记，全球市场连续重挫，A 股开门不红反黑。', shocks: { equity: -0.05, us_equity: -0.06, vix: 0.4 }, duration_days: 3, sentiment: -2 },
+  { id: 'dir_2008_apr', date: '2008-04-24', type: 'policy', title: '印花税下调，两市暴涨', news: '监管出手下调印花税，两市近乎涨停，救市信号明确。', shocks: { equity: 0.09 }, duration_days: 1, sentiment: 1.5 },
+  { id: 'dir_2008_jun', date: '2008-06-10', type: 'director', title: '油价飙升与通胀担忧', news: '国际油价冲击历史高位，输入型通胀压力骤增，市场持续走弱。', shocks: { equity: -0.08, oil: 0.10 }, duration_days: 10, sentiment: -1.5 },
+  { id: 'dir_2008_lehman', date: '2008-09-15', type: 'black_swan', title: '百年投行倒闭，全球金融海啸', news: '158 年历史的雷曼兄弟破产，全球金融市场剧烈震荡，金融危机全面爆发。', shocks: { equity: -0.045, us_equity: -0.05, vix: 0.6, gold: 0.03 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['systemic_risk', 'crisis_communication'], force_day: true },
+  { id: 'dir_2008_bottom', date: '2008-10-28', type: 'director', title: '市场跌至谷底', news: '沪指一年间跌去七成，跌破 1700 点，恐慌情绪弥漫。有客户开始亏损严重。', shocks: { equity: -0.04 }, duration_days: 2, sentiment: -2.5 },
+  { id: 'dir_2008_4t', date: '2008-11-10', type: 'policy', title: '四万亿刺激计划出台', news: '大规模投资计划公布，货币宽松加速，市场应声暴涨。', shocks: { equity: 0.10, lpr_5y: -0.01, credit: -0.002 }, duration_days: 5, sentiment: 2.5, unlock_knowledge: ['policy_stimulus'] },
+  { id: 'dir_2008_cuts', date: '2008-12-01', type: 'policy', title: '连续降息周期', news: '央行在三个月内第五次降息，利率降至历史低位。', shocks: { lpr_5y: -0.008, rate10y: -0.004 }, duration_days: 10, sentiment: 0.5 },
+  // ===== 2009 四万亿之年 =====
+  { id: 'dir_2009_credit', date: '2009-01-10', type: 'director', title: '天量信贷开闸', news: '新增信贷井喷，基建地产全面升温，市场走出 V 型反转。', shocks: { equity: 0.15, housing: 0.06, liquidity: 0.10 }, duration_days: 50, sentiment: 2 },
+  { id: 'dir_2009_top', date: '2009-08-04', type: 'director', title: '反弹见顶，市场转弱', news: '指数翻倍后动能衰竭，货币政策微调预期升温，市场回落。', shocks: { equity: -0.05 }, duration_days: 10, sentiment: -1 },
+  // ===== 2010-2011 欧债与通胀 =====
+  { id: 'dir_2010_apr', date: '2010-04-19', type: 'policy', title: '地产调控"国十条"与欧债阴云', news: '史上最严地产调控出台，叠加海外主权债务危机发酵，市场双双受挫。', shocks: { equity: -0.06, housing: -0.04 }, duration_days: 5, sentiment: -1.5 },
+  { id: 'dir_2011_infl', date: '2011-07-01', type: 'macro', title: '通胀高企，理财热兴起', news: 'CPI 持续走高，负利率时代来临，银行理财与信托产品受到追捧。', shocks: { equity: -0.04, gold: 0.06 }, duration_days: 15, sentiment: -1, unlock_knowledge: ['negative_rate', 'inflation'] },
+  { id: 'dir_2011_us', date: '2011-08-08', type: 'black_swan', title: '美债评级下调，全球市场剧震', news: '海外主权信用评级遭遇历史性下调，全球风险资产齐跌，黄金创新高。', shocks: { equity: -0.04, us_equity: -0.07, vix: 0.5, gold: 0.04 }, duration_days: 1, sentiment: -2 },
+  // ===== 2012 换挡 =====
+  { id: 'dir_2012_cut', date: '2012-06-08', type: 'policy', title: '三年半来首次降息', news: '央行宣布降息，稳增长信号明确，利率市场化改革同步推进。', shocks: { lpr_5y: -0.005, rate10y: -0.002, liquidity: 0.03 }, duration_days: 5, sentiment: 0.5 },
+  { id: 'dir_2012_end', date: '2012-12-04', type: 'director', title: '经济企稳，银行股引领反弹', news: '经济数据触底回升，银行等低估值板块大涨，市场走出年末行情。', shocks: { equity: 0.12, style_big: 0.08 }, duration_days: 25, sentiment: 1.5 },
+  // ===== 2013 钱荒与余额宝 =====
+  { id: 'dir_2013_yeb', date: '2013-06-13', type: 'policy', title: '"宝宝类"产品横空出世', news: '互联网货币基金上线，1 元起购、随存随取，收益率远超活期，银行存款面临分流压力。', shocks: { liquidity: -0.01, equity: 0.02 }, duration_days: 2, sentiment: 0.5, unlock_knowledge: ['money_fund', 'deposit_migration'], force_day: true },
+  { id: 'dir_2013_crunch', date: '2013-06-20', type: 'black_swan', title: '"钱荒"来袭', news: '银行间隔夜利率飙升至历史高位，流动性骤然紧绷，股市债市双杀。', shocks: { liquidity: -0.12, rate10y: 0.008, equity: -0.03 }, duration_days: 3, sentiment: -2, unlock_knowledge: ['liquidity_risk', 'cash_mgmt'], force_day: true },
+  { id: 'dir_2013_ugl', date: '2013-08-16', type: 'black_swan', title: '券商乌龙指事件', news: '某券商系统错误引发瞬间巨量买单，市场瞬间暴涨后回落，交易所宣布交易有效。', shocks: { equity: 0.005 }, duration_days: 1, sentiment: 0.3 },
+  // ===== 2014-2015 杠杆牛熊 =====
+  { id: 'dir_2014_hsgt', date: '2014-11-17', type: 'policy', title: '沪港通开通', news: '两地市场互联互通机制正式启动，外资配置渠道打开。', shocks: { equity: 0.03 }, duration_days: 3, sentiment: 1 },
+  { id: 'dir_2014_cut', date: '2014-11-21', type: 'policy', title: '两年来首次降息，牛市启幕', news: '央行超预期降息，券商银行涨停潮，增量资金跑步入场。', shocks: { equity: 0.08, lpr_5y: -0.01, rate10y: -0.005, liquidity: 0.06 }, duration_days: 10, sentiment: 2 },
+  { id: 'dir_2014_bull', date: '2014-12-15', type: 'director', title: '指数加速上攻', news: '"改革牛"叙事下，两融余额屡创新高，单日成交破万亿成常态。', shocks: { equity: 0.20, style_big: 0.15 }, duration_days: 30, sentiment: 2.5 },
+  { id: 'dir_2015_mania', date: '2015-04-20', type: 'director', title: '全民炒股与场外配资', news: '开户数井喷，场外配资盛行，"卖房炒股"言论再现。监管开始清查配资。', shocks: { equity: 0.10, style_small: 0.15 }, duration_days: 20, sentiment: 3, unlock_knowledge: ['leverage_risk'] },
+  { id: 'dir_2015_top', date: '2015-06-15', type: 'director', title: '沪指站上 5100 点', news: '指数创七年新高，多数分析师高呼"改革牛下半场"。市场拥挤度达到极值。', shocks: { sentiment_dom: 0.3 }, duration_days: 1, sentiment: 1.5 },
+  { id: 'dir_2015_crash1', date: '2015-06-26', type: 'black_swan', title: '"千股跌停"', news: '清查配资引发强制平仓潮，两市近两千只个股跌停，流动性瞬间枯竭。', shocks: { equity: -0.078, style_small: -0.10 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['forced_liquidation', 'crisis_communication'], force_day: true },
+  { id: 'dir_2015_crash2', date: '2015-07-27', type: 'black_swan', title: '二次探底', news: '救市资金入场后市场短暂企稳，但信心脆弱，再度重挫。', shocks: { equity: -0.085 }, duration_days: 1, sentiment: -3 },
+  { id: 'dir_2015_824', date: '2015-08-24', type: 'black_swan', title: '全球市场连锁暴跌', news: '海外市场"黑色星期一"传导，全球风险资产同步重挫。', shocks: { equity: -0.085, us_equity: -0.04 }, duration_days: 1, sentiment: -2.5 },
+  { id: 'dir_2015_stab', date: '2015-09-01', type: 'director', title: '救市组合拳见效', news: '多项维稳措施落地，市场波动收敛，逐步进入漫长修复期。', shocks: { equity: 0.05 }, duration_days: 15, sentiment: 0.5 },
+  // ===== 2016 熔断与地产 =====
+  { id: 'dir_2016_fuse1', date: '2016-01-04', type: 'policy', title: '熔断机制首日即触发', news: '新年首个交易日，熔断机制实施首日即两次触发提前收盘，市场恐慌。', shocks: { equity: -0.07 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['circuit_breaker'], force_day: true },
+  { id: 'dir_2016_fuse2', date: '2016-01-07', type: 'policy', title: '熔断四日两触，机制连夜叫停', news: '实施仅四个交易日的熔断机制被宣布暂停，市场信心亟待修复。', shocks: { equity: -0.07 }, duration_days: 1, sentiment: -3 },
+  { id: 'dir_2016_rec', date: '2016-03-01', type: 'director', title: '市场缓慢修复', news: '注册制推迟、汇率企稳，市场开启半年修复行情。', shocks: { equity: 0.10 }, duration_days: 30, sentiment: 1 },
+  { id: 'dir_2016_house', date: '2016-10-01', type: 'director', title: '房价暴涨与"去库存"', news: '热点城市房价快速上行，居民加杠杆购房，资金明显脱实向虚。', shocks: { housing: 0.08, lpr_5y: -0.002 }, duration_days: 40, sentiment: 0.5, unlock_knowledge: ['housing_vs_invest'] },
+  { id: 'dir_2016_ins', date: '2016-12-05', type: 'policy', title: '险资举牌遭监管问话', news: '激进举牌行为被点名批评，相关概念股大跌，万能险资金运用受限。', shocks: { equity: -0.02, style_big: -0.03 }, duration_days: 5, sentiment: -1 },
+  // ===== 2017 蓝筹牛与去杠杆 =====
+  { id: 'dir_2017_blue', date: '2017-05-01', type: 'director', title: '价值投资大年，蓝筹白马走强', news: '外资持续流入，白马股走出独立行情，"核心资产"概念兴起。', shocks: { style_big: 0.15, equity: 0.06 }, duration_days: 120, sentiment: 1 },
+  { id: 'dir_2017_agr', date: '2017-11-17', type: 'policy', title: '资管新规征求意见稿发布', news: '打破刚兑、净值化管理的监管框架公开征求意见，通道与非标业务面临重构。', shocks: { style_small: -0.05 }, duration_days: 10, sentiment: -1, unlock_knowledge: ['asset_mgmt_reform'] },
+  // ===== 2018 贸易战与质押危机 =====
+  { id: 'dir_2018_trade', date: '2018-03-23', type: 'black_swan', title: '关税清单落地，贸易摩擦爆发', news: '大规模关税清单公布，全球市场大跌，出口链条与科技板块承压。', shocks: { equity: -0.04, us_equity: -0.02 }, duration_days: 1, sentiment: -2, unlock_knowledge: ['geopolitical_risk'], force_day: true },
+  { id: 'dir_2018_agr', date: '2018-04-27', type: 'policy', title: '资管新规正式落地', news: '过渡期设定，保本理财进入倒计时，净值化转型全面启动。', shocks: { style_small: -0.04, credit: 0.002 }, duration_days: 20, sentiment: -1 },
+  { id: 'dir_2018_pledge', date: '2018-06-19', type: 'black_swan', title: '股权质押危机浮现', news: '市场持续下行触发质押盘平仓风险，中小市值个股批量闪崩。', shocks: { equity: -0.04, style_small: -0.06 }, duration_days: 5, sentiment: -2 },
+  { id: 'dir_2018_p2p', date: '2018-07-15', type: 'policy', title: 'P2P 爆雷潮', news: '多地平台接连爆雷，投资者维权无门，高息集资风险集中暴露。', shocks: { credit: 0.005, liquidity: -0.03 }, duration_days: 15, sentiment: -1.5, unlock_knowledge: ['fraud_alert', 'high_yield_trap'] },
+  { id: 'dir_2018_bottom', date: '2018-10-19', type: 'policy', title: '高层喊话，政策底显现', news: '监管层罕见集体发声，股权质押纾困政策密集出台，市场止跌回升。', shocks: { equity: 0.03 }, duration_days: 2, sentiment: 1.5 },
+  // ===== 2019 结构牛 =====
+  { id: 'dir_2019_start', date: '2019-01-04', type: 'policy', title: '降准落地，市场见底回升', news: '全面降准释放约 1.5 万亿流动性，市场在 2440 点构筑大底后掉头向上。', shocks: { equity: 0.18, liquidity: 0.05 }, duration_days: 60, sentiment: 1.5 },
+  { id: 'dir_2019_star', date: '2019-07-22', type: 'policy', title: '科创板开市', news: '注册制试点落地，首批 25 家公司上市首日平均翻倍。', shocks: { style_small: 0.04 }, duration_days: 5, sentiment: 1 },
+  { id: 'dir_2019_fx7', date: '2019-08-05', type: 'macro', title: '人民币汇率"破 7"', news: '汇率市场化波动加大，"破 7"引发全球关注，避险资产走强。', shocks: { fx_cny: 0.02, gold: 0.02 }, duration_days: 3, sentiment: -1, unlock_knowledge: ['fx_risk'] },
+  { id: 'dir_2019_lpr', date: '2019-08-20', type: 'policy', title: 'LPR 形成机制改革', news: '贷款利率并轨，LPR 报价机制落地，实体融资成本下降通道打开。', shocks: { lpr_5y: -0.006 }, duration_days: 5, sentiment: 0.5 },
+  // ===== 2020 疫情与大放水 =====
+  { id: 'dir_2020_covid', date: '2020-02-03', type: 'black_swan', title: '突发公共卫生事件，开市大跌', news: '春节假期延长后首个交易日，两市超 3000 只个股跌停。远程办公、在线业务骤然成为常态。', shocks: { equity: -0.077, style_small: -0.06, vix: 0.4 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['crisis_communication', 'risk_off'], force_day: true },
+  { id: 'dir_2020_gfc2', date: '2020-03-09', type: 'black_swan', title: '全球熔断潮', news: '海外市场十天内四次熔断，原油单日暴跌逾三成，全球流动性危机爆发。', shocks: { us_equity: -0.09, oil: -0.15, vix: 0.8, risk_g: -0.08 }, duration_days: 3, sentiment: -3, unlock_knowledge: ['global_crisis'], force_day: true },
+  { id: 'dir_2020_qe', date: '2020-03-23', type: 'policy', title: '海外央行"无限量宽松"', news: '海外央行推出无限量量化宽松，全球流动性危机缓解，市场触底回升。', shocks: { us_equity: 0.08, gold: 0.05, liquidity: 0.08 }, duration_days: 10, sentiment: 1.5 },
+  { id: 'dir_2020_oilneg', date: '2020-04-21', type: 'black_swan', title: '原油期货史上首次负值', news: '交割合约结算价跌至负值区，"储油比油贵"成为现实，挂钩产品巨亏案例频出。', shocks: { oil: -0.20 }, duration_days: 1, sentiment: -1, unlock_knowledge: ['structured_product_risk'] },
+  { id: 'dir_2020_rally', date: '2020-07-02', type: 'director', title: '放量快牛，基金爆款频出', news: '两市成交连续破万亿，明星基金经理被"顶流"化，新发基金动辄百亿。', shocks: { equity: 0.15 }, duration_days: 10, sentiment: 2.5 },
+  { id: 'dir_2020_pull', date: '2020-07-16', type: 'director', title: '快牛歇脚', news: '监管查处场外配资，市场单日大跌，进入宽幅震荡。', shocks: { equity: -0.05 }, duration_days: 2, sentiment: -1 },
+  // ===== 2021 抱团瓦解 =====
+  { id: 'dir_2021_baotuan', date: '2021-02-18', type: 'director', title: '春节后"抱团股"瓦解', news: '节后首日"核心资产"集体重挫，明星基金净值快速回撤，"基金亏了"登上热搜。', shocks: { style_big: -0.12, equity: -0.06 }, duration_days: 30, sentiment: -2, unlock_knowledge: ['take_profit', 'herding'], force_day: true },
+  { id: 'dir_2021_reg', date: '2021-07-26', type: 'policy', title: '行业整顿政策密集出台', news: '教育培训、互联网平台监管收紧，相关板块连续重挫，市场风险偏好急降。', shocks: { equity: -0.04, style_small: -0.06 }, duration_days: 3, sentiment: -2, unlock_knowledge: ['policy_risk'] },
+  { id: 'dir_2021_evergrande', date: '2021-09-15', type: 'black_swan', title: '头部房企债务危机发酵', news: '房企信用风险持续暴露，"三道红线"下行业加速出清，地产链承压。', shocks: { credit: 0.004, housing: -0.04 }, duration_days: 20, sentiment: -1.5 },
+  { id: 'dir_2021_energy', date: '2021-09-25', type: 'macro', title: '能源紧张与"拉闸限电"', news: '能源价格飙升叠加限电措施，周期品价格大幅波动。', shocks: { oil: 0.08, liquidity: -0.02 }, duration_days: 10, sentiment: -0.5 },
+  // ===== 2022 至暗与背离 =====
+  { id: 'dir_2022_war', date: '2022-02-24', type: 'black_swan', title: '地区冲突爆发，商品暴涨', news: '地区军事冲突推升全球避险情绪，能源与粮食价格飙升。', shocks: { gold: 0.05, oil: 0.10, risk_g: -0.05, equity: -0.012 }, duration_days: 5, sentiment: -2, unlock_knowledge: ['war_risk', 'gold_hedge'], force_day: true },
+  { id: 'dir_2022_jwh', date: '2022-03-16', type: 'policy', title: '金融委会议稳定市场', news: '高层会议直面市场关切，中概股、平台经济等问题明确表态，市场暴力反弹。', shocks: { equity: 0.05 }, duration_days: 2, sentiment: 1.5 },
+  { id: 'dir_2022_3000', date: '2022-04-25', type: 'director', title: '沪指跌破 3000 点', news: '疫情反复冲击供应链，市场信心受挫，沪指年内第二次跌破 3000 点。', shocks: { equity: -0.05 }, duration_days: 1, sentiment: -2.5 },
+  { id: 'dir_2022_rec', date: '2022-06-28', type: 'director', title: '疫后修复行情', news: '供应链修复叠加稳增长发力，市场走出两个月结构性行情。', shocks: { equity: 0.12 }, duration_days: 20, sentiment: 1.5 },
+  { id: 'dir_2022_fed', date: '2022-09-27', type: 'macro', title: '海外激进加息与汇率承压', news: '海外央行连续大幅加息，内外政策周期罕见背离，本币汇率与利差压力凸显。', shocks: { fed_rate: 0.01, us10y: 0.008, usd_idx: 0.03, fx_cny: 0.03, style_big: -0.05 }, duration_days: 15, sentiment: -2, unlock_knowledge: ['policy_divergence', 'interest_parity'], force_day: true },
+  { id: 'dir_2022_redeem', date: '2022-11-14', type: 'black_swan', title: '理财"赎回潮"与破净危机', news: '债市急跌引发净值型理财大面积回撤，"负反馈"螺旋下赎回潮出现，网点咨询电话被打爆。', shocks: { credit: 0.006, liquidity: -0.06, rate10y: 0.006 }, duration_days: 10, sentiment: -1.5, unlock_knowledge: ['nav_break', 'redemption_spiral'], force_day: true },
+  // ===== 2023 AI 浪潮 =====
+  { id: 'dir_2023_ai', date: '2023-02-10', type: 'director', title: '生成式 AI 席卷全球', news: '对话式 AI 引发全球关注，算力与应用板块爆发，科技行情重启。', shocks: { us_equity: 0.08, style_small: 0.06 }, duration_days: 40, sentiment: 1.5, unlock_knowledge: ['ai_advisor'] },
+  { id: 'dir_2023_svb', date: '2023-03-13', type: 'black_swan', title: '海外银行挤兑风波', news: '海外多家区域性银行接连倒闭，利率风险下资产负债错配问题暴露。', shocks: { us_equity: -0.04, vix: 0.4, gold: 0.03 }, duration_days: 3, sentiment: -1.5, unlock_knowledge: ['bank_risk'] },
+  { id: 'dir_2023_stamp', date: '2023-08-28', type: 'policy', title: '印花税减半，"高开低走"', news: '活跃资本市场组合拳落地，市场高开后回落，"政策底"讨论升温。', shocks: { equity: 0.012 }, duration_days: 1, sentiment: 0.5 },
+  { id: 'dir_2023_zz', date: '2023-11-15', type: 'black_swan', title: '大型财富集团风险暴露', news: '头部民营财富管理集团出现兑付困难，高息非标产品风险再次敲响警钟。', shocks: { credit: 0.004 }, duration_days: 10, sentiment: -1, unlock_knowledge: ['nonstandard_risk'] },
+  // ===== 2024 微盘危机与 9·24 =====
+  { id: 'dir_2024_micro', date: '2024-01-22', type: 'black_swan', title: '微盘股流动性危机', news: '雪球产品集中敲入、量化策略踩踏，小微盘股连续暴跌后流动性危机蔓延。', shocks: { style_small: -0.08, equity: -0.03 }, duration_days: 5, sentiment: -2.5, unlock_knowledge: ['structured_notes_risk'], force_day: true },
+  { id: 'dir_2024_bottom', date: '2024-02-06', type: 'policy', title: '国家队入场，市场见底', news: '汇金宣布扩大增持范围，市场在 2635 点见底回升。', shocks: { equity: 0.03 }, duration_days: 2, sentiment: 1 },
+  { id: 'dir_2024_924', date: '2024-09-24', type: 'policy', title: '一揽子政策组合拳', news: '降准降息、创设新货币工具支持股市，市场情绪瞬间点燃，成交额刷新历史纪录。', shocks: { equity: 0.20, style_small: 0.18, liquidity: 0.08, vix: -0.3 }, duration_days: 8, sentiment: 3, unlock_knowledge: ['policy_bottom', 'chasing_high'], force_day: true },
+  { id: 'dir_2024_1008', date: '2024-10-08', type: 'director', title: '情绪顶点后的回落', news: '假期开户潮涌入的资金高位接盘，市场高开后大幅回落，"追高"代价再次显现。', shocks: { equity: -0.065 }, duration_days: 2, sentiment: -1 },
+  { id: 'dir_2024_pension', date: '2024-12-15', type: 'policy', title: '个人养老金制度全面推开', news: '个人养老金从试点走向全国，养老金融成为网点服务新焦点。', shocks: { liquidity: 0.02 }, duration_days: 3, sentiment: 0.5, unlock_knowledge: ['third_pillar'] },
+  // ===== 2025 终局之年 =====
+  { id: 'dir_2025_tariff', date: '2025-04-07', type: 'black_swan', title: '关税冲击，全球市场剧震', news: '超预期关税政策引发全球市场单日重挫，避险资产大涨。', shocks: { equity: -0.07, us_equity: -0.06, gold: 0.04 }, duration_days: 2, sentiment: -2.5, force_day: true },
+  { id: 'dir_2025_rec', date: '2025-04-10', type: 'director', title: '市场修复与再平衡', news: '政策对冲及时，市场逐步修复，全球配置价值讨论升温。', shocks: { equity: 0.06 }, duration_days: 5, sentiment: 1 },
+  { id: 'dir_2025_aiapp', date: '2025-06-20', type: 'director', title: 'AI 应用全面落地', news: 'AI 应用渗透各行各业，金融行业智能化转型加速，"人机协作"成为财富管理关键词。', shocks: { us_equity: 0.06, style_small: 0.08 }, duration_days: 30, sentiment: 1.5 },
+];

@@ -1,0 +1,16 @@
+{
+  "name": "@fm/tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sim": "tsx src/simulate.ts"
+  },
+  "dependencies": {
+    "@fm/core": "*",
+    "@fm/content": "*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "fm-game",
+  "private": true,
+  "version": "0.1.0",
+  "description": "重生之我是理财经理 — Monorepo (core / content / ui / tools)",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "content",
+    "tools"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @fm/ui",
+    "build": "npm run build -w @fm/ui",
+    "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/ui --noEmit",
+    "test": "vitest run",
+    "sim": "npm run sim -w @fm/tools"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "3.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
+  }
+}
