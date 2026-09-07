@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { state, gameReady, getGame, doAction, advanceFrame, pushLog, switchFrame, useMemoryHint, frameLabel } from '../state';
+import { state, gameReady, getGame, doAction, advanceFrame, pushLog, switchFrame, useMemoryHint, frameLabel, startReception } from '../state';
 import { ACTION_NAMES, ACTION_DESC, fmtMoney, type ActionType, type TimeFrame } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
-const actions: ActionType[] = ['reception', 'lobby', 'outreach', 'study', 'review', 'aftersale', 'social', 'rest'];
+const actions: ActionType[] = ['lobby', 'outreach', 'study', 'review', 'aftersale', 'social', 'rest'];
 
 const apLeft = computed(() => Math.max(0, state.apMax - state.apUsed));
 
@@ -37,14 +37,31 @@ function onAct(a: ActionType) {
   doAction(a, ACTION_NAMES[a]);
 }
 
+/** 接待改为对话玩法 */
+function onReception() {
+  if (startReception()) {
+    state.apUsed += 0; // AP 在对话成交/送客时统一结算
+  }
+}
+
 function endFrame() {
   if (!g.value) return;
   const n = advanceFrame();
-  pushLog(`【结算】${state.frameLabel()}推进 ${n} 个交易日：AUM ${fmtMoney(g.value.player.aum)}。`);
+  pushLog(`【结算】${frameLabel()}推进 ${n} 个交易日：AUM ${fmtMoney(g.value.player.aum)}。`);
 }
 
 function onMemory() {
   useMemoryHint();
+}
+
+/** 晋升评审 */
+function openPromotion() {
+  const next = g.value?.promotionCheck().find((r) => r.req.grade === (g.value?.player.grade ?? 0) + 1);
+  if (!next) return;
+  if (next.eligible && g.value!.applyPromotion()) {
+    pushLog(`【晋升】评审通过！现任命为「${next.req.name}」。`);
+  }
+  state.modal = { kind: 'promotion' };
 }
 </script>
 
@@ -65,6 +82,9 @@ function onMemory() {
         <span class="ap">AP <b>{{ apLeft }}</b> / {{ state.apMax }}</span>
       </div>
       <div class="actions">
+        <button class="reception-btn" :disabled="apLeft <= 0 || !!state.reception" title="面对面接待客户：挖潜需求、推荐产品" @click="onReception">
+          🤝 接待客户（对话）
+        </button>
         <button v-for="a in actions" :key="a" :disabled="apLeft <= 0" :title="ACTION_DESC[a]" @click="onAct(a)">
           {{ ACTION_NAMES[a] }}
         </button>
@@ -78,6 +98,7 @@ function onMemory() {
       </div>
       <div class="foot">
         <button class="ghost" @click="onMemory" title="调用前世记忆（方向性提示，越用越失准）">重启记忆</button>
+        <button class="promo-btn" :disabled="!g" @click="openPromotion" title="查看晋升条件，满足时可提交评审">晋升评审</button>
         <button class="primary grow" :disabled="apLeft > 0" @click="endFrame">
           {{ advanceLabel }}
         </button>
@@ -146,6 +167,9 @@ h3 { font-size: 15px; }
 .mem-hint { color: #c9b8ff; line-height: 1.6; font-size: 13px; }
 .ghost { border-color: var(--accent2); color: #c9b8ff; background: transparent; }
 .ghost:hover:not(:disabled) { background: rgba(124, 92, 255, 0.12); }
+.promo-btn { border-color: var(--gold); color: var(--gold); background: transparent; }
+.promo-btn:hover:not(:disabled) { background: rgba(240, 180, 41, 0.12); }
+.reception-btn { grid-column: 1 / 3; background: rgba(240, 180, 41, 0.1); border-color: var(--gold); color: var(--gold); font-weight: 600; }
 .foot { margin-top: 12px; display: flex; gap: 8px; }
 .grow { flex: 1; }
 .foot button { width: 100%; padding: 10px; }

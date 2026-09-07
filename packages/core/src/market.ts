@@ -50,6 +50,10 @@ export class MarketSim {
   /** 事件冲击的剩余施加天数：factorId -> {shock, days}（多事件叠加） */
   private activeShocks: Record<string, Array<{ perDay: number; days: number }>> = {};
 
+  /** 因子日变化历史（环形，供产品净值懒计算回溯）：最近 40 天 */
+  factorHistory: Array<{ date: IsoDate; rets: Record<string, number> }> = [];
+  private static HISTORY_CAP = 40;
+
   constructor(
     factors: MarketFactorDef[],
     industries: IndustryIndexDef[],
@@ -143,7 +147,8 @@ export class MarketSim {
         const v = day.rets[fid] ?? 0;
         const fdef = this.factors.find((f) => f.id === fid);
         if (fdef?.is_rate) {
-          // 利率/利差/汇率型因子：变动按 beta 直接叠加（利率上行为负贡献，故内容里用负 beta 表达）
+          // 利率/利差型因子：beta 为"收益率对利率变动的敏感度"（如 -1.6 = 利率+1bp 收益 -0.16%）。
+          // rets 单位是小数（0.0001 = 1bp），乘以 100 折算为百分点敏感度。
           r += beta * v * 100;
         } else if (fid === 'vix' || fid === 'risk_g' || fid === 'liquidity' || fid === 'sentiment_dom') {
           // 指数型情绪/状态因子：按变化率缩放
@@ -169,6 +174,9 @@ export class MarketSim {
     }
 
     this.sentiment = this.sentiment * 0.97 + (day.sentiment - this.sentiment) * 0.15;
+
+    this.factorHistory.push({ date, rets: day.rets });
+    if (this.factorHistory.length > MarketSim.HISTORY_CAP) this.factorHistory.shift();
 
     const snap: MarketSnapshot = {
       date,

@@ -2,6 +2,9 @@ import type { ProductDef, ClientDef, IsoDate, MarketSnapshot, ActionResult, Acti
 import { GRADE_NAMES } from './types';
 import { Rng } from './rng';
 import { MarketSim } from './market';
+import { productNavAt, productOnShelf } from './nav';
+import { monthlyKpiScore, kpiGradeName, monthlyBonus, isOpeningSeason, checkPromotion, PROMOTION_PATH, type PromotionCheckResult } from './career';
+import { RandomEventEngine, type RandomEventInstance, type RandomEventOutcome } from './random-event-engine';
 
 /** 各帧的行动点上限（规划书 3.2：日 4 / 周 10 / 月 32-40，取 36） */
 export const AP_PER_FRAME: Record<TimeFrame, number> = { day: 4, week: 10, month: 36 };
@@ -39,6 +42,70 @@ export class Game {
   /** 供 UI 层派生独立随机流（考试抽题等），不干扰主 rng 序列 */
   rngNextInt(): number {
     return Math.floor(this.rng.next() * 0x7fffffff);
+  }
+
+  /** 随机事件引擎（内容池由 shell 注入） */
+  eventEngine: RandomEventEngine | null = null;
+  /** 待玩家决策的随机事件（UI 弹窗） */
+  pendingEvent: RandomEventInstance | null = null;
+
+  injectEvents(pool: RandomEventInstance[], rng: Rng) {
+    this.eventEngine = new RandomEventEngine(pool, rng);
+  }
+
+  /** 帧推进后掷骰随机事件（返回事件供 UI 弹窗；效果在玩家决策/确认后结算） */
+  rollRandomEvent(): RandomEventInstance | null {
+    if (!this.eventEngine || this.pendingEvent) return null;
+    const year = Number(this.date.slice(0, 4));
+    const ev = this.eventEngine.roll(this.forceDayDays > 0 ? 'day' : this.frame, year, this.date);
+    if (ev) {
+      this.pendingEvent = ev;
+    }
+    return ev;
+  }
+
+  /** 应用无分支事件 / 玩家选择的分支 */
+  resolveEvent(choiceIdx?: number): RandomEventOutcome | null {
+    const ev = this.pendingEvent;
+    if (!ev) return null;
+    this.pendingEvent = null;
+    const a = this.player.attrs;
+    let eff = ev.effects;
+    let outcome = '';
+    let risk: 'comply' | 'grey' | 'red' | undefined;
+    let teach: string | undefined;
+    if (ev.choices && ev.choices.length > 0) {
+      const idx = choiceIdx ?? 0;
+      const ch = ev.choices[Math.min(idx, ev.choices.length - 1)];
+      eff = ch.effects;
+      outcome = ch.outcome;
+      risk = ch.risk;
+      teach = ch.teach;
+      if (ch.risk === 'red') {
+        this.violations += 1;
+        a.rep = Math.max(0, a.rep - 10);
+      }
+    }
+    if (eff.trust) {
+      for (const c of this.clients) {
+        if (c.status === 'active') c.trust = Math.max(0, Math.min(100, c.trust + eff.trust));
+      }
+    }
+    if (eff.stress) a.stress = Math.max(0, a.stress + eff.stress);
+    if (eff.fame) a.fame = Math.max(0, a.fame + eff.fame);
+    if (eff.aum) this.player.aum = Math.max(0, this.player.aum + eff.aum);
+    // income 效果记入日志（月度结算并入工资）
+    const effTexts: string[] = [];
+    if (eff.trust) effTexts.push(`全体客户信任 ${eff.trust > 0 ? '+' : ''}${eff.trust}`);
+    if (eff.stress) effTexts.push(`压力 ${eff.stress > 0 ? '+' : ''}${eff.stress}`);
+    if (eff.fame) effTexts.push(`知名度 ${eff.fame > 0 ? '+' : ''}${eff.fame}`);
+    if (eff.aum) effTexts.push(`AUM ${eff.aum > 0 ? '+' : ''}${fmtMoney(eff.aum)}`);
+    if (eff.income) effTexts.push(`现金 ${eff.income > 0 ? '+' : ''}${fmtMoney(eff.income)}`);
+    this.log.push({
+      date: this.date,
+      text: `【事件】${ev.title}：${outcome || '……'}（${effTexts.join('，') || '无直接影响'}）`,
+    });
+    return { eventId: ev.id, title: ev.title, outcomeText: outcome, effects: eff, risk, teach };
   }
   player = {
     name: '林奇安',
@@ -243,12 +310,89 @@ export class Game {
       ins_target: 100_000 * (1 + growth * 0.22),
       ins_done: 0,
     };
+    // 客户月度情绪结算：持仓浮亏侵蚀信任，浮盈修复信任（长线客户经营的核心循环）
+    const notes: string[] = [];
+    for (const c of this.clients) {
+      if (c.holdings.length === 0 || c.status !== 'active') continue;
+      const pv = this.clientPortfolioValue(c.id);
+      const cost = c.holdings.reduce((s: number, h) => s + h.amount, 0);
+      const pnlPct = cost > 0 ? (pv / cost - 1) * 100 : 0;
+      const before = c.trust;
+      if (pnlPct < -5) {
+        c.trust = Math.max(0, c.trust + Math.max(-4, pnlPct / 8));
+        if (before - c.trust > 1) notes.push(`${c.name} 因持仓回撤有些不安（${pnlPct.toFixed(1)}%）。`);
+      } else if (pnlPct > 5) {
+        c.trust = Math.min(100, c.trust + Math.min(3, pnlPct / 15));
+        if (c.trust - before > 1) notes.push(`${c.name} 对收益很满意，介绍朋友来网点（信任 +${(c.trust - before).toFixed(0)}）。`);
+      }
+    }
+    // KPI 评级与绩效
+    const score = monthlyKpiScore(this.kpi);
+    const grade = kpiGradeName(score);
+    const opening = isOpeningSeason(m);
+    const gained = aumGainBuffer.reduce((s, v) => s + v, 0);
+    const bonus = monthlyBonus(y, gained, score, opening);
     const salary = 4500 + this.player.grade * 1500;
-    const bonus = Math.round(this.player.aum * 0.0002);
+    this.monthScores.push(score);
+    if (this.monthScores.length > 6) this.monthScores.shift();
+    this.violations = this.violations; // 占位：违规记录由合规系统维护
+
     this.log.push({
       date: snap.date,
-      text: `【${y}年${m}月】新的一月开始，KPI 已更新。上月工资 ${fmtMoney(salary)} + 绩效 ${fmtMoney(bonus)}。`,
+      text: `【${y}年${m}月】月度考核 ${grade}（${score} 分）${opening ? '，开门红冲刺中！' : ''}。工资 ${fmtMoney(salary)} + 绩效 ${fmtMoney(bonus)}。${notes.slice(0, 3).join(' ')}`,
     });
+    aumGainBuffer.length = 0;
+  }
+
+  /** 近 6 月平均考核分（晋升用） */
+  recentSeasonScore(): number {
+    if (this.monthScores.length === 0) return 0;
+    return this.monthScores.reduce((a, b) => a + b, 0) / this.monthScores.length;
+  }
+
+  monthScores: number[] = [];
+  violations = 0;
+
+  /** 贵宾客户数：金融资产 ≥ 50 万 */
+  vipClientCount(): number {
+    return this.clients.filter((c) => {
+      const total = c.finance.deposits + c.finance.wealth_mgmt + c.finance.funds
+        + this.clientPortfolioValue(c.id);
+      return total >= 500_000 && c.status === 'active';
+    }).length;
+  }
+
+  /** 私行客户数：金融资产 ≥ 600 万 */
+  privateClientCount(): number {
+    return this.clients.filter((c) => {
+      const total = c.finance.deposits + c.finance.wealth_mgmt + c.finance.funds
+        + this.clientPortfolioValue(c.id);
+      return total >= 6_000_000 && c.status === 'active';
+    }).length;
+  }
+
+  /** 晋升检查：返回各级评审结果 */
+  promotionCheck(): PromotionCheckResult[] {
+    const ctx = {
+      certs: this.player.certs,
+      aum: this.player.aum,
+      vipClients: this.vipClientCount(),
+      privateClients: this.privateClientCount(),
+      seasonScore: this.recentSeasonScore(),
+      violations: this.violations,
+    };
+    return PROMOTION_PATH.map((req) => checkPromotion(this.player.grade, req, ctx));
+  }
+
+  /** 执行晋升（通过评审后调用） */
+  applyPromotion(): boolean {
+    const results = this.promotionCheck();
+    const next = results.find((r) => r.req.grade === this.player.grade + 1);
+    if (!next || !next.eligible) return false;
+    this.player.grade = next.req.grade;
+    this.player.income_month += 2500;
+    this.log.push({ date: this.date, text: `【晋升】恭喜！你已晋升为「${next.req.name}」！月薪上调，新职级解锁更粗的时间帧。` });
+    return true;
   }
 
   /** 执行一次行动 */
@@ -359,22 +503,21 @@ export class Game {
     if (roll < 0.25 + charm / 250) {
       const amt = this.dealAmount(c);
       const prod = this.suggestProduct(c);
-      c.holdings.push({ productId: prod.id, amount: amt, nav_at_buy: 1, bought_at: this.date });
-      this.player.aum += amt;
-      c.trust = Math.min(100, c.trust + 5);
-      const inc = Math.round(amt * 0.004);
-      a.sales += 0.8;
+      const res = this.executeDeal(c, prod, amt);
+      const inc = res.ok ? Math.round(amt * 0.004) : 0;
+      a.sales += res.ok ? 0.8 : 0;
       a.stress += 1;
-      if (prod.category === 'deposit') this.kpi.deposit_done += amt;
-      else if (prod.category === 'wealth_mgmt') this.kpi.wm_done += amt;
-      else if (prod.category === 'fund') this.kpi.fund_done += amt;
-      else if (prod.category === 'insurance') this.kpi.ins_done += amt;
-      return {
-        text: `${c.name} 到访。你耐心了解了需求后，推荐了「${prod.name}」，成功成交 ${fmtMoney(amt)}！`,
-        trust_delta: 5,
-        aum_delta: amt,
-        income_delta: inc,
-      };
+      if (res.ok) {
+        return {
+          text: `${c.name} 到访。你耐心了解了需求后，推荐了「${prod.name}」，成功成交 ${fmtMoney(amt)}！`,
+          trust_delta: 5,
+          aum_delta: amt,
+          income_delta: inc,
+        };
+      }
+      a.comm += 0.4;
+      c.trust = Math.min(100, c.trust + 1);
+      return { text: `${c.name} 对「${prod.name}」感兴趣，但 ${res.reason}，本轮未成交。` };
     }
     a.comm += 0.4;
     c.trust = Math.min(100, c.trust + 1);
@@ -388,12 +531,57 @@ export class Game {
     return Math.max(10000, Math.round((base * r) / 1000) * 1000);
   }
 
+  /** 客户在我行总持仓现值（盯市） */
+  clientPortfolioValue(clientId: string): number {
+    const c = this.clients.find((x) => x.id === clientId);
+    if (!c) return 0;
+    let total = 0;
+    for (const h of c.holdings) {
+      const p = this.products.find((x) => x.id === h.productId);
+      if (!p) { total += h.amount; continue; }
+      total += productNavAt(this.sim, p, this.sim.cursor, this.seed) / Math.max(0.0001, h.nav_at_buy) * h.amount;
+    }
+    return total;
+  }
+
+  /** 全体客户持仓市值合计（真实 AUM 盯市） */
+  totalPortfolioValue(): number {
+    let t = 0;
+    for (const c of this.clients) t += this.clientPortfolioValue(c.id);
+    return t;
+  }
+
   /** 适当性最小校验 + 推荐产品 */
   suggestProduct(c: ClientDef): ProductDef {
-    const prods = this.products.filter((p) => p.risk_level <= c.risk.level && inEra(p, this.date));
-    const pool = prods.length ? prods : this.products.filter((p) => p.risk_level === 1 && inEra(p, this.date));
+    const prods = this.products.filter((p) => p.risk_level <= c.risk.level && productOnShelf(p, this.date));
+    const pool = prods.length ? prods : this.products.filter((p) => p.risk_level === 1 && productOnShelf(p, this.date));
     return this.rng.pick(pool);
   }
+
+  /**
+   * 成交：资金池约束（客户可投资资产）+ 净值基准记录 + KPI 归属。
+   * 返回 null 表示资金不足/不适当。
+   */
+  executeDeal(c: (typeof this.clients)[number], p: ProductDef, amount: number): { ok: boolean; reason?: string } {
+    if (amount < p.min_amount) return { ok: false, reason: `低于起购金额 ${fmtMoney(p.min_amount)}` };
+    if (p.risk_level > c.risk.level) return { ok: false, reason: `超出客户风险承受能力（${c.risk.level} 级客户 vs R${p.risk_level} 产品）` };
+    if (!productOnShelf(p, this.date)) return { ok: false, reason: '该产品已不在当年代货架上' };
+    const already = c.holdings.reduce((s, h) => s + h.amount, 0);
+    const pool = c.finance.deposits + c.finance.wealth_mgmt + c.finance.funds + c.finance.annual_cashflow * 0.5;
+    if (already + amount > pool * 0.85) return { ok: false, reason: '超出客户可投资资产的合理比例' };
+    const nav = productNavAt(this.sim, p, this.sim.cursor, this.seed);
+    c.holdings.push({ productId: p.id, amount, nav_at_buy: nav, bought_at: this.date });
+    this.player.aum += amount;
+    c.trust = Math.min(100, c.trust + 5);
+    aumGainBuffer.push(amount);
+    if (p.category === 'deposit') this.kpi.deposit_done += amount;
+    else if (p.category === 'wealth_mgmt') this.kpi.wm_done += amount;
+    else if (p.category === 'fund') this.kpi.fund_done += amount;
+    else if (p.category === 'insurance') this.kpi.ins_done += amount;
+    return { ok: true };
+  }
+
+  seed = 42;
 
   products: ProductDef[] = [];
 
@@ -407,6 +595,9 @@ function inEra(p: ProductDef, date: IsoDate): boolean {
   const y = Number(date.slice(0, 4));
   return y >= p.era[0] && y <= p.era[1];
 }
+
+/** 月度新增 AUM 累计（供薪资绩效） */
+export const aumGainBuffer: number[] = [];
 
 export function fmtMoney(n: number): string {
   if (n >= 100000000) return `${(n / 100000000).toFixed(2)} 亿`;

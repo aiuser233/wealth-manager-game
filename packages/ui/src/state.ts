@@ -1,10 +1,11 @@
 import { reactive, computed } from 'vue';
 import {
-  GameCalendar, MarketSim, Game, Rng,
+  GameCalendar, MarketSim, Game, Rng, Reception,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
-  type TimeFrame, type ExamPaper, type ExamResult, buildPaper, gradePaper, EXAM_DEFS,
+  type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession,
+  buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, examBank } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, examBank, randomEvents } from '@fm/content';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -48,9 +49,26 @@ export const state = reactive({
 
   /** 金手指记忆 */
   memoryHint: '' as string,
+
+  /** 接待对话（进行中的会话） */
+  reception: null as ReceptionSession | null,
+  /** 对话日志（客户/玩家） */
+  receptionLog: [] as Array<{ who: 'client' | 'me' | 'sys'; text: string }>,
+  /** 已揭示的真实需求 */
+  receptionRevealed: false,
+  /** 待推荐的金额 */
+  receptionAmount: 0,
+  /** 通用弹窗（晋升/事件/月度结算） */
+  modal: null as null | { kind: 'promotion' | 'month' | 'event'; payload?: any },
 });
 
 let game: Game;
+/** 读档替换用的引用容器 */
+const gameRef: { current: Game | null } = { current: null };
+
+export function getGame(): Game {
+  return gameRef.current ?? game;
+}
 
 export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   const sim = new MarketSim(
@@ -58,6 +76,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
     contentBundle.releases, cal, seed, eraDrift, eraLevel,
   );
   game = new Game(sim, cal, seed, contentBundle.clients);
+  gameRef.current = game;
   game.products = contentBundle.products;
   game.player.name = name || '林奇安';
   game.player.gender = gender;
@@ -79,14 +98,12 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   state.baseSnap = { day: null, week: null, month: null, since_view: null };
   state.selectedClientId = game.clients[0]?.id ?? '';
   refreshCaches();
+  // 注入随机事件池
+  game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
 }
 
-export function getGame(): Game {
-  return game;
-}
-
-export const gameReady = computed(() => state.started && !!game);
+export const gameReady = computed(() => state.started && (gameRef.current !== null || typeof game !== 'undefined'));
 
 function refreshCaches() {
   state.lastSnap = game.lastSnap;
@@ -174,7 +191,18 @@ export function advanceFrame(daysOverride?: number): number {
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
   }
+  // 帧末掷骰随机事件（UI 弹窗决策）
+  if (!res.interrupted) {
+    const ev = game.rollRandomEvent();
+    if (ev) state.modal = { kind: 'event', payload: ev };
+  }
   return res.daysAdvanced;
+}
+
+/** 玩家对随机事件做出选择 */
+export function resolveEventChoice(choiceIdx?: number) {
+  game.resolveEvent(choiceIdx);
+  state.modal = null;
 }
 
 export function pushLog(text: string) {
@@ -258,6 +286,144 @@ export function toggleMulti(idx: number, opt: number) {
   if (pos >= 0) arr.splice(pos, 1);
   else arr.push(opt);
   state.examAnswers[idx] = arr;
+}
+
+// ================= 接待对话 =================
+
+let receptionEngine: Reception | null = null;
+
+/** 开始接待（消耗 AP 由调用方控制；这里只生成会话） */
+export function startReception(): boolean {
+  const g = getGame();
+  if (state.apUsed >= state.apMax) return false;
+  receptionEngine ??= new Reception(g.rng);
+  const s = receptionEngine.start(g.clients);
+  if (!s) return false;
+  state.reception = s;
+  state.receptionRevealed = false;
+  state.receptionAmount = Math.max(10000, Math.round(s.pool * s.need.intentRatio / 10000) * 10000);
+  state.receptionLog = [
+    { who: 'client', text: s.need.surface },
+  ];
+  return true;
+}
+
+/** 挖潜 */
+export function probeReception(probeIdx: number) {
+  const s = state.reception;
+  if (!s || !receptionEngine) return;
+  const r = receptionEngine.probe(s, probeIdx);
+  state.receptionLog.push({ who: 'me', text: s.need.probes[probeIdx].text });
+  state.receptionLog.push({ who: 'client', text: r.reply });
+  s.trustGained += 0; // probe 内部已累计
+  if (s.revealed && !state.receptionRevealed) {
+    state.receptionRevealed = true;
+    state.receptionLog.push({ who: 'sys', text: `【诊断】${s.need.hidden}` });
+  }
+}
+
+/** 放弃接待 */
+export function cancelReception() {
+  const g = getGame();
+  if (state.reception) {
+    const c = g.clients.find((x) => x.id === state.reception!.clientId);
+    if (c) c.trust = Math.max(0, c.trust - 2);
+  }
+  state.reception = null;
+  state.receptionLog = [];
+}
+
+/** 推荐产品并成交 */
+export function recommendReception(productId: string) {
+  const s = state.reception;
+  const g = getGame();
+  if (!s || !receptionEngine) return;
+  const product = g.products.find((p) => p.id === productId);
+  const client = g.clients.find((c) => c.id === s.clientId);
+  if (!product || !client) return;
+  const evalRes = receptionEngine.evaluate(s, product, client, state.receptionAmount);
+  state.receptionLog.push({ who: 'me', text: `我推荐了「${product.name}」，建议投入 ${fmtMoneyCN(state.receptionAmount)}。` });
+  state.receptionLog.push({ who: 'client', text: evalRes.reason });
+  if (evalRes.deal) {
+    const res = g.executeDeal(client, product, state.receptionAmount);
+    state.receptionLog.push({ who: 'sys', text: res.ok ? `✓ 成交！AUM +${fmtMoneyCN(state.receptionAmount)}` : `✗ ${res.reason}` });
+  }
+  // 信任结算（挖潜收益 + 推荐反馈）
+  client.trust = Math.max(0, Math.min(100, client.trust + s.trustGained * 0.5 + evalRes.trustDelta));
+  // 结束会话
+  state.reception = null;
+}
+
+function fmtMoneyCN(n: number): string {
+  if (n >= 100000000) return `${(n / 100000000).toFixed(2)} 亿`;
+  if (n >= 10000) return `${(n / 10000).toFixed(1)} 万`;
+  return `${Math.round(n)}`;
+}
+
+// ================= 存档系统 =================
+
+/** 从存档 JSON 恢复游戏（引擎状态机重放到 cursor） */
+export function loadGameFromSave(data: any) {
+  const sim = new MarketSim(
+    contentBundle.factors, contentBundle.industries, contentBundle.events,
+    contentBundle.releases, cal, data.seed ?? 42, eraDrift, eraLevel,
+  );
+  const g = new Game(sim, cal, data.seed ?? 42, contentBundle.clients);
+  g.products = contentBundle.products;
+  // 重放市场状态机
+  const target = data.market?.cursor ?? 0;
+  while (sim.cursor < target) sim.stepToNext();
+  // 直接覆盖数值状态（存档里的状态优先，重放保证一致性）
+  if (data.market?.factorState) Object.assign(sim.factorState, data.market.factorState);
+  if (data.market?.industryState) Object.assign(sim.industryState, data.market.industryState);
+  if (data.market?.indicesState) Object.assign(sim.indicesState, data.market.indicesState);
+  if (typeof data.market?.sentiment === 'number') sim.sentiment = data.market.sentiment;
+  // 玩家
+  if (data.player) {
+    Object.assign(g.player, data.player);
+    g.player.attrs = { ...data.player.attrs };
+    g.player.certs = data.certs ?? data.player.certs ?? [];
+  }
+  if (data.kpi) Object.assign(g.kpi, data.kpi);
+  if (Array.isArray(data.monthScores)) g.monthScores = [...data.monthScores];
+  if (typeof data.memoryUses === 'number') g.memoryUses = data.memoryUses;
+  if (data.frame) { g.frame = data.frame; g.apMax = data.frame === 'month' ? 36 : data.frame === 'week' ? 10 : 4; }
+  if (typeof data.forceDayDays === 'number') g.forceDayDays = data.forceDayDays;
+  if (typeof data.apUsed === 'number') g.apUsed = data.apUsed;
+  if (typeof data.violations === 'number') g.violations = data.violations;
+  if (Array.isArray(data.clients)) {
+    for (const sc of data.clients) {
+      const gc = g.clients.find((x) => x.id === sc.id);
+      if (gc) {
+        gc.holdings = (sc.holdings ?? []).map((h: any) => ({ ...h }));
+        gc.trust = sc.trust ?? gc.trust;
+        gc.status = sc.status ?? 'active';
+      }
+    }
+  }
+  // 替换全局 game 引用：通过 newGame 重建再覆盖（简单可靠）
+  state.started = true;
+  state.news = Array.isArray(data.news) ? data.news : [];
+  state.log = Array.isArray(data.log) ? data.log : [];
+  state.todayActions = [];
+  state.apUsed = g.apUsed;
+  state.apMax = g.apMax;
+  state.lastSnap = null;
+  state.baseSnap = { day: null, week: null, month: null, since_view: null };
+  state.selectedClientId = g.clients[0]?.id ?? '';
+  state.memoryHint = '';
+  state.reception = null;
+  state.receptionLog = [];
+  // 重建 game 实例挂载（模块级 game 变量）
+  replaceGame(g);
+  state.seed = data.seed ?? 42;
+  pushLog(`【读档】已恢复到 ${g.date} 的进度。`);
+}
+
+/** 模块内 game 引用替换 */
+function replaceGame(g: Game) {
+  gameRef.current = g;
+  game = g;
 }
 
 export function fmtPct(v: number | undefined): string {

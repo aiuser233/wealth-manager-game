@@ -7,6 +7,8 @@ import { products } from './products';
 import { clients } from './clients';
 import { eraDrift, eraLevel } from './macro';
 import { examBank } from './exams';
+import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
+import { randomEvents } from './random-events';
 
 export const contentBundle: ContentBundle = {
   factors,
@@ -17,4 +19,4 @@ export const contentBundle: ContentBundle = {
   clients,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank };
+export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank, KNOWLEDGE, DEBRIEF_CARDS, randomEvents };
