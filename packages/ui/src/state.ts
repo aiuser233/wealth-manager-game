@@ -100,7 +100,38 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   refreshCaches();
   // 注入随机事件池
   game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
+  // 自动存档（新开局覆盖 1 号自动档）
+  try { localStorage.setItem('fm_save_0', serializeNow()); } catch { /* 存储满等异常忽略 */ }
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
+}
+
+/** 当前游戏状态序列化（自动存档用） */
+function serializeNow(): string {
+  const g = getGame();
+  return JSON.stringify({
+    version: 1,
+    savedAt: new Date().toISOString(),
+    seed: state.seed,
+    date: g.date,
+    player: { ...g.player, attrs: { ...g.player.attrs } },
+    kpi: { ...g.kpi },
+    monthScores: [...g.monthScores],
+    memoryUses: g.memoryUses,
+    frame: g.frame,
+    forceDayDays: g.forceDayDays,
+    apUsed: g.apUsed,
+    violations: g.violations,
+    market: {
+      factorState: { ...g.sim.factorState },
+      industryState: { ...g.sim.industryState },
+      indicesState: { ...g.sim.indicesState },
+      sentiment: g.sim.sentiment,
+      cursor: g.sim.cursor,
+    },
+    clients: g.clients.map((c) => ({ ...c, holdings: c.holdings.map((h) => ({ ...h })) })),
+    news: state.news.slice(0, 30),
+    log: state.log.slice(0, 60),
+  });
 }
 
 export const gameReady = computed(() => state.started && (gameRef.current !== null || typeof game !== 'undefined'));
@@ -191,11 +222,9 @@ export function advanceFrame(daysOverride?: number): number {
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
   }
-  // 帧末掷骰随机事件（UI 弹窗决策）
-  if (!res.interrupted) {
-    const ev = game.rollRandomEvent();
-    if (ev) state.modal = { kind: 'event', payload: ev };
-  }
+  // 帧末掷骰随机事件（中断日也掷，UI 弹窗决策）
+  const ev = game.rollRandomEvent();
+  if (ev) state.modal = { kind: 'event', payload: ev };
   return res.daysAdvanced;
 }
 
@@ -203,6 +232,8 @@ export function advanceFrame(daysOverride?: number): number {
 export function resolveEventChoice(choiceIdx?: number) {
   game.resolveEvent(choiceIdx);
   state.modal = null;
+  // 月初自动存档钩子：事件结算后落一个自动档
+  try { localStorage.setItem('fm_save_1', serializeNow()); } catch { /* 忽略 */ }
 }
 
 export function pushLog(text: string) {
