@@ -94,13 +94,13 @@ describe('游戏主控', () => {
   });
   it('金手指记忆：2018 后归零提示', () => {
     const g = makeGame();
-    // 快进到 2019
+    // 快进到 2019（约 3300 个交易日，全量演算较慢，放宽超时）
     while (g.sim.cursor < cal.indexOf('2019-06-03')) {
       g.sim.stepToNext();
     }
     const mem = g.useMemory();
     expect(mem.hint).toContain('归零');
-  });
+  }, 30000);
 });
 
 describe('产品净值引擎', () => {

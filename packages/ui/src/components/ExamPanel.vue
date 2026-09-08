@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive } from '../state';
+import { storage } from '../storage';
 import { EXAM_DEFS } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
@@ -32,7 +33,7 @@ function submitDaily() {
 }
 
 function clearWrong() {
-  localStorage.removeItem('fm_wrong_book');
+  storage.remove('fm_wrong_book');
   refreshWrong();
 }
 

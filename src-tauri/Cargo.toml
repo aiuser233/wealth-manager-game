@@ -1,0 +1,26 @@
+[package]
+name = "fm-game-tauri"
+version = "0.1.0"
+description = "重生之我是理财经理 — 银行培训游戏化平台（桌面壳）"
+authors = ["fm-game"]
+edition = "2021"
+rust-version = "1.77"
+
+# 自动更新占位：P3 仅保留配置位，签名密钥未配置时 updater 不启用
+# 后续接入 tauri-plugin-updater 时在此声明
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+
+[profile.release]
+# 银行内网分发：体积优先
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

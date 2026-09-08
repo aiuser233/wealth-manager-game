@@ -7,6 +7,7 @@ import {
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { storage } from './storage';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -116,7 +117,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
   // 自动存档（新开局覆盖 1 号自动档）
-  try { localStorage.setItem('fm_save_0', serializeNow()); } catch { /* 存储满等异常忽略 */ }
+  storage.set('fm_save_0', serializeNow());
   // 新手引导（跳过条件：本浏览器已完成过）
   startTutorial();
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
@@ -413,7 +414,7 @@ export const tutorial = ref<TutorialStep | null>(null);
 
 /** 开新档时启动引导（存档恢复不触发） */
 export function startTutorial() {
-  const done = localStorage.getItem('fm_tutorial_done') === '1';
+  const done = storage.get('fm_tutorial_done') === '1';
   if (done) return;
   tutorial.value = { idx: 0, ...TUTORIAL_STEPS[0] };
 }
@@ -423,7 +424,7 @@ export function tutorialNext() {
   if (!cur) return;
   if (cur.idx + 1 >= TUTORIAL_STEPS.length) {
     tutorial.value = null;
-    try { localStorage.setItem('fm_tutorial_done', '1'); } catch { /* 忽略 */ }
+    storage.set('fm_tutorial_done', '1');
   } else {
     tutorial.value = { idx: cur.idx + 1, ...TUTORIAL_STEPS[cur.idx + 1] };
   }
@@ -434,7 +435,7 @@ export function resolveEventChoice(choiceIdx?: number) {
   game.resolveEvent(choiceIdx);
   state.modal = null;
   // 月初自动存档钩子：事件结算后落一个自动档
-  try { localStorage.setItem('fm_save_1', serializeNow()); } catch { /* 忽略 */ }
+  storage.set('fm_save_1', serializeNow());
 }
 
 export function pushLog(text: string) {
@@ -499,8 +500,8 @@ export function submitExam() {
   const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
   pushWrongQuestions(state.examPaper, res.perQuestion);
   try {
-    const attempts = Number(localStorage.getItem('fm_exam_attempts') ?? 0) + 1;
-    localStorage.setItem('fm_exam_attempts', String(attempts));
+    const attempts = Number(storage.get('fm_exam_attempts') ?? 0) + 1;
+    storage.set('fm_exam_attempts', String(attempts));
   } catch { /* 忽略 */ }
   if (res.passed && exam && !game.player.certs.includes(exam.name)) {
     game.player.certs.push(exam.name);
@@ -547,7 +548,7 @@ export interface WrongQuestion {
 
 /** 错题本（按 questionId 去重） */
 export function wrongBook(): WrongQuestion[] {
-  const raw = localStorage.getItem('fm_wrong_book');
+  const raw = storage.get('fm_wrong_book');
   return raw ? JSON.parse(raw) : [];
 }
 
@@ -566,7 +567,7 @@ function pushWrongQuestions(paper: ExamPaper, per: number[]) {
       knowledge_tags: q.knowledge_tags,
     });
   });
-  localStorage.setItem('fm_wrong_book', JSON.stringify(book.slice(0, 200)));
+  storage.set('fm_wrong_book', JSON.stringify(book.slice(0, 200)));
 }
 
 /** 知识点弱项雷达：错题按 knowledge_tag 聚合 */
@@ -591,14 +592,14 @@ export function cramForExam(): string {
   g.player.attrs.stress += 3;
   g.player.energy = Math.max(0, g.player.energy - 8);
   // 冲刺 buff：24h 内通过率提升（简单实现为 pro 临时加成记录）
-  localStorage.setItem('fm_cram_until', String(Date.now() + 24 * 3600 * 1000));
+  storage.set('fm_cram_until', String(Date.now() + 24 * 3600 * 1000));
   pushLog('【考前冲刺】熬了个通宵刷题……专业力 +0.5，通过率临时提升，但压力 +3、精力 -8。');
   return '冲刺完成！通过率临时提升（持续到明天）。';
 }
 
 /** 冲刺 buff 是否生效 */
 export function cramActive(): boolean {
-  const until = Number(localStorage.getItem('fm_cram_until') ?? 0);
+  const until = Number(storage.get('fm_cram_until') ?? 0);
   return Date.now() < until;
 }
 
@@ -608,13 +609,13 @@ export function dailyQuestion(): { q: ExamQuestion; done: boolean } | null {
   if (pool.length === 0) return null;
   const dateKey = Number(game.date.replace(/-/g, ''));
   const idx = dateKey % pool.length;
-  const done = localStorage.getItem(`fm_daily_${game.date}`) === '1';
+  const done = storage.get(`fm_daily_${game.date}`) === '1';
   return { q: pool[idx], done };
 }
 
 /** 完成每日一题（答对给情绪加成） */
 export function finishDaily(correct: boolean): string {
-  localStorage.setItem(`fm_daily_${game.date}`, '1');
+  storage.set(`fm_daily_${game.date}`, '1');
   if (correct) {
     game.player.attrs.stress = Math.max(0, game.player.attrs.stress - 2);
     game.player.attrs.pro += 0.3;

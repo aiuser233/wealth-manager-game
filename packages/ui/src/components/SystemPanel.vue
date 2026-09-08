@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow } from '../state';
 import { buildReport, reportHtml, downloadReport } from '../report';
+import { storage } from '../storage';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
@@ -13,7 +14,7 @@ function exportReport() {
     weakSpots: weakSpotRadar(),
     wrongTotal: book.length,
     wrongCorrected: 0,
-    examAttempts: Number(localStorage.getItem('fm_exam_attempts') ?? 0),
+    examAttempts: Number(storage.get('fm_exam_attempts') ?? 0),
     lifeLog: state.log.filter((l) => l.text.startsWith('【人生线】')).map((l) => ({ date: l.date, text: l.text.replace('【人生线】', '') })),
     questEngine: state.questEngine,
   });
@@ -30,7 +31,7 @@ const message = ref('');
 function refreshSaves() {
   const list: SaveMeta[] = [];
   for (let i = 0; i < 11; i++) {
-    const raw = localStorage.getItem(`fm_save_${i}`);
+    const raw = storage.get(`fm_save_${i}`);
     if (!raw) continue;
     try {
       const data = JSON.parse(raw);
@@ -60,14 +61,14 @@ function serializeGame(): string {
 
 function saveTo(slot: number, auto: boolean) {
   const raw = serializeGame();
-  localStorage.setItem(`fm_save_${slot}`, raw);
+  storage.set(`fm_save_${slot}`, raw);
   message.value = auto ? `自动存档完成（槽位 ${slot + 1}）` : `已保存到槽位 ${slot + 1}`;
   refreshSaves();
   setTimeout(() => (message.value = ''), 2500);
 }
 
 function loadFrom(slot: number) {
-  const raw = localStorage.getItem(`fm_save_${slot}`);
+  const raw = storage.get(`fm_save_${slot}`);
   if (!raw) return;
   message.value = '读档完成（引擎状态已恢复，UI 刷新后生效）';
   // 读档实现：重建 MarketSim 到 cursor（重放因子状态机）
