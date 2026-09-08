@@ -4,6 +4,20 @@ import { Rng } from './rng';
 /** 题型 */
 export type QuestionType = 'single' | 'multiple' | 'judge';
 
+/** 双审元数据（合规门基石）：所有教学内容统一附加 */
+export interface ReviewMeta {
+  status: 'draft' | 'reviewed' | 'approved';
+  /** 内容依据的公开监管文件/文献 */
+  source_notes: string[];
+  /** 金融知识审校人 */
+  k_reviewer?: string | null;
+  /** 合规表述审校人 */
+  c_reviewer?: string | null;
+  reviewed_at?: string | null;
+  /** 分年代教学点说明 */
+  era_note?: string;
+}
+
 /** 题库题目（规划书 7.4 JSON 结构） */
 export interface ExamQuestion {
   id: string;
@@ -19,6 +33,8 @@ export interface ExamQuestion {
   explanation: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   source_note?: string;
+  /** 双审元数据（存量内容批量补齐后必填） */
+  review?: ReviewMeta;
 }
 
 /** 考试科目定义 */

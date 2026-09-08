@@ -1,4 +1,5 @@
 import type { ExamQuestion } from '@fm/core';
+import { withReview } from '../../tools/content-tools/checks/with-review.mts';
 
 /**
  * 题库样例卷（M1 起扩至每卷 ≥600 题；本文件为出题管线验证用种子题）。
@@ -10,14 +11,17 @@ const B = '汇诚银行';
 const F = '玄财基金';
 
 /** 快捷构造器（single） */
-const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
+const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
+}
 /** 快捷构造器（multiple） */
-const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
+const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
+}
 /** 快捷构造器（judge） */
-const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+}
 
 export const examBank: ExamQuestion[] = [
   // ================= 银行从业·法律法规与综合能力 =================
@@ -33,7 +37,7 @@ export const examBank: ExamQuestion[] = [
   // ================= 银行从业·个人理财 =================
   s('bp001', 'exam_bank_pf', '风险测评', ['suitability'], '风险测评 R1–R5 中，R1 对应的投资者类型是（）。', ['保守型', '平衡型', '成长型', '进取型'], 0, 'R1 为保守型（谨慎型），仅适合低风险产品。', 1),
   s('bp002', 'exam_bank_pf', '适当性', ['suitability'], '客户风险测评结果为 R2，下列可以购买的产品风险等级是（）。', ['R1 和 R2', 'R1 至 R5', 'R3 及以上', '任何产品'], 0, '风险匹配原则：只能销售风险等级不高于客户测评等级的产品。', 1),
-  s('bp003', 'exam_bank_pf', '理财产品', ['nav_product'], '净值型理财产品的收益特征是（）。', ['固定不变', '随净值波动，可能亏损', '保证本金且保证收益', '只赚不赔'], 1, '净值型产品收益随净值波动，不保本不保收益。资管新规的核心教学点。', 2),
+  s('bp003', 'exam_bank_pf', '理财产品', ['nav_product'], '净值型理财产品的收益特征是（）。', ['固定不变', '随净值波动，可能亏损', '保证本金且收益固定', '无风险高收益'], 1, '净值型产品收益随净值波动，不保本不保收益。资管新规的核心教学点。', 2),
   s('bp004', 'exam_bank_pf', '理财产品', ['nav_product'], '业绩比较基准的正确理解是（）。', ['银行承诺的最低收益', '收益的计算依据和目标参考，不是承诺', '历史收益的保证', '法定利率'], 1, '业绩比较基准仅作参考目标，不构成收益承诺。', 2),
   s('bp005', 'exam_bank_pf', '家庭规划', ['family_lifecycle'], '家庭形成期（新婚至子女出生）的理财重点通常是（）。', ['养老规划', '购房与保障、积累资产', '遗产安排', '大额慈善捐赠'], 1, '家庭形成期收入上升、支出增加，重点是购房、保障与资产积累。', 2),
   m('bp006', 'exam_bank_pf', '适当性', ['suitability'], '销售理财产品前，理财经理应当（）。', ['了解客户的风险偏好', '了解客户的财务状况', '向客户充分揭示产品风险', '替客户填写风险测评问卷'], [0, 1, 2], '了解客户、了解产品、充分揭示是适当性三要素；代客填问卷违规。', 2),
@@ -85,14 +89,14 @@ export const examBank: ExamQuestion[] = [
   s('bp009', 'exam_bank_pf', '保险', ['insurance_basics'], '重疾保险的主要功能是（）。', ['资产增值', '收入损失补偿与医疗费用保障', '养老替代', '避税'], 1, '重疾险补偿患病后的收入中断与康复费用。', 1),
   s('bp010', 'exam_bank_pf', '理财流程', ['planning_process'], '理财规划服务流程的第一步是（）。', ['推荐产品', '建立客户关系与收集信息', '签署合同', '资产配置'], 1, '先建立信任、全面收集客户信息，才谈得上规划。', 1),
   s('ef009', 'exam_fund', '基金风险', ['fund_nav'], '基金的过往业绩（）。', ['代表未来收益', '不预示未来表现，仅供参考', '可以保证本金', '与管理人无关'], 1, '"过往业绩不预示未来表现"是法定销售话术。', 1),
-  s('ef010', 'exam_fund', '基金销售', ['red_lines'], '基金销售中可以向客户承诺的是（）。', ['最低收益', '本金安全', '如实说明产品风险与特征', '稳赚不赔'], 2, '销售中唯一能承诺的是如实披露，任何收益承诺都违规。', 1),
+  s('ef010', 'exam_fund', '基金销售', ['red_lines'], '基金销售中可以向客户承诺的是（）。', ['最低收益', '本金安全', '如实说明产品风险与特征', '「稳赚不赔」的承诺'], 2, '销售中唯一能承诺的是如实披露，任何收益承诺都违规（含「保本保收益」等变体）。', 1),
   s('es008', 'exam_securities', '市场层次', ['market_basics'], '创业板市场主要服务的企业类型是（）。', ['大型国企', '成长型创新创业企业', '外资企业', '政府平台'], 1, '创业板定位于成长型创新创业企业。', 1),
-  s('es009', 'exam_securities', '基金结构', ['structured_product'], '分级基金 B 份额的特点是（）。', ['稳健低风险', '借助杠杆放大涨跌', '保本保息', '只涨不跌'], 1, 'B 份额向 A 份额融资获得杠杆，波动被放大。', 2),
+  s('es009', 'exam_securities', '基金结构', ['structured_product'], '分级基金 B 份额的特点是（）。', ['稳健低风险', '借助杠杆放大涨跌', '「保本保息」承诺', '只涨不跌'], 1, 'B 份额向 A 份额融资获得杠杆，波动被放大。', 2),
   s('af009', 'exam_afp', '行为金融', ['behavior_finance'], '投资者亏钱时死扛不卖、赚钱时急忙了结，属于（）。', ['锚定效应', '处置效应', '羊群效应', '过度自信'], 1, '处置效应：急于兑现盈利、拖延兑现亏损。', 2),
   s('af010', 'exam_afp', '教育金', ['education_fund'], '教育金储备宜采用的资产组合基调是（）。', ['全仓高波动股票', '随使用年限临近逐步降低风险', '全仓期货', '高杠杆配资'], 1, '目标日期临近应逐步降波动（下滑轨道）。', 2),
   s('cf009', 'exam_cfp', '信托', ['family_trust'], '2025 年前后的"传承浪潮"中，高净值客户最常采用的顶层工具是（）。', ['口头遗嘱', '家族信托与保险金信托', '代持协议', '境外赌注'], 1, '家族信托与保险金信托是主流传承工具。', 2),
   s('cf010', 'exam_cfp', '风险隔离', ['risk_isolation'], '企业主家庭资产与企业风险隔离的正确做法是（）。', ['公私账户混用', '企业家庭资产隔离+合法架构安排', '企业贷款给家人买房', '财务不做账'], 1, '公私隔离是家企风险隔离的第一课。', 2),
-  j('bl011', 'exam_bank_law', '职业操守', ['red_lines'], '向客户承诺理财产品的保本保收益属于违规行为。', 1, '资管新规后打破刚兑，承诺保本保收益是红线。'),
+  j('bl011', 'exam_bank_law', '职业操守', ['red_lines'], '向客户承诺「保本保收益」类条款属于违规行为。', 1, '打破刚兑后，承诺「保本保收益」类条款是红线。'),
   j('bp011', 'exam_bank_pf', '双录', ['dual_recording'], '销售专区"双录"指录音与录像。', 1, '双录保障销售过程可回溯，保护双方权益。'),
   j('ef011', 'exam_fund', '基金定投', ['dca'], '定投可以消除市场风险。', 0, '定投只能摊薄成本，不能消除系统性风险。', 2),
   j('es010', 'exam_securities', '市场风险', ['systemic_risk'], '系统性风险可以通过充分分散化完全消除。', 0, '系统性风险（如金融危机）无法靠分散消除，能消除的只是非系统性风险。', 2),

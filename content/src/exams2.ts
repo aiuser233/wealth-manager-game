@@ -1,4 +1,5 @@
 import type { ExamQuestion } from '@fm/core';
+import { withReview } from '../../tools/content-tools/checks/with-review.mts';
 
 /**
  * 题库扩容第二批（150 题）：延续六科目，覆盖更多知识点。
@@ -8,12 +9,15 @@ import type { ExamQuestion } from '@fm/core';
 const B = '汇诚银行';
 const F = '玄财基金';
 
-const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
-const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
-const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
+}
+const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
+}
+const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+}
 
 export const examBank2: ExamQuestion[] = [
   // ============ 银行从业·法律法规（+25） ============
@@ -92,8 +96,8 @@ export const examBank2: ExamQuestion[] = [
   s('ef119', 'exam_fund', '基金创新', ['structured_product'], '雪球结构产品的"敲出"是指（）。', ['亏损封顶', '标的价格涨过障碍价，产品提前结束拿票息', '爆仓', '基金清盘'], 1, '敲出=提前止盈离场；敲入=承担下行风险。', 3),
   s('ef120', 'exam_fund', '基金创新', ['structured_product'], '雪球产品最适合的投资者是（）。', ['所有大众客户', '理解尾部风险并有能力承担的合格投资者', '退休教师', '首次理财者'], 1, '雪球仅向合格投资者销售，尾部风险教育必不可少。', 3),
   m('ef121', 'exam_fund', '基金分类', ['fund_basics'], '按运作方式，公募基金分为（）。', ['开放式', '封闭式', '定期开放式', '无限式'], [0, 1, 2], '开放/封闭/定开是三种主要运作方式。', 1),
-  m('ef122', 'exam_fund', '基金治理', ['fund_governance'], '基金运作中"利益冲突防范"措施包括（）。', ['托管人监督', '公平交易制度', '严禁老鼠仓', '允许关联交易优先'], [0, 1, 2], '关联交易必须审批且不得利益输送。', 2),
-  m('ef123', 'exam_fund', '基金销售', ['suitability'], '基金销售话术红线包括（）。', ['承诺保本', '夸大过往业绩', '使用"稳赚"字样', '如实揭示风险'], [0, 1, 2], '如实揭示是义务不是红线。', 1),
+  m('ef122', 'exam_fund', '基金治理', ['fund_governance'], '基金运作中"利益冲突防范"措施包括（）。', ['托管人监督', '公平交易制度', '严禁「老鼠仓」等违法行为', '允许关联交易优先'], [0, 1, 2], '关联交易必须审批且不得利益输送。', 2),
+  m('ef123', 'exam_fund', '基金销售', ['suitability'], '基金销售话术红线包括（）。', ['承诺保本', '夸大过往业绩', '使用「稳赚」字样', '如实揭示风险'], [0, 1, 2], '如实揭示是义务不是红线。', 1),
   j('ef124', 'exam_fund', '基金估值', ['fund_nav'], '场内 ETF 的二级市场交易价格可能偏离净值（折溢价）。', 1, '折溢价套利机制使其收敛但不会瞬时消失。', 2),
   j('ef125', 'exam_fund', '基金风险', ['fund_risk'], '基金规模越大，基金经理调仓越灵活。', 0, '规模是业绩的敌人：大基金调仓冲击成本更高。', 3),
 
@@ -112,7 +116,7 @@ export const examBank2: ExamQuestion[] = [
   s('es112', 'exam_securities', '量化交易', ['quant'], '量化交易的主要风险不包括（）。', ['模型失效', '同质化策略踩踏', '流动性枯竭', '保证盈利'], 3, '"保证盈利"不是风险而是虚假宣传。', 2),
   s('es113', 'exam_securities', '科创板', ['star_market'], '科创板允许（）。', ['亏损企业上市', '仅盈利企业上市', '仅国企上市', '仅金融企业上市'], 0, '五套上市标准中含未盈利标准，硬科技导向。', 2),
   s('es114', 'exam_securities', '北交所', ['bse'], '北交所的定位是（）。', ['大盘蓝筹', '创新型中小企业', '债券专营', '外汇交易'], 1, '北交所服务"专精特新"创新型中小企业。', 2),
-  s('es115', 'exam_securities', '证券类型', ['structured_product'], '收益凭证与结构性存款的区别之一是收益凭证（）。', ['受存款保险保障', '是证券公司的表内负债、不属存款', '保本保息', '无风险'], 1, '收益凭证非存款，不适用存款保险。', 4),
+  s('es115', 'exam_securities', '证券类型', ['structured_product'], '收益凭证与结构性存款的区别之一是收益凭证（）。', ['受存款保险保障', '是证券公司的表内负债、不属存款', '「保本保息」属性', '无风险'], 1, '收益凭证非存款，不适用存款保险。', 4),
   s('es116', 'exam_securities', '市场风险', ['systemic_risk'], '系统性风险的特征是（）。', ['可分散消除', '影响全市场、无法靠分散消除', '仅个别公司', '与宏观无关'], 1, 'Beta 风险无法分散，只能用对冲或降仓管理。', 1),
   s('es117', 'exam_securities', '价值投资', ['value_investing'], '市盈率 PE 的合理使用方式是（）。', ['越低越好无脑买', '结合成长性、行业均值与盈利质量横向比较', '只看绝对值', '只适用于亏损股'], 1, 'PE 陷阱：周期顶低 PE、亏损无 PE、盈利质量决定含金量。', 2),
   s('es118', 'exam_securities', '价值投资', ['value_investing'], 'ROE 长期高于同行的公司通常意味着（）。', ['必然涨价', '存在护城河或竞争优势', '风险更高', '即将退市'], 1, '持续高 ROE 是商业模式优势的财务表达。', 2),

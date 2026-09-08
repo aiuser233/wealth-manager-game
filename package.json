@@ -14,7 +14,10 @@
     "build": "npm run build -w @fm/ui",
     "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/ui --noEmit",
     "test": "vitest run",
-    "sim": "npm run sim -w @fm/tools"
+    "sim": "npm run sim -w @fm/tools",
+    "bot": "npm run bot -w @fm/tools",
+    "content:lint": "tsx tools/content-tools/build.mts",
+    "content:check": "tsx tools/content-tools/build.mts && tsx tools/content-tools/checks/ref-check.mts"
   },
   "devDependencies": {
     "typescript": "5.9.3",

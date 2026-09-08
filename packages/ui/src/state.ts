@@ -6,7 +6,7 @@ import {
   type QuestDef, type LifeLineDef,
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME1_LIFELINES } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, LIFELINES_ALL } from '@fm/content';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -259,7 +259,7 @@ export function advanceFrame(daysOverride?: number): number {
 // ================= 主线剧情 =================
 
 export function initQuestEngine(seed: number) {
-  state.questEngine = new QuestEngine(VOLUME1_QUESTS as unknown as QuestDef[], VOLUME1_LIFELINES as unknown as LifeLineDef[]);
+  state.questEngine = new QuestEngine(VOLUME1_QUESTS as unknown as QuestDef[], LIFELINES_ALL as unknown as LifeLineDef[]);
 }
 
 /** 剧情演出：下一步 */

@@ -1,16 +1,20 @@
 import type { ExamQuestion } from '@fm/core';
+import { withReview } from '../../tools/content-tools/checks/with-review.mts';
 
 /**
  * 题库第四批（120 题）：计算型与案例型题为主，对应"错题本高频考点"。
  * 计算题强化：复利/年金/房贷/收益率/久期/夏普；案例题强化：适当性/危机沟通/合规红线。
  */
 
-const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
-const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
-const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
+}
+const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
+}
+const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+}
 
 export const examBank4: ExamQuestion[] = [
   // ============ 计算题专区 ============
@@ -59,7 +63,7 @@ export const examBank4: ExamQuestion[] = [
   s('bc041', 'exam_bank_pf', '案例·产品匹配', ['suitability'], '案例：客户 30 万闲钱 3 个月不用，想"放活期又嫌收益低"。最佳建议是（）。', ['3 个月定存/现金理财/短债组合，兼顾流动性与收益', '5 年期定存', '股票基金', '私募'], 0, '期限匹配是现金管理的第一原则。', 1),
   s('bc042', 'exam_bank_pf', '案例·理财规划', ['planning_process'], '案例：客户首次面谈就要求"直接给我推荐产品"。专业做法是（）。', ['立即推荐爆款', '说明流程价值：用 10 分钟快速 KYC，先明确目标与约束，再谈产品', '拒绝服务', '只谈费率'], 1, '流程不是形式，是降低错配的过滤器。', 2),
   s('bc043', 'exam_bank_law', '案例·双录', ['dual_recording'], '案例：理财经理替客户在双录中回答了"是否知晓产品风险"。该行为属于（）。', ['高效服务', '违规：风险确认必须客户本人真实表达', '行业惯例', '可以补录'], 1, '双录的意义在于客户本人真实意思表示。', 1),
-  s('bc044', 'exam_bank_law', '案例·飞单', ['red_lines'], '案例：同事私下推荐"银行内部通道"的 12% 收益产品，合同盖章为某投资公司。识别要点是（）。', ['收益高就买', '发行主体非银行/子公司、收益显著异常、合同要素不符——基本可判定飞单，应拒绝并报告', '先卖一单试试', '看同事面子'], 1, '三看：主体、收益、合同。', 2),
+  s('bc044', 'exam_bank_law', '案例·飞单', ['red_lines'], '案例：同事私下推荐"银行内部通道"的 12% 收益产品，合同盖章为某投资公司。识别要点是（）。', ['收益高就买', '发行主体非银行/子公司、收益显著异常、合同要素不符——基本可判定飞单，应拒绝并报告', '先试一单', '碍于面子'], 1, '三看：主体、收益、合同。', 2),
   s('bc045', 'exam_afp', '案例·保险', ['insurance_basics'], '案例：客户已买 5 份理财型年金，无任何保障型保单。正确的组合建议是（）。', ['再买第 6 份年金', '先补齐寿险/重疾/医疗/意外四件套，存量年金视现金价值决定去留', '全部退保重买', '不动'], 1, '先保障后理财的纠偏。', 2),
   s('bc046', 'exam_cfp', '案例·全球配置', ['global_allocation'], '案例：客户 80% 资产为国内房产，要求"全球分散"。第一步应该是（）。', ['马上全买 QDII', '先做整体资产负债与流动性盘点，明确可动用金融资产与目标比例，再分步全球配置', '卖房全款投资', '买黄金'], 1, '先盘点后配置；房产流动性错配是首要问题。', 3),
   s('bc047', 'exam_afp', '案例·教育金', ['education_fund'], '案例：客户想用高波动股票基金给孩子准备 8 年后的留学金。专业建议是（）。', ['支持全仓股票基金', '目标日期递减结构：前期可含权益，随期限临近切换至固收+，锁定安全垫', '买彩票', '不准备'], 1, '刚性目标的安全垫优先原则。', 2),
@@ -71,11 +75,11 @@ export const examBank4: ExamQuestion[] = [
   s('bc053', 'exam_bank_pf', '案例·产品切换', ['nav_product'], '案例：2022 年 11 月债市急跌，客户 R2 固收理财浮亏 0.8%，要全部赎回。最专业的分析是（）。', ['立刻同意全部赎回', '分析浮亏来源（利率急升）、产品剩余期限、负反馈机制与修复路径，给出分批/持有/转换的选项', '推荐更高收益产品对冲', '批评客户不专业'], 1, '把恐慌决策变成选项决策。', 3),
   s('bc054', 'exam_cfp', '案例·家族治理', ['succession'], '案例：家族信托设立后，儿子挥霍分配款。可用的条款工具是（）。', ['无能为力', '调整分配机制：分期分配+激励条款+保护人监督（在信托架构允许范围内）', '直接撤销信托', '报警'], 1, '信托条款是活的家规。', 3),
   s('bc055', 'exam_afp', '案例·应急金', ['emergency_fund'], '案例：自由职业者收入不稳定，应急金建议为（）。', ['1 个月支出', '标准 6 个月起步，收入波动大者 9-12 个月', '不需要', '信用卡即可'], 1, '收入波动与应急金正相关。', 2),
-  s('bc056', 'exam_bank_pf', '案例·新人销售', ['communication'], '案例：新人理财经理第一次面谈紧张，最实用的建议是（）。', ['背完所有产品手册', '用提问主导节奏：从客户的家庭与目标聊起，产品放最后', '夸大收益建立自信', '避免见面只发微信'], 1, '提问即控场，倾听即专业。', 1),
+  s('bc056', 'exam_bank_pf', '案例·新人销售', ['communication'], '案例：新人理财经理第一次面谈紧张，最实用的建议是（）。', ['背完所有产品手册', '用提问主导节奏：从客户的家庭与目标聊起，产品放最后', '夸大收益建立自信', '避免见面只发模板短信'], 1, '提问即控场，倾听即专业。', 1),
   s('bc057', 'exam_afp', '案例·组合再平衡', ['rebalance'], '案例：目标股债 60/40，牛市后变成 75/25。再平衡的正确操作是（）。', ['什么都不做', '卖出超配的股票、买入欠配的债券，恢复目标比例', '全部清仓重来', '加倍买入股票'], 1, '再平衡=纪律化的高抛低吸。', 1),
   s('bc058', 'exam_cfp', '案例·大额保单', ['insurance_trust'], '案例：客户想给非婚生子女留资产。合规且有效的工具是（）。', ['口头承诺', '指定受益人的保单/信托安排（法律框架内，需专业法税意见）', '现金放在办公室', '写在朋友圈'], 1, '受益人指定是传承确定性最高的工具之一，需专业流程。', 4),
   s('bc059', 'exam_afp', '案例·退休领取', ['retirement_plan'], '案例：客户退休组合 40% 权益 60% 固收，退休首年遇到熊市。更稳妥的提取策略是（）。', ['照常按 4% 提取股票', '动用现金/固收桶支出，避免低点卖出权益（水桶策略）', '全部清仓', '借钱消费'], 1, '桶策略降低"收益序列风险"。', 3),
-  s('bc060', 'exam_bank_pf', '案例·客户档案', ['planning_process'], '案例：客户资产主要在别行，本行仅 5 万存款但咨询深入。正确姿势是（）。', ['嫌他没钱不热情', '把首次咨询当 KYC 资产迁移的第一步，专业体验是最好的获客', '只推存款冲指标', '推销保险'], 1, '长期主义者的获客逻辑。', 1),
+  s('bc060', 'exam_bank_pf', '案例·客户档案', ['planning_process'], '案例：客户资产主要在别行，本行仅 5 万存款但咨询深入。正确姿势是（）。', ['嫌他没钱不热情', '把首次咨询当 KYC 资产迁移的第一步，专业体验是最好的获客', '只推存款冲指标', '群发模板广告'], 1, '长期主义者的获客逻辑。', 1),
 
   // ============ 补充判断与多选（保证抽卷池） ============
   m('bc061', 'exam_bank_law', '案例·合规', ['red_lines'], '以下哪些行为会触发"调查线"（Bad End）？', ['飞单', '代客操作并私收报酬', '挪用客户资金', '如实告知产品风险'], [0, 1, 2], '三条都是红线；如实告知是义务。', 1),

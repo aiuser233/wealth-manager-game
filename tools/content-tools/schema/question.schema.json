@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "考试题目",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_]{3,32}$" },
+    "subject": { "type": "string", "enum": ["exam_bank_law", "exam_bank_pf", "exam_fund", "exam_securities", "exam_afp", "exam_cfp"] },
+    "chapter": { "type": "string", "minLength": 2, "maxLength": 24 },
+    "knowledge_tags": { "type": "array", "items": { "type": "string" }, "minItems": 1, "maxItems": 4 },
+    "type": { "type": "string", "enum": ["single", "multiple", "judge"] },
+    "stem": { "type": "string", "minLength": 8, "maxLength": 400 },
+    "options": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "minItems": 2,
+      "maxItems": 6
+    },
+    "answer": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0, "maximum": 5 },
+        { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 5 }, "minItems": 2 }
+      ]
+    },
+    "explanation": { "type": "string", "minLength": 4, "maxLength": 500 },
+    "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "source_note": { "type": "string" },
+    "review": { "$ref": "common.schema.json" }
+  },
+  "required": ["id", "subject", "chapter", "knowledge_tags", "type", "stem", "options", "answer", "explanation", "difficulty", "review"],
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "multiple" } } },
+      "then": { "properties": { "answer": { "type": "array" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "judge" } } },
+      "then": { "properties": { "options": { "maxItems": 2 }, "answer": { "type": "integer", "maximum": 1 } } }
+    }
+  ]
+}

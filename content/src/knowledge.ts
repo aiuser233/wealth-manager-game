@@ -6,11 +6,22 @@ export interface KnowledgeEntry {
   unlockYear: number;
   category: 'basics' | 'product' | 'market' | 'compliance' | 'planning' | 'behavior';
   tags: string[];
+  /** 词条正文跨年代讲述（如行业简史）时标注有效区间，年代检查按区间末年执行 */
+  era_span?: [number, number];
   what: string;
   why: string;
   how: string;
   pitfall: string;
   quiz: { q: string; a: string };
+  /** 双审元数据（P1 起：存量批量补齐 source_notes，状态 draft 待审） */
+  review?: {
+    status: 'draft' | 'reviewed' | 'approved';
+    source_notes: string[];
+    k_reviewer?: string | null;
+    c_reviewer?: string | null;
+    reviewed_at?: string | null;
+    era_note?: string;
+  };
 }
 
 /** 行情复盘卡（历史复盘室） */
@@ -39,7 +50,7 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
     quiz: { q: '存款保险最高偿付限额是多少？', a: '50 万元（本息合计），超出部分从投保机构清算财产中受偿。' },
   },
   {
-    id: 'k_risk_rating', title: '风险测评 R1–R5', unlockYear: 2006, category: 'compliance', tags: ['suitability'],
+    id: 'k_risk_rating', title: '风险测评 R1–R5', unlockYear: 2006, category: 'compliance', tags: ['suitability', 'risk_rating'],
     what: '风险测评是量化客户风险承受能力的问卷，结果分 R1 保守型到 R5 进取型五级，有效期 1 年。',
     why: '适当性管理的基石：把合适风险等级的产品卖给合适的人，是"卖者尽责"的第一步。',
     how: '销售前必查：产品风险等级 ≤ 客户测评等级。R2 客户只能买 R1/R2 产品。',
@@ -95,7 +106,7 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
     quiz: { q: '"保命的钱"该配什么？', a: '意外险、重疾险、医疗险等保障型保险。' },
   },
   {
-    id: 'k_behavior_disposition', title: '处置效应', unlockYear: 2015, category: 'behavior', tags: ['behavior_finance'],
+    id: 'k_behavior_disposition', title: '处置效应', unlockYear: 2015, category: 'behavior', tags: ['behavior_finance', 'take_profit'],
     what: '投资者急于卖出盈利持仓、拖延卖出亏损持仓的倾向。',
     why: '行为金融最经典的发现之一：盈利拿不住、亏损死扛，长期侵蚀收益。',
     how: '帮客户建立卖出纪律：按目标价/目标收益率/再平衡规则操作，而非情绪。',
@@ -143,7 +154,7 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
     quiz: { q: '千股跌停时杠杆盘为什么连环爆？', a: '价格下跌触发平仓→抛售加剧下跌→更多平仓的负反馈。' },
   },
   {
-    id: 'k_suitability_age', title: '生命周期配置', unlockYear: 2008, category: 'planning', tags: ['family_lifecycle', 'retirement_plan'],
+    id: 'k_suitability_age', title: '生命周期配置', unlockYear: 2008, category: 'planning', tags: ['family_lifecycle', 'retirement_plan', 'housing_vs_invest'],
     what: '按人生阶段调整资产结构：形成期重积累、成长期重教育金、成熟期重养老、退休期重保值与现金流。',
     why: '25 岁和 55 岁的风险承受完全不同——年龄是配置的第一变量。',
     how: '经典参考：权益比例 ≈ (100 − 年龄)%，再按风险偏好修正。',

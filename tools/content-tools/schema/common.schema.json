@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "内容审核元数据（所有教学内容统一附加）",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "approved"],
+      "description": "draft=待审；reviewed=双审通过待终审；approved=可进正式包"
+    },
+    "source_notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "内容依据的公开监管文件/经典文献，至少 1 条"
+    },
+    "k_reviewer": { "type": ["string", "null"], "description": "金融知识审校人" },
+    "c_reviewer": { "type": ["string", "null"], "description": "合规表述审校人" },
+    "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+    "era_note": { "type": "string", "description": "分年代教学点说明（如 2018 资管新规前后差异）" }
+  },
+  "required": ["status", "source_notes"]
+}

@@ -1,4 +1,5 @@
 import type { ExamQuestion } from '@fm/core';
+import { withReview } from '../../tools/content-tools/checks/with-review.mts';
 
 /**
  * 题库第三批（150 题）：深化各科目章节覆盖，提高 3-4 星题占比。
@@ -7,12 +8,15 @@ import type { ExamQuestion } from '@fm/core';
 
 const B = '汇诚银行';
 
-const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
-const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
-const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion =>
-  ({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+const s = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 2): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'single', stem, options, answer, explanation, difficulty });
+}
+const m = (id: string, subject: string, chapter: string, tags: string[], stem: string, options: string[], answer: number[], explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 3): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'multiple', stem, options, answer, explanation, difficulty });
+}
+const j = (id: string, subject: string, chapter: string, tags: string[], stem: string, answer: 0 | 1, explanation: string, difficulty: 1 | 2 | 3 | 4 | 5 = 1): ExamQuestion => {
+  return withReview({ id, subject, chapter, knowledge_tags: tags, type: 'judge', stem, options: ['正确', '错误'], answer, explanation, difficulty });
+}
 
 export const examBank3: ExamQuestion[] = [
   // ============ 银行从业·法律法规（+25） ============
@@ -32,7 +36,7 @@ export const examBank3: ExamQuestion[] = [
   s('bl214', 'exam_bank_law', '外汇管理', ['fx_control'], '个人每年便利化购汇额度为等值（）。', ['1 万美元', '5 万美元', '10 万美元', '50 万美元'], 1, '个人年度便利化额度 5 万美元。', 1),
   s('bl215', 'exam_bank_law', '银团贷款', ['syndicate'], '银团贷款中"牵头行"的职责是（）。', ['承诺全额放款', '组织分销贷款份额并担任代理行（或另指定）', '只出咨询意见', '监管贷款使用'], 1, '牵头行负责组建银团、分销份额。', 3),
   s('bl216', 'exam_bank_law', '资产证券化', ['abs'], '信贷资产证券化中"真实出售"的意义是（）。', ['提高贷款利率', '实现风险隔离、出表', '增加资本占用', '规避监管'], 1, '真实出售+破产隔离是资产证券化的法律基础。', 3),
-  s('bl217', 'exam_bank_law', '理财业务', ['wm_rules'], '理财产品的风险准备金 / 风险补偿机制体现的原则是（）。', ['风险自担的前置缓冲', '保本保息', '刚性兑付', '存款保险延伸'], 0, '风险准备金是"卖者尽责"的缓冲工具，不等于保本承诺。', 3),
+  s('bl217', 'exam_bank_law', '理财业务', ['wm_rules'], '理财产品的风险准备金 / 风险补偿机制体现的原则是（）。', ['风险自担的前置缓冲', '刚性兑付的缓冲', '收益托底承诺', '存款保险延伸'], 0, '风险准备金是"卖者尽责"的缓冲工具，不等于保本承诺。', 3),
   s('bl218', 'exam_bank_law', '理财业务', ['wm_rules'], '商业银行理财产品投资单一资产的集中度要求体现了（）原则。', ['分散化投资', '集中优势兵力', '高收益导向', '期限错配'], 0, '组合分散、集中度限额是组合管理审慎要求。', 3),
   s('bl219', 'exam_bank_law', '消费者保护', ['consumer_protection'], '产品销售中"禁止不当销售"不包括（）。', ['捆绑销售', '误导宣传', '代客操作', '如实告知风险'], 3, '如实告知是义务不是禁止行为。', 1),
   s('bl220', 'exam_bank_law', '个人信息', ['data_protection'], '银行处理客户个人金融信息的合法性基础不包括（）。', ['客户同意', '法定职责', '合同必要', '高管同意'], 3, '个人信息处理的合法基础为同意/合同/法定职责等，高管个人无权决定。', 2),

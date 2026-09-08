@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { state, gameReady, getGame } from '../state';
 import { KNOWLEDGE, DEBRIEF_CARDS } from '@fm/content';
+import { KNOWLEDGE_ALL } from '@fm/content';
 import { contentBundle } from '@fm/content';
 
 type Tab = 'knowledge' | 'debrief' | 'gallery';
@@ -10,12 +11,13 @@ const tab = ref<Tab>('knowledge');
 const g = computed(() => (gameReady.value ? getGame() : null));
 const year = computed(() => Number(g.value?.date.slice(0, 4) ?? 2006));
 
-const unlockedKnowledge = computed(() => KNOWLEDGE.filter((k) => k.unlockYear <= year.value));
-const lockedKnowledge = computed(() => KNOWLEDGE.filter((k) => k.unlockYear > year.value));
+const ALL_K = KNOWLEDGE_ALL.length >= KNOWLEDGE.length ? KNOWLEDGE_ALL : KNOWLEDGE;
+const unlockedKnowledge = computed(() => ALL_K.filter((k) => k.unlockYear <= year.value));
+const lockedKnowledge = computed(() => ALL_K.filter((k) => k.unlockYear > year.value));
 
 const selectedK = ref<string>('');
 const selectedD = ref<string>('');
-const activeK = computed(() => KNOWLEDGE.find((k) => k.id === selectedK.value));
+const activeK = computed(() => ALL_K.find((k) => k.id === selectedK.value));
 const activeD = computed(() => DEBRIEF_CARDS.find((d) => d.id === selectedD.value));
 
 /** 已触发事件的复盘卡（历史复盘室） */
@@ -76,7 +78,7 @@ function retireGap(c: typeof c4.value): { need: number; gap: number; saveMonthly
 <template>
   <div class="wrap">
     <div class="tabs">
-      <button :class="{ active: tab === 'knowledge' }" @click="tab = 'knowledge'">知识库（{{ KNOWLEDGE.length }}）</button>
+      <button :class="{ active: tab === 'knowledge' }" @click="tab = 'knowledge'">知识库（{{ ALL_K.length }}）</button>
       <button :class="{ active: tab === 'debrief' }" @click="tab = 'debrief'">历史复盘室（{{ triggeredDebriefs.length }}）</button>
       <button :class="{ active: tab === 'gallery' }" @click="tab = 'gallery'">原型图鉴（{{ galleryItems.length }}）</button>
     </div>

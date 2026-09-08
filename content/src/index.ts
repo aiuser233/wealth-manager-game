@@ -11,11 +11,20 @@ import { examBank2 } from './exams2';
 import { examBank3 } from './exams3';
 import { examBank4 } from './exams4';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
+import { knowledgeBatch2 } from './knowledge2';
+import { knowledgeBatch3 } from './knowledge3';
 import { randomEvents } from './random-events';
 import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
+import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
 /** 全量题库（四批合计） */
 export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4];
+
+/** 知识库全量（三批合计） */
+export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3];
+
+/** 人生线全量（完整版 18 节点：王秀兰 9 + 李建国 9） */
+export const LIFELINES_ALL = LIFELINES_FULL;
 
 export const contentBundle: ContentBundle = {
   factors,
@@ -26,4 +35,4 @@ export const contentBundle: ContentBundle = {
   clients,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, DEBRIEF_CARDS, randomEvents, VOLUME1_QUESTS, VOLUME1_LIFELINES };
+export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, DEBRIEF_CARDS, randomEvents, VOLUME1_QUESTS, VOLUME1_LIFELINES, WANG_LIFELINE, LI_LIFELINE };
