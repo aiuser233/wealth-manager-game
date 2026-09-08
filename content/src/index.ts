@@ -8,12 +8,14 @@ import { clients } from './clients';
 import { eraDrift, eraLevel } from './macro';
 import { examBank } from './exams';
 import { examBank2 } from './exams2';
+import { examBank3 } from './exams3';
+import { examBank4 } from './exams4';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { randomEvents } from './random-events';
 import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
 
-/** 全量题库（两批合计） */
-export const examBankAll = [...examBank, ...examBank2];
+/** 全量题库（四批合计） */
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4];
 
 export const contentBundle: ContentBundle = {
   factors,
