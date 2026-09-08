@@ -10,6 +10,7 @@ import { examBank } from './exams';
 import { examBank2 } from './exams2';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { randomEvents } from './random-events';
+import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
 
 /** 全量题库（两批合计） */
 export const examBankAll = [...examBank, ...examBank2];
@@ -23,4 +24,4 @@ export const contentBundle: ContentBundle = {
   clients,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, DEBRIEF_CARDS, randomEvents };
+export { factors, industries, releases, directorEvents, products, clients, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, DEBRIEF_CARDS, randomEvents, VOLUME1_QUESTS, VOLUME1_LIFELINES };

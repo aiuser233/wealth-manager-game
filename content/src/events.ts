@@ -13,7 +13,7 @@ export const directorEvents: GameEventDef[] = [
   // ===== 2007 疯牛与崩塌 =====
   { id: 'dir_2007_227', date: '2007-02-27', type: 'black_swan', title: '全球市场剧震', news: '两市罕见近9%暴跌，恐慌蔓延至全球市场。开户狂潮遭遇当头冷水。', shocks: { equity: -0.088, us_equity: -0.03, vix: 0.5 }, duration_days: 1, sentiment: -2 },
   { id: 'dir_2007_530', date: '2007-05-30', type: 'policy', title: '印花税上调，两市暴跌', news: '深夜突袭的印花税调整引发"5·30"暴跌，大量个股连续跌停。追高的投资者损失惨重。', shocks: { equity: -0.093, style_small: -0.10 }, duration_days: 3, sentiment: -2.5, unlock_knowledge: ['stamp_duty', 'chasing_high'], force_day: true },
-  { id: 'dir_2007_bull2', date: '2007-07-20', type: 'director', title: '蓝筹行情卷土重来', news: '大盘权重股带动指数强劲上攻，市场重回疯狂，"死了都不卖"成为流行语。', shocks: { equity: 0.18, style_big: 0.20 }, duration_days: 45, sentiment: 2 },
+  { id: 'dir_2007_bull2', date: '2007-07-20', type: 'director', title: '蓝筹行情卷土重来', news: '大盘权重股带动指数强劲上攻，市场重回疯狂，"死了都不卖"成为流行语。', shocks: { equity: 0.15, style_big: 0.20 }, duration_days: 45, sentiment: 2 },
   { id: 'dir_2007_top', date: '2007-10-16', type: 'director', title: '沪指突破 6100 点', news: '沪指盘中创出历史新高，全民炒股热情达到顶点。营业部挤满新开户的市民。', shocks: { sentiment_dom: 0.3 }, duration_days: 1, sentiment: 1.5, unlock_knowledge: ['euphoria_top'] },
   { id: 'dir_2007_fall', date: '2007-11-01', type: 'director', title: '市场高位回落', news: '获利盘涌出，市场震荡下行，不少新基民的净值明显回撤。', shocks: { equity: -0.06 }, duration_days: 15, sentiment: -1.5 },
   { id: 'dir_2007_qdii', date: '2007-11-15', type: 'director', title: '首批出海基金集体折戟', news: '海外市场动荡叠加汇率因素，首批出海产品净值大幅回撤，投资者质疑声四起。', shocks: { us_equity: -0.05, equity: -0.02 }, duration_days: 10, sentiment: -1, unlock_knowledge: ['qdii_risk'] },
@@ -21,8 +21,9 @@ export const directorEvents: GameEventDef[] = [
   { id: 'dir_2008_jan', date: '2008-01-14', type: 'black_swan', title: '海外金融风暴升级', news: '海外大型金融机构巨额减记，全球市场连续重挫，A 股开门不红反黑。', shocks: { equity: -0.05, us_equity: -0.06, vix: 0.4 }, duration_days: 3, sentiment: -2 },
   { id: 'dir_2008_apr', date: '2008-04-24', type: 'policy', title: '印花税下调，两市暴涨', news: '监管出手下调印花税，两市近乎涨停，救市信号明确。', shocks: { equity: 0.09 }, duration_days: 1, sentiment: 1.5 },
   { id: 'dir_2008_jun', date: '2008-06-10', type: 'director', title: '油价飙升与通胀担忧', news: '国际油价冲击历史高位，输入型通胀压力骤增，市场持续走弱。', shocks: { equity: -0.08, oil: 0.10 }, duration_days: 10, sentiment: -1.5 },
+  { id: 'dir_2008_aug', date: '2008-08-08', type: 'director', title: '奥运行情落空，阴跌不止', news: '"奥运行情"预期落空，市场加速寻底，基金发行跌入冰点。', shocks: { equity: -0.12, style_small: -0.10 }, duration_days: 15, sentiment: -1.5 },
   { id: 'dir_2008_lehman', date: '2008-09-15', type: 'black_swan', title: '百年投行倒闭，全球金融海啸', news: '158 年历史的雷曼兄弟破产，全球金融市场剧烈震荡，金融危机全面爆发。', shocks: { equity: -0.045, us_equity: -0.05, vix: 0.6, gold: 0.03 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['systemic_risk', 'crisis_communication'], force_day: true },
-  { id: 'dir_2008_bottom', date: '2008-10-28', type: 'director', title: '市场跌至谷底', news: '沪指一年间跌去七成，跌破 1700 点，恐慌情绪弥漫。有客户开始亏损严重。', shocks: { equity: -0.04 }, duration_days: 2, sentiment: -2.5 },
+  { id: 'dir_2008_bottom', date: '2008-10-28', type: 'director', title: '市场跌至谷底', news: '沪指一年间跌去七成，跌破 1700 点，恐慌情绪弥漫。有客户开始亏损严重。', shocks: { equity: -0.09 }, duration_days: 2, sentiment: -2.5 },
   { id: 'dir_2008_4t', date: '2008-11-10', type: 'policy', title: '四万亿刺激计划出台', news: '大规模投资计划公布，货币宽松加速，市场应声暴涨。', shocks: { equity: 0.10, lpr_5y: -0.01, credit: -0.002 }, duration_days: 5, sentiment: 2.5, unlock_knowledge: ['policy_stimulus'] },
   { id: 'dir_2008_cuts', date: '2008-12-01', type: 'policy', title: '连续降息周期', news: '央行在三个月内第五次降息，利率降至历史低位。', shocks: { lpr_5y: -0.008, rate10y: -0.004 }, duration_days: 10, sentiment: 0.5 },
   // ===== 2009 四万亿之年 =====
@@ -50,8 +51,9 @@ export const directorEvents: GameEventDef[] = [
   { id: 'dir_2015_824', date: '2015-08-24', type: 'black_swan', title: '全球市场连锁暴跌', news: '海外市场"黑色星期一"传导，全球风险资产同步重挫。', shocks: { equity: -0.085, us_equity: -0.04 }, duration_days: 1, sentiment: -2.5 },
   { id: 'dir_2015_stab', date: '2015-09-01', type: 'director', title: '救市组合拳见效', news: '多项维稳措施落地，市场波动收敛，逐步进入漫长修复期。', shocks: { equity: 0.05 }, duration_days: 15, sentiment: 0.5 },
   // ===== 2016 熔断与地产 =====
-  { id: 'dir_2016_fuse1', date: '2016-01-04', type: 'policy', title: '熔断机制首日即触发', news: '新年首个交易日，熔断机制实施首日即两次触发提前收盘，市场恐慌。', shocks: { equity: -0.07 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['circuit_breaker'], force_day: true },
-  { id: 'dir_2016_fuse2', date: '2016-01-07', type: 'policy', title: '熔断四日两触，机制连夜叫停', news: '实施仅四个交易日的熔断机制被宣布暂停，市场信心亟待修复。', shocks: { equity: -0.07 }, duration_days: 1, sentiment: -3 },
+  { id: 'dir_2016_fuse1', date: '2016-01-04', type: 'policy', title: '熔断机制首日即触发', news: '新年首个交易日，熔断机制实施首日即两次触发提前收盘，市场恐慌。', shocks: { equity: -0.09 }, duration_days: 1, sentiment: -3, unlock_knowledge: ['circuit_breaker'], force_day: true },
+  { id: 'dir_2016_fuse2', date: '2016-01-07', type: 'policy', title: '熔断四日两触，机制连夜叫停', news: '实施仅四个交易日的熔断机制被宣布暂停，市场信心亟待修复。', shocks: { equity: -0.09 }, duration_days: 1, sentiment: -3 },
+  { id: 'dir_2016_jan', date: '2016-01-11', type: 'black_swan', title: '汇率贬值恐慌，A股连续下挫', news: '开年汇率快速贬值叠加熔断阴霾，市场连续急跌，避险情绪浓重。', shocks: { equity: -0.10, fx_cny: 0.015 }, duration_days: 8, sentiment: -2, force_day: true },
   { id: 'dir_2016_rec', date: '2016-03-01', type: 'director', title: '市场缓慢修复', news: '注册制推迟、汇率企稳，市场开启半年修复行情。', shocks: { equity: 0.10 }, duration_days: 30, sentiment: 1 },
   { id: 'dir_2016_house', date: '2016-10-01', type: 'director', title: '房价暴涨与"去库存"', news: '热点城市房价快速上行，居民加杠杆购房，资金明显脱实向虚。', shocks: { housing: 0.08, lpr_5y: -0.002 }, duration_days: 40, sentiment: 0.5, unlock_knowledge: ['housing_vs_invest'] },
   { id: 'dir_2016_ins', date: '2016-12-05', type: 'policy', title: '险资举牌遭监管问话', news: '激进举牌行为被点名批评，相关概念股大跌，万能险资金运用受限。', shocks: { equity: -0.02, style_big: -0.03 }, duration_days: 5, sentiment: -1 },

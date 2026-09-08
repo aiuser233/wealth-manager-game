@@ -22,6 +22,13 @@ const advanceLabel = computed(() => {
   return curFrame.value === 'day' ? '下班结算 → 下一个交易日' : curFrame.value === 'week' ? '周末结算 → 下一周' : '月末结算 → 下个月';
 });
 
+/** 主线进度（图鉴馆/工作台共用） */
+const questProgress = computed(() => {
+  const qe = state.questEngine;
+  if (!qe) return null;
+  return qe.volumeProgress(1);
+});
+
 const kpi = computed(() => {
   const k = g.value?.kpi;
   if (!k) return [];
@@ -126,9 +133,12 @@ function openPromotion() {
       <div v-for="item in kpi" :key="item.label" class="kpi-row">
         <span class="kpi-label">{{ item.label }}</span>
         <div class="bar">
-          <div class="fill" :style="{ width: Math.min(100, (item.done / Math.max(1, item.target)) * 100) + '%' }" />
+          <div class="fill" :style="{ width: Math.min(100, (item.target > 0 ? item.done / item.target : 0) * 100) + '%' }" />
         </div>
-        <span class="kpi-num dim">{{ fmtMoney(item.done) }} / {{ fmtMoney(item.target) }}</span>
+        <span class="kpi-num dim">{{ item.target > 0 ? fmtMoney(item.done) + ' / ' + fmtMoney(item.target) : '本年代无此类' }}</span>
+      </div>
+      <div v-if="questProgress" class="quest-prog">
+        <span class="dim">卷一主线：{{ questProgress.done }} / {{ questProgress.total }} 章</span>
       </div>
     </section>
 
@@ -180,6 +190,7 @@ h3 { font-size: 15px; }
 .warn { color: var(--warn); }
 
 .kpi-row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; margin: 8px 0; }
+.quest-prog { margin-top: 8px; font-size: 12px; border-top: 1px dashed var(--line); padding-top: 8px; }
 .bar { height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
 .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.4s; }
 .kpi-num { font-size: 12px; white-space: nowrap; }

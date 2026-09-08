@@ -1,11 +1,12 @@
 import { reactive, computed } from 'vue';
 import {
-  GameCalendar, MarketSim, Game, Rng, Reception,
+  GameCalendar, MarketSim, Game, Rng, Reception, QuestEngine,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
   type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession, type ExamQuestion,
+  type QuestDef, type LifeLineDef,
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME1_LIFELINES } from '@fm/content';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -60,6 +61,13 @@ export const state = reactive({
   receptionAmount: 0,
   /** 通用弹窗（晋升/事件/月度结算） */
   modal: null as null | { kind: 'promotion' | 'month' | 'event'; payload?: any },
+
+  /** 主线剧情 */
+  questEngine: null as QuestEngine | null,
+  /** 剧情演出状态 */
+  questDialog: null as null | { quest: QuestDef; idx: number; phase: 'dialogue' | 'choice' | 'result'; resultText?: string; resultGrade?: string },
+  /** 人生线待确认 */
+  lifeDialog: null as null | LifeLineDef,
 });
 
 let game: Game;
@@ -100,6 +108,8 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   refreshCaches();
   // 注入随机事件池
   game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
+  // 初始化主线剧情引擎（卷一）
+  initQuestEngine(seed);
   // 自动存档（新开局覆盖 1 号自动档）
   try { localStorage.setItem('fm_save_0', serializeNow()); } catch { /* 存储满等异常忽略 */ }
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
@@ -222,10 +232,96 @@ export function advanceFrame(daysOverride?: number): number {
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
   }
+  // 主线剧情触发（优先于随机事件）
+  if (state.questEngine) {
+    const q = state.questEngine.checkQuests(game.date);
+    if (q) {
+      state.questDialog = { quest: q, idx: 0, phase: 'dialogue' };
+      return res.daysAdvanced;
+    }
+    const life = state.questEngine.checkLifeNodes(game.date, (cid) => {
+      const c = getGame().clients.find((x) => x.id === cid);
+      return c?.trust ?? 0;
+    });
+    if (life) {
+      state.lifeDialog = life;
+      return res.daysAdvanced;
+    }
+  }
   // 帧末掷骰随机事件（中断日也掷，UI 弹窗决策）
   const ev = game.rollRandomEvent();
   if (ev) state.modal = { kind: 'event', payload: ev };
   return res.daysAdvanced;
+}
+
+// ================= 主线剧情 =================
+
+export function initQuestEngine(seed: number) {
+  state.questEngine = new QuestEngine(VOLUME1_QUESTS as unknown as QuestDef[], VOLUME1_LIFELINES as unknown as LifeLineDef[]);
+}
+
+/** 剧情演出：下一步 */
+export function questNext() {
+  const d = state.questDialog;
+  if (!d) return;
+  if (d.phase === 'dialogue') {
+    if (d.idx < d.quest.dialogues.length - 1) {
+      d.idx += 1;
+    } else if (d.quest.choices.length > 0) {
+      d.phase = 'choice';
+    } else {
+      finishQuest(0);
+    }
+  }
+}
+
+/** 剧情演出：做出选择 */
+export function chooseQuest(choiceIdx: number) {
+  finishQuest(choiceIdx);
+}
+
+function finishQuest(choiceIdx: number) {
+  const d = state.questDialog;
+  const qe = state.questEngine;
+  const g = getGame();
+  if (!d || !qe) return;
+  const res = qe.complete(choiceIdx);
+  if (!res) return;
+  // 应用效果
+  const e = res.effects;
+  if (e.trust) {
+    const target = d.quest.client ? g.clients.find((c) => c.id === d.quest.client) : null;
+    if (target) target.trust = Math.max(0, Math.min(100, target.trust + e.trust));
+    else for (const c of g.clients) c.trust = Math.max(0, Math.min(100, c.trust + e.trust));
+  }
+  if (e.pro) g.player.attrs.pro += e.pro;
+  if (e.comm) g.player.attrs.comm += e.comm;
+  if (e.sales) g.player.attrs.sales += e.sales;
+  if (e.rep) g.player.attrs.rep += e.rep;
+  if (e.stress) g.player.attrs.stress = Math.max(0, g.player.attrs.stress + e.stress);
+  if (e.aum) g.player.aum = Math.max(0, g.player.aum + e.aum);
+  pushLog(`【剧情】${d.quest.title} —— ${res.outcome}`);
+  d.phase = 'result';
+  d.resultText = res.outcome;
+  d.resultGrade = res.grade;
+}
+
+export function closeQuestDialog() {
+  state.questDialog = null;
+}
+
+/** 人生线确认 */
+export function confirmLifeNode() {
+  const qe = state.questEngine;
+  const g = getGame();
+  const node = state.lifeDialog;
+  if (!qe || !node) return;
+  const res = qe.completeLife();
+  if (!res) return;
+  const c = g.clients.find((x) => x.id === node.client);
+  if (c && node.effects.trust) c.trust = Math.max(0, Math.min(100, c.trust + node.effects.trust));
+  pushLog(`【人生线】${node.title} —— ${node.text}`);
+  state.lifeDialog = null;
 }
 
 /** 玩家对随机事件做出选择 */
