@@ -141,6 +141,8 @@ function serializeNow(): string {
     clients: g.clients.map((c) => ({ ...c, holdings: c.holdings.map((h) => ({ ...h })) })),
     news: state.news.slice(0, 30),
     log: state.log.slice(0, 60),
+    /** 剧情进度 */
+    quest: state.questEngine?.serialize() ?? null,
   });
 }
 
@@ -361,8 +363,14 @@ export function startExam(examId: string): boolean {
   const exam = EXAM_DEFS.find((e) => e.id === examId);
   if (!exam) return false;
   if (game.player.certs.includes(exam.name)) return false;
+  // 冲刺 buff：临时专业力加成（仅在考试判定内使用）
+  const cramBoost = cramActive() ? 6 : 0;
+  const savedPro = game.player.attrs.pro;
+  if (cramBoost) game.player.attrs.pro += cramBoost;
   rngExam ??= new Rng(game.rngNextInt());
+  // 抽卷用 rng；判分通过率由专业力影响（简化：通过线降低 = pro 加成）
   const paper = buildPaper(exam, examBankAll, rngExam);
+  if (cramBoost) game.player.attrs.pro = savedPro; // 还原，buff 在判分阶段再乘
   state.examPaper = paper;
   state.examAnswers = paper.questions.map((q) => (q.type === 'multiple' ? [] : -1));
   state.examIdx = 0;
@@ -381,6 +389,8 @@ export function submitExam() {
   if (!state.examPaper || state.examScreen !== 'taking') return;
   if (state.examTimer) { clearInterval(state.examTimer); state.examTimer = 0; }
   const res = gradePaper(state.examPaper, state.examAnswers);
+  // 冲刺 buff：通过线判定时给 3 分宽限（临时抱佛脚的临场效应）
+  if (cramActive()) res.scorePct = Math.min(100, res.scorePct + 3);
   state.examResult = res;
   state.examScreen = 'result';
   const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
@@ -425,6 +435,7 @@ export interface WrongQuestion {
   correctAnswer: string;
   explanation: string;
   wrongAt: string;
+  knowledge_tags?: string[];
 }
 
 /** 错题本（按 questionId 去重） */
@@ -445,9 +456,43 @@ function pushWrongQuestions(paper: ExamPaper, per: number[]) {
       correctAnswer: q.type === 'multiple' ? (q.answer as number[]).map((x) => String.fromCharCode(65 + x)).join('、') : String.fromCharCode(65 + (q.answer as number)),
       explanation: q.explanation,
       wrongAt: game.date,
+      knowledge_tags: q.knowledge_tags,
     });
   });
   localStorage.setItem('fm_wrong_book', JSON.stringify(book.slice(0, 200)));
+}
+
+/** 知识点弱项雷达：错题按 knowledge_tag 聚合 */
+export function weakSpotRadar(): Array<{ tag: string; count: number }> {
+  const book = wrongBook();
+  const counter: Record<string, number> = {};
+  for (const w of book) {
+    for (const t of w.knowledge_tags ?? []) counter[t] = (counter[t] ?? 0) + 1;
+  }
+  return Object.entries(counter)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+}
+
+/** 考前冲刺：消耗 AP 换通过率 buff（规划书 7.5"临时抱佛脚"） */
+export function cramForExam(): string {
+  const g = getGame();
+  if (state.apUsed >= state.apMax) return '本帧行动点已用完，无法冲刺。';
+  state.apUsed += 1;
+  g.player.attrs.pro += 0.5;
+  g.player.attrs.stress += 3;
+  g.player.energy = Math.max(0, g.player.energy - 8);
+  // 冲刺 buff：24h 内通过率提升（简单实现为 pro 临时加成记录）
+  localStorage.setItem('fm_cram_until', String(Date.now() + 24 * 3600 * 1000));
+  pushLog('【考前冲刺】熬了个通宵刷题……专业力 +0.5，通过率临时提升，但压力 +3、精力 -8。');
+  return '冲刺完成！通过率临时提升（持续到明天）。';
+}
+
+/** 冲刺 buff 是否生效 */
+export function cramActive(): boolean {
+  const until = Number(localStorage.getItem('fm_cram_until') ?? 0);
+  return Date.now() < until;
 }
 
 /** 每日一题（按日期确定性抽取，情绪加成） */
@@ -603,6 +648,9 @@ export function loadGameFromSave(data: any) {
   // 重建 game 实例挂载（模块级 game 变量）
   replaceGame(g);
   state.seed = data.seed ?? 42;
+  // 恢复剧情进度
+  initQuestEngine(state.seed);
+  if (data.quest) state.questEngine?.restore(data.quest);
   pushLog(`【读档】已恢复到 ${g.date} 的进度。`);
 }
 

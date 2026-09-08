@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily } from '../state';
+import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive } from '../state';
 import { EXAM_DEFS } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
@@ -13,9 +13,10 @@ const answeredCount = computed(() =>
   state.examAnswers.filter((a) => (Array.isArray(a) ? a.length > 0 : a >= 0)).length,
 );
 
-/** 错题本与每日一题 */
+/** 错题本 / 弱项雷达 / 冲刺 */
 const wrongList = ref(wrongBook());
 const showWrong = ref(false);
+const radar = computed(() => weakSpotRadar());
 const daily = computed(() => dailyQuestion());
 const dailyAnswer = ref<number | null>(null);
 const dailyFeedback = ref('');
@@ -33,6 +34,10 @@ function submitDaily() {
 function clearWrong() {
   localStorage.removeItem('fm_wrong_book');
   refreshWrong();
+}
+
+function doCram() {
+  dailyFeedback.value = cramForExam();
 }
 
 function prevQ() { if (state.examIdx > 0) state.examIdx -= 1; }
@@ -75,7 +80,20 @@ function jump(i: number) { state.examIdx = i; }
 
       <div class="tools">
         <button @click="showWrong = !showWrong; refreshWrong()">错题本（{{ wrongList.length }}）</button>
+        <button :disabled="state.apUsed >= state.apMax" @click="doCram" title="消耗 1 AP 换取通过率临时提升（规划书 7.5）">考前冲刺（1 AP）</button>
+        <span v-if="cramActive()" class="gold">✦ 冲刺 buff 生效中</span>
       </div>
+
+      <!-- 弱项雷达 -->
+      <div v-if="radar.length > 0" class="radar">
+        <h4>弱项知识点雷达（错题聚合 TOP10）</h4>
+        <div v-for="r in radar" :key="r.tag" class="radar-row">
+          <span class="tag">{{ r.tag }}</span>
+          <div class="bar"><div class="fill" :style="{ width: Math.min(100, r.count * 20) + '%' }" /></div>
+          <span class="dim num">{{ r.count }}</span>
+        </div>
+      </div>
+
       <div v-if="showWrong" class="wrong-book">
         <div class="head"><h4>错题回顾</h4><button @click="clearWrong">清空</button></div>
         <div v-for="w in wrongList" :key="w.questionId" class="wrong-item">
@@ -177,7 +195,13 @@ h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .daily-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
 .daily-opts .opt { padding: 6px 10px; font-size: 12px; text-align: left; }
 .daily-opts .opt.picked { border-color: var(--accent); background: rgba(79, 140, 255, 0.15); }
-.tools { margin-bottom: 10px; }
+.tools { margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.radar { background: var(--bg2); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.radar h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.radar-row { display: grid; grid-template-columns: 150px 1fr 30px; align-items: center; gap: 8px; margin: 4px 0; }
+.radar-row .bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.radar-row .fill { height: 100%; background: var(--warn); }
+.radar-row .num { font-size: 11px; text-align: right; }
 .wrong-book { background: var(--bg2); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; max-height: 260px; overflow-y: auto; }
 .wrong-item { border-bottom: 1px solid var(--bg2); padding: 6px 0; }
 .wrong-item .stem { font-size: 12px; line-height: 1.6; }
