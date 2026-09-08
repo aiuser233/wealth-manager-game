@@ -13,6 +13,7 @@ import SystemPanel from './components/SystemPanel.vue';
 import EventDialog from './components/EventDialog.vue';
 import QuestDialog from './components/QuestDialog.vue';
 import LifeNodeDialog from './components/LifeNodeDialog.vue';
+import TutorialOverlay from './components/TutorialOverlay.vue';
 import StartScreen from './components/StartScreen.vue';
 
 const seed = ref(42);
@@ -74,6 +75,7 @@ function start() {
     <EventDialog />
     <QuestDialog />
     <LifeNodeDialog />
+    <TutorialOverlay />
     <PromotionPanel v-if="state.modal?.kind === 'promotion'" />
     <SystemPanel v-if="state.modal?.kind === 'system'" />
   </div>

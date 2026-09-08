@@ -133,16 +133,102 @@ export class QuestEngine {
     return { done: inVol.filter((q) => this.completed.has(q.id)).length, total: inVol.length };
   }
 
-  /** 序列化（存档） */
-  serialize(): { completed: string[]; lifelines: string[] } {
-    return { completed: [...this.completed], lifelines: [...this.firedLifelines] };
+  /**
+   * 结局闭环 v0（P2）：卷一结束时按"业绩 / 专业 / 红线"三维给阶段性评语。
+   * 完整六结局留 P6；此处输出可导出的阶段画像。
+   */
+  volumeReview(volume: number, dims: {
+    /** 业绩分：月度 KPI 均分（0-100） */
+    perfScore: number;
+    /** 专业分：证书数*10 + 专业力上限 60 */
+    proScore: number;
+    /** 红线：违规次数 */
+    violations: number;
+    /** 客户信任均值（0-100） */
+    avgTrust: number;
+  }): { headline: string; lines: string[]; grades: Array<{ dim: string; grade: string; comment: string }> } {
+    const done = this.quests.filter((q) => q.volume === volume && this.completed.has(q.id)).length;
+    const total = this.quests.filter((q) => q.volume === volume).length;
+
+    const perfGrade = dims.perfScore >= 85 ? 'S' : dims.perfScore >= 70 ? 'A' : dims.perfScore >= 55 ? 'B' : 'C';
+    const proGrade = dims.proScore >= 50 ? 'S' : dims.proScore >= 30 ? 'A' : dims.proScore >= 15 ? 'B' : 'C';
+    const redGrade = dims.violations === 0 ? 'S' : dims.violations <= 2 ? 'A' : dims.violations <= 5 ? 'B' : 'C';
+    const trustGrade = dims.avgTrust >= 60 ? 'S' : dims.avgTrust >= 40 ? 'A' : dims.avgTrust >= 25 ? 'B' : 'C';
+
+    const perfComment: Record<string, string> = {
+      S: '业绩标杆：KPI 从不是你的目的，但每次你都超额完成。',
+      A: '业绩扎实：稳定达标，距离标杆只差一个牛熊周期的沉淀。',
+      B: '业绩平庸：靠天吃饭的月份太多，配置能力需要补课。',
+      C: '业绩告急：回头看看，是获客不足还是转化不力？',
+    };
+    const proComment: Record<string, string> = {
+      S: '专业过硬：证书与知识储备让客户愿意把家庭资产负债表交给你。',
+      A: '专业合格：该考的证考了，该懂的逻辑懂了，继续往深里走。',
+      B: '专业单薄：证书是门槛不是天花板，错题本里的坑都填了吗？',
+      C: '专业堪忧：连门槛都还没迈过去，考题里的红线就是执业红线。',
+    };
+    const redComment: Record<string, string> = {
+      S: '红线满分：一次违规都没有，合规是你的本能而不是负担。',
+      A: '偶有擦边：没有造成事故，但记住——违规没有"差一点没事"。',
+      B: '红线意识薄弱：双录、适当性、承诺收益，培训要重点回炉。',
+      C: '合规高危：这个状态放到真实网点，已经在处罚名单上了。',
+    };
+    const trustComment: Record<string, string> = {
+      S: '客户信任满分：人生线走完了大半，客户把你当成家人。',
+      A: '信任良好：客户愿意听你讲完再决定，这就是专业溢价。',
+      B: '信任一般：客户还把你当"卖产品的"，多聊聊人生再聊钱。',
+      C: '信任危机：客户在防着你，回想一下哪次急功近利伤了人。',
+    };
+
+    const grades = [
+      { dim: '业绩', grade: perfGrade, comment: perfComment[perfGrade] },
+      { dim: '专业', grade: proGrade, comment: proComment[proGrade] },
+      { dim: '红线', grade: redGrade, comment: redComment[redGrade] },
+      { dim: '信任', grade: trustGrade, comment: trustComment[trustGrade] },
+    ];
+
+    // 头条：三维加权总评
+    const scoreMap: Record<string, number> = { S: 4, A: 3, B: 2, C: 1 };
+    const total3 = scoreMap[redGrade] * 2 + scoreMap[perfGrade] + scoreMap[proGrade]; // 红线双倍权重
+    const headline = total3 >= 12
+      ? '卷一终评 · 「穿越牛熊的新星」——牛熊交替之间，你守住了底线也赢得了信任。'
+      : total3 >= 9
+        ? '卷一终评 · 「稳健起步的理财经理」——专业在长，业绩在涨，红线在手。'
+        : total3 >= 6
+          ? '卷一终评 · 「磕磕绊绊的新人」——这一世比上一世强，但距离合格还有距离。'
+          : '卷一终评 · 「重蹈覆辙的前世」——被行情和欲望牵着走的人生，需要再来一次。';
+
+    const lines = [
+      `主线章节：${done}/${total} 完成。`,
+      ...grades.map((g) => `【${g.dim}·${g.grade}】${g.comment}`),
+    ];
+    return { headline, lines, grades };
+  }
+
+  /** 序列化（存档）：含进行中任务与生涯日志（P2 存档补全） */
+  serialize(): { completed: string[]; lifelines: string[]; pending: string | null; pendingLife: string | null; careerLog: Array<{ date: IsoDate; title: string; grade: string }> } {
+    return {
+      completed: [...this.completed],
+      lifelines: [...this.firedLifelines],
+      pending: this.pending?.id ?? null,
+      pendingLife: this.pendingLife ? `${this.pendingLife.client}@${this.pendingLife.year}@${this.pendingLife.title}` : null,
+      careerLog: [...this.careerLog],
+    };
   }
 
   /** 恢复（读档） */
-  restore(data: { completed: string[]; lifelines: string[] }) {
+  restore(data: {
+    completed: string[]; lifelines: string[];
+    pending?: string | null; pendingLife?: string | null;
+    careerLog?: Array<{ date: IsoDate; title: string; grade: string }>;
+  }) {
     this.completed = new Set(data.completed ?? []);
     this.firedLifelines = new Set(data.lifelines ?? []);
-    this.pending = null;
-    this.pendingLife = null;
+    // 恢复进行中的剧情演出（下次 checkQuests/checkLifeNodes 直接返回）
+    const pid = data.pending ?? null;
+    this.pending = pid ? (this.quests.find((q) => q.id === pid) ?? null) : null;
+    const plid = data.pendingLife ?? null;
+    this.pendingLife = plid ? (this.lifelines.find((n) => `${n.client}@${n.year}@${n.title}` === plid) ?? null) : null;
+    this.careerLog = [...(data.careerLog ?? [])];
   }
 }

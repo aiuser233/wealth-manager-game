@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { state, gameReady, getGame, cal, markViewed, fmtPct, pctClass, snapAt } from '../state';
 import { MarketSim } from '@fm/core';
+import KLineChart from './KLineChart.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
@@ -89,6 +90,9 @@ const familyNames: Record<string, string> = {
       </div>
       <span class="dim">数据日：{{ g.lastSnap?.date ?? '--' }} · 行情为架空模拟</span>
     </div>
+
+    <!-- K 线走势图（宽基/行业，近 60/120 日） -->
+    <KLineChart />
 
     <div class="cols">
       <!-- 宽基指数 -->

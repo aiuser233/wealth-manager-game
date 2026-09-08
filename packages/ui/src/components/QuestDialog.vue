@@ -56,9 +56,21 @@ const gradeLabel = (g?: string): string => {
 
       <!-- 结果阶段 -->
       <div v-else class="result-stage">
-        <p class="grade" :class="d.resultGrade">{{ gradeLabel(d.resultGrade) }}</p>
-        <p class="outcome">{{ d.resultText }}</p>
-        <button class="primary" @click="closeQuestDialog">继续工作</button>
+        <template v-if="state.volumeReview">
+          <p class="vol-title">{{ state.volumeReview.headline }}</p>
+          <div class="dim-grid">
+            <div v-for="gd in state.volumeReview.grades" :key="gd.dim" class="dim-card">
+              <span class="dim-name">{{ gd.dim }}</span>
+              <span class="dim-grade">{{ gd.grade }}</span>
+            </div>
+          </div>
+          <p v-for="(l, i) in state.volumeReview.lines" :key="i" class="outcome">{{ l }}</p>
+        </template>
+        <template v-else>
+          <p class="grade" :class="d.resultGrade">{{ gradeLabel(d.resultGrade) }}</p>
+          <p class="outcome">{{ d.resultText }}</p>
+        </template>
+        <button class="primary" @click="closeQuestDialog">{{ state.volumeReview ? '开启卷二（未完待续）' : '继续工作' }}</button>
       </div>
     </div>
   </div>
@@ -93,4 +105,10 @@ h3 { font-size: 17px; flex: 1; }
 .grade.normal { color: var(--text-dim); }
 .grade.bad { color: var(--up); }
 .outcome { line-height: 2; }
+
+.vol-title { font-size: 17px; font-weight: 700; color: var(--gold); line-height: 1.6; }
+.dim-grid { display: flex; justify-content: center; gap: 10px; }
+.dim-card { display: flex; flex-direction: column; align-items: center; background: var(--bg2); border-radius: 8px; padding: 8px 18px; min-width: 72px; }
+.dim-name { font-size: 12px; color: var(--text-dim); }
+.dim-grade { font-size: 22px; font-weight: 800; color: var(--gold); }
 </style>

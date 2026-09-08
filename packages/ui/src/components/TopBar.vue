@@ -3,7 +3,8 @@ import { state, gameReady, getGame } from '../state';
 import { GRADE_NAMES } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
-const dateStr = computed(() => g.value?.date ?? '----');
+// 日期绑定 state.gameDate 镜像（Game 实例字段非响应式，直接读 g.value.date 不会触发重算）
+const dateStr = computed(() => (gameReady.value ? state.gameDate : '----'));
 const grade = computed(() => (g.value ? GRADE_NAMES[g.value.player.grade] : ''));
 
 defineProps<{
@@ -26,7 +27,7 @@ export default {};
 <template>
   <header class="top">
     <div class="brand">汇诚银行 · 城东支行</div>
-    <nav class="tabs">
+    <nav class="tabs topbar-tabs">
       <button
         v-for="t in tabs" :key="t.id"
         :class="{ active: state.screen === t.id }"
@@ -34,7 +35,6 @@ export default {};
       >{{ t.label }}<span v-if="t.id === 'workbench' && newsCount" class="badge">{{ newsCount }}</span></button>
     </nav>
     <div class="right">
-      <span class="dim">{{ g?.player.name }}</span>
       <span class="tag">{{ grade }}</span>
       <span class="date">{{ dateStr }}</span>
     </div>
@@ -47,6 +47,13 @@ export default {};
   padding: 10px 16px;
   background: var(--bg2);
   border-bottom: 1px solid var(--line);
+}
+@media (max-width: 767px) {
+  .top { gap: 8px; padding: 6px 8px; flex-wrap: wrap; }
+  .brand { font-size: 12px; width: 100%; padding-bottom: 4px; border-bottom: 1px dashed var(--line); }
+  .tabs { order: 2; flex: 1 0 100%; }
+  .right { order: 1; margin-left: auto; }
+  .tabs button { padding: 8px 12px; min-height: 44px; }
 }
 .brand { font-weight: 700; color: var(--gold); letter-spacing: 1px; white-space: nowrap; }
 .tabs { display: flex; gap: 6px; flex: 1; }

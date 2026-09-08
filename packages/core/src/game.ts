@@ -184,6 +184,8 @@ export class Game {
   lastSnap: MarketSnapshot | null = null;
   /** 上次查看行情的快照（用于"距上次查看"涨跌） */
   lastViewedSnap: MarketSnapshot | null = null;
+  /** 快照历史（环形，供 K 线图绘制）：最近 120 个交易日 */
+  snapHistory: MarketSnapshot[] = [];
 
   constructor(sim: MarketSim, cal: any, seed: number, clients: ClientDef[]) {
     this.sim = sim;
@@ -196,12 +198,19 @@ export class Game {
     return this.cal.at(Math.max(0, this.sim.cursor - 1));
   }
 
+  /** K 线历史入环形缓冲（上限 120 交易日） */
+  private pushSnapHistory(snap: MarketSnapshot) {
+    this.snapHistory.push(snap);
+    if (this.snapHistory.length > 120) this.snapHistory.shift();
+  }
+
   /** 推进 n 个交易日（执行完今日行动后调用） */
   advanceDays(n: number) {
     for (let i = 0; i < n; i++) {
       this.apUsed = 0;
       const snap = this.sim.stepToNext();
       this.lastSnap = snap;
+      this.pushSnapHistory(snap);
       for (const nw of this.sim.newsFeed) {
         if (nw.date === snap.date) this.hooks.onNews?.(nw);
       }
@@ -315,6 +324,7 @@ export class Game {
       const before = this.sim.firedEvents.length;
       const snap = this.sim.stepToNext();
       this.lastSnap = snap;
+      this.pushSnapHistory(snap);
       out.push(snap);
       for (const nw of this.sim.newsFeed) {
         if (nw.date === snap.date) this.hooks.onNews?.(nw);

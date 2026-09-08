@@ -1,4 +1,4 @@
-import { reactive, computed } from 'vue';
+import { reactive, computed, ref } from 'vue';
 import {
   GameCalendar, MarketSim, Game, Rng, Reception, QuestEngine,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
@@ -25,6 +25,8 @@ export const state = reactive({
   /** 今日行动点 */
   apUsed: 0,
   apMax: 4,
+  /** 当前游戏日期（Game 实例字段非响应式，镜像到 state 供 UI 绑定） */
+  gameDate: '----' as string,
   /** 今日行动记录 */
   todayActions: [] as Array<{ name: string; text: string }>,
 
@@ -68,6 +70,9 @@ export const state = reactive({
   questDialog: null as null | { quest: QuestDef; idx: number; phase: 'dialogue' | 'choice' | 'result'; resultText?: string; resultGrade?: string },
   /** 人生线待确认 */
   lifeDialog: null as null | LifeLineDef,
+
+  /** 结局闭环 v0：卷一结束的三维阶段评语 */
+  volumeReview: null as null | { headline: string; lines: string[]; grades: Array<{ dim: string; grade: string; comment: string }> },
 });
 
 let game: Game;
@@ -112,14 +117,16 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   initQuestEngine(seed);
   // 自动存档（新开局覆盖 1 号自动档）
   try { localStorage.setItem('fm_save_0', serializeNow()); } catch { /* 存储满等异常忽略 */ }
+  // 新手引导（跳过条件：本浏览器已完成过）
+  startTutorial();
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
 }
 
-/** 当前游戏状态序列化（自动存档用） */
-function serializeNow(): string {
+/** 当前游戏状态序列化（v2：含接待/考试/剧情 pending/K线历史，手动存档与自动档共用） */
+export function serializeNow(): string {
   const g = getGame();
   return JSON.stringify({
-    version: 1,
+    version: 2,
     savedAt: new Date().toISOString(),
     seed: state.seed,
     date: g.date,
@@ -138,11 +145,22 @@ function serializeNow(): string {
       sentiment: g.sim.sentiment,
       cursor: g.sim.cursor,
     },
+    /** K 线历史（snapHistory 环形缓冲） */
+    snapHistory: g.snapHistory.slice(-120),
     clients: g.clients.map((c) => ({ ...c, holdings: c.holdings.map((h) => ({ ...h })) })),
     news: state.news.slice(0, 30),
     log: state.log.slice(0, 60),
-    /** 剧情进度 */
+    /** 剧情进度（含进行中任务、生涯日志） */
     quest: state.questEngine?.serialize() ?? null,
+    /** 接待会话中间态 */
+    reception: state.reception ? { ...state.reception, need: state.reception.need } : null,
+    receptionLog: state.reception ? state.receptionLog : [],
+    receptionRevealed: state.receptionRevealed,
+    receptionAmount: state.reception ? state.receptionAmount : 0,
+    /** 考试进行态 */
+    exam: state.examScreen === 'taking' && state.examPaper
+      ? { paper: state.examPaper, answers: state.examAnswers, idx: state.examIdx, secondsLeft: state.examSecondsLeft }
+      : null,
   });
 }
 
@@ -152,6 +170,7 @@ function refreshCaches() {
   state.lastSnap = game.lastSnap;
   state.apUsed = game.apUsed;
   state.apMax = game.apMax;
+  state.gameDate = game.date;
   // 各口径基准：当日=昨收；周=上周五；月=上月末；since_view=上次查看
   const d = game.date;
   const weekDays = cal.tradingDaysOfWeek(d);
@@ -191,6 +210,7 @@ export function advanceDays(n: number) {
   state.todayActions = [];
   state.apUsed = game.apUsed;
   state.lastSnap = game.lastSnap;
+  state.gameDate = game.date;
   if (state.baseSnap.since_view) {
     // 保留"距上次查看"基准，直到玩家手动刷新
   } else if (game.lastSnap) {
@@ -201,6 +221,7 @@ export function advanceDays(n: number) {
 export function doAction(type: ActionType, name: string): ActionResult {
   const r = game.doAction(type);
   state.apUsed = game.apUsed;
+  state.gameDate = game.date;
   state.todayActions.push({ name, text: r.text });
   state.lastResult = r.text;
   if (r.income_delta) pushLog(`[${game.date}] ${r.text}`);
@@ -230,6 +251,7 @@ export function advanceFrame(daysOverride?: number): number {
   state.apUsed = game.apUsed;
   state.todayActions = [];
   state.lastSnap = game.lastSnap;
+  state.gameDate = game.date;
   for (const s of res.snaps) cacheSnap(s, 0);
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
@@ -280,6 +302,28 @@ export function questNext() {
 /** 剧情演出：做出选择 */
 export function chooseQuest(choiceIdx: number) {
   finishQuest(choiceIdx);
+  // 卷末任务完成 → 触发结局闭环 v0（三维阶段评语）
+  const d = state.questDialog;
+  if (d?.quest.id.endsWith('vol1_end') && state.questEngine) {
+    state.volumeReview = computeVolumeReview(1);
+  }
+}
+
+/** 三维阶段评语（结局闭环 v0） */
+export function computeVolumeReview(volume: number) {
+  const g = getGame();
+  const qe = state.questEngine;
+  if (!qe) return null;
+  const avgTrust = g.clients.length
+    ? g.clients.reduce((a, c) => a + c.trust, 0) / g.clients.length
+    : 0;
+  const proScore = Math.min(60, g.player.certs.length * 10) + Math.min(30, g.player.attrs.pro * 0.3);
+  return qe.volumeReview(volume, {
+    perfScore: g.recentSeasonScore(),
+    proScore,
+    violations: g.violations,
+    avgTrust,
+  });
 }
 
 function finishQuest(choiceIdx: number) {
@@ -310,6 +354,7 @@ function finishQuest(choiceIdx: number) {
 
 export function closeQuestDialog() {
   state.questDialog = null;
+  state.volumeReview = null;
 }
 
 /** 人生线确认 */
@@ -324,6 +369,64 @@ export function confirmLifeNode() {
   if (c && node.effects.trust) c.trust = Math.max(0, Math.min(100, c.trust + node.effects.trust));
   pushLog(`【人生线】${node.title} —— ${node.text}`);
   state.lifeDialog = null;
+}
+
+// ================= 新手引导（P2：前 3 个交易日四教学点强制引导） =================
+
+export interface TutorialStep {
+  idx: number;
+  title: string;
+  text: string;
+  /** 行动指引（指向哪个界面/操作） */
+  hint: string;
+}
+
+const TUTORIAL_STEPS: Omit<TutorialStep, 'idx'>[] = [
+  {
+    title: '欢迎来到 2006',
+    text: '你重生为汇诚银行城东支行的见习理财经理。\n这一世，你比所有人都多知道未来二十年的行情——但请记住：你的客户不是 K 线，是一个个具体的人。',
+    hint: '点击"知道了"进入工作台。',
+  },
+  {
+    title: '行动点（AP）与一天的工作',
+    text: '每天有 4 点行动力（AP）。在工作台"今日行动"里接待客户、打电话维护关系、学习考证、去营业厅站大堂——每项消耗 1 AP。',
+    hint: '试试在工作台执行一个行动，或直接推进时间。',
+  },
+  {
+    title: '接待客户：先问，再卖',
+    text: '接待是对话玩法：客户嘴上说的和真实需要的不一样。先"挖潜"两次揭示真实需求，再从货架上推荐风险匹配的产品。\n适当性不符客户会拒签——这是红线，不是技巧。',
+    hint: '工作台 → 接待客户（消耗 1 AP）。',
+  },
+  {
+    title: '行情终端与主线剧情',
+    text: '"行情终端"看指数、行业与 K 线；每月"结算"推进时间。\n剧情会主动找上门：系统任务在日期到点后自动弹出，客户的人生线在信任足够时触发——你的每一次选择都会被记进生涯档案。',
+    hint: '有问题随时看"手册"。推进时间后注意弹窗。',
+  },
+  {
+    title: '金手指与代价',
+    text: '"重启记忆"能调用前世记忆，告诉你未来大事件的方向——但每用一次，记忆就失准一分，2018 年后彻底归零。\n靠记忆赢一时，靠专业赢一世。开始营业吧。',
+    hint: '点击"开始营业"正式入职。',
+  },
+];
+
+export const tutorial = ref<TutorialStep | null>(null);
+
+/** 开新档时启动引导（存档恢复不触发） */
+export function startTutorial() {
+  const done = localStorage.getItem('fm_tutorial_done') === '1';
+  if (done) return;
+  tutorial.value = { idx: 0, ...TUTORIAL_STEPS[0] };
+}
+
+export function tutorialNext() {
+  const cur = tutorial.value;
+  if (!cur) return;
+  if (cur.idx + 1 >= TUTORIAL_STEPS.length) {
+    tutorial.value = null;
+    try { localStorage.setItem('fm_tutorial_done', '1'); } catch { /* 忽略 */ }
+  } else {
+    tutorial.value = { idx: cur.idx + 1, ...TUTORIAL_STEPS[cur.idx + 1] };
+  }
 }
 
 /** 玩家对随机事件做出选择 */
@@ -395,6 +498,10 @@ export function submitExam() {
   state.examScreen = 'result';
   const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
   pushWrongQuestions(state.examPaper, res.perQuestion);
+  try {
+    const attempts = Number(localStorage.getItem('fm_exam_attempts') ?? 0) + 1;
+    localStorage.setItem('fm_exam_attempts', String(attempts));
+  } catch { /* 忽略 */ }
   if (res.passed && exam && !game.player.certs.includes(exam.name)) {
     game.player.certs.push(exam.name);
     game.player.attrs.pro += 5;
@@ -639,12 +746,39 @@ export function loadGameFromSave(data: any) {
   state.todayActions = [];
   state.apUsed = g.apUsed;
   state.apMax = g.apMax;
+  state.gameDate = g.date;
   state.lastSnap = null;
   state.baseSnap = { day: null, week: null, month: null, since_view: null };
   state.selectedClientId = g.clients[0]?.id ?? '';
   state.memoryHint = '';
-  state.reception = null;
-  state.receptionLog = [];
+  // K 线历史恢复
+  g.snapHistory = Array.isArray(data.snapHistory) ? data.snapHistory.slice(-120) : [];
+  // 接待会话中间态恢复
+  if (data.reception) {
+    state.reception = data.reception;
+    state.receptionLog = Array.isArray(data.receptionLog) ? data.receptionLog : [{ who: 'client', text: data.reception.need?.surface ?? '' }];
+    state.receptionRevealed = !!data.receptionRevealed;
+    state.receptionAmount = data.receptionAmount ?? 0;
+    // probe/evaluate 只依赖会话对象本身，rng 仅 start 用 —— 惰性重建引擎即可续聊
+    receptionEngine = new Reception(getGame().rng);
+  } else {
+    state.reception = null;
+    state.receptionLog = [];
+  }
+  // 考试进行态恢复
+  if (data.exam?.paper) {
+    state.examPaper = data.exam.paper;
+    state.examAnswers = data.exam.answers ?? [];
+    state.examIdx = data.exam.idx ?? 0;
+    state.examScreen = 'taking';
+    const examDef = EXAM_DEFS.find((e) => e.id === data.exam.paper.examId);
+    state.examSecondsLeft = data.exam.secondsLeft ?? examDef?.time_limit_sec ?? 600;
+    if (state.examTimer) clearInterval(state.examTimer);
+    state.examTimer = setInterval(() => {
+      state.examSecondsLeft -= 1;
+      if (state.examSecondsLeft <= 0) submitExam();
+    }, 1000);
+  }
   // 重建 game 实例挂载（模块级 game 变量）
   replaceGame(g);
   state.seed = data.seed ?? 42;

@@ -1,8 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame } from '../state';
+import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow } from '../state';
+import { buildReport, reportHtml, downloadReport } from '../report';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
+
+/** 学习报告导出（P2）：生成 HTML → 浏览器打开 + 另存，打印即为 PDF */
+function exportReport() {
+  const game = getGame();
+  const book = wrongBook();
+  const rep = buildReport(game, {
+    weakSpots: weakSpotRadar(),
+    wrongTotal: book.length,
+    wrongCorrected: 0,
+    examAttempts: Number(localStorage.getItem('fm_exam_attempts') ?? 0),
+    lifeLog: state.log.filter((l) => l.text.startsWith('【人生线】')).map((l) => ({ date: l.date, text: l.text.replace('【人生线】', '') })),
+    questEngine: state.questEngine,
+  });
+  downloadReport(reportHtml(rep), `学习报告_${game.player.name}_${game.date}.html`);
+  message.value = '学习报告已生成（新窗口打开 + 已下载 HTML，浏览器打印即为 PDF）';
+  setTimeout(() => (message.value = ''), 3500);
+}
 
 /** 存档位：3 自动 + 8 手动 */
 interface SaveMeta { slot: number; auto: boolean; date: string; player: string; aum: string; savedAt: string; }
@@ -36,32 +54,8 @@ function fmtAum(n: number): string {
 }
 
 function serializeGame(): string {
-  const g = getGame();
-  return JSON.stringify({
-    version: 1,
-    savedAt: new Date().toISOString(),
-    seed: state.seed,
-    date: g.date,
-    player: { ...g.player, attrs: { ...g.player.attrs } },
-    kpi: { ...g.kpi },
-    monthScores: [...g.monthScores],
-    memoryUses: g.memoryUses,
-    frame: g.frame,
-    forceDayDays: g.forceDayDays,
-    apUsed: g.apUsed,
-    violations: g.violations,
-    market: {
-      factorState: { ...g.sim.factorState },
-      industryState: { ...g.sim.industryState },
-      indicesState: { ...g.sim.indicesState },
-      sentiment: g.sim.sentiment,
-      cursor: g.sim.cursor,
-    },
-    clients: g.clients.map((c) => ({ ...c, holdings: c.holdings.map((h) => ({ ...h })) })),
-    news: state.news.slice(0, 60),
-    log: state.log.slice(0, 120),
-    certs: g.player.certs,
-  });
+  // 复用 state 的 v2 序列化（含接待/考试/剧情 pending/K线历史），手动档与自动档格式一致
+  return serializeNow();
 }
 
 function saveTo(slot: number, auto: boolean) {
@@ -134,6 +128,10 @@ function importSave(file: File) {
       </label>
     </div>
 
+    <div class="row">
+      <button class="gold-btn" @click="exportReport">📄 导出学习报告（考证/错题/生涯/合规）</button>
+    </div>
+
     <h4>已有存档</h4>
     <div class="save-list">
       <div v-for="s in saves" :key="s.slot" class="save-item" :class="{ auto: s.auto }">
@@ -161,6 +159,8 @@ h3 { margin-bottom: 4px; }
 h4 { font-size: 13px; color: var(--text-dim); margin: 8px 0 6px; }
 .msg { color: var(--gold); }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.gold-btn { border-color: var(--gold); color: var(--gold); }
+.gold-btn:hover:not(:disabled) { background: rgba(240, 180, 41, 0.12); border-color: var(--gold); }
 .file-label { border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 .file-label:hover { border-color: var(--accent); }
 .save-list { display: flex; flex-direction: column; gap: 6px; }
