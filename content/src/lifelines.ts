@@ -95,6 +95,13 @@ export const LI_LIFELINE: LifeLineDef[] = [
     effects: { trust: 4, unlockKnowledge: ['education_fund', 'insurance_basics'] },
   },
   {
+    client: 'cli_liqiang', year: 2013, month: 7,
+    title: '利率市场化：转贷的算术题',
+    text: '央行放开了贷款利率管制，李建国拿着邻居的"转贷省钱账"来问："我的房贷要不要也转？"利率市场化元年，存量按揭客户的第一个"再定价"问题。你给他算了手续成本、利率差额与重定价周期——省不省，算完才知道。',
+    trustReq: 40,
+    effects: { trust: 4, unlockKnowledge: ['debt', 'cashflow'] },
+  },
+  {
     client: 'cli_liqiang', year: 2015, month: 4,
     title: '邻居的配资神话',
     text: '李建国的邻居用场外配资三个月翻倍，换了大车。他来问你："我房子抵押了去配资怎么样？"——2015 年 4 月。两个月后市场会用最惨烈的方式回答这个问题。',
