@@ -8,6 +8,8 @@ import {
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
+import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
+import { packQuestions } from './packs';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -18,7 +20,7 @@ export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 const cal = new GameCalendar('2006-01-02', '2025-12-31');
 
 export const state = reactive({
-  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help',
+  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer',
   started: false,
   seed: 42,
   playerSeedText: '',
@@ -225,6 +227,7 @@ export function doAction(type: ActionType, name: string): ActionResult {
   state.gameDate = game.date;
   state.todayActions.push({ name, text: r.text });
   state.lastResult = r.text;
+  touchActiveDay(game.date);
   if (r.income_delta) pushLog(`[${game.date}] ${r.text}`);
   return r;
 }
@@ -348,6 +351,9 @@ function finishQuest(choiceIdx: number) {
   if (e.stress) g.player.attrs.stress = Math.max(0, g.player.attrs.stress + e.stress);
   if (e.aum) g.player.aum = Math.max(0, g.player.aum + e.aum);
   pushLog(`【剧情】${d.quest.title} —— ${res.outcome}`);
+  // P4 学习记录：抉择态度数据入档（best/good/normal/bad 天然分级）
+  recordChoice({ questTitle: d.quest.title, grade: res.grade, at: game.date });
+  touchActiveDay(game.date);
   d.phase = 'result';
   d.resultText = res.outcome;
   d.resultGrade = res.grade;
@@ -473,7 +479,9 @@ export function startExam(examId: string): boolean {
   if (cramBoost) game.player.attrs.pro += cramBoost;
   rngExam ??= new Rng(game.rngNextInt());
   // 抽卷用 rng；判分通过率由专业力影响（简化：通过线降低 = pro 加成）
-  const paper = buildPaper(exam, examBankAll, rngExam);
+  // P4：并入行内题包（同科目追加进池，抽卷配比算法自动兼容）
+  const pool = [...examBankAll, ...packQuestions()];
+  const paper = buildPaper(exam, pool, rngExam);
   if (cramBoost) game.player.attrs.pro = savedPro; // 还原，buff 在判分阶段再乘
   state.examPaper = paper;
   state.examAnswers = paper.questions.map((q) => (q.type === 'multiple' ? [] : -1));
@@ -503,6 +511,9 @@ export function submitExam() {
     const attempts = Number(storage.get('fm_exam_attempts') ?? 0) + 1;
     storage.set('fm_exam_attempts', String(attempts));
   } catch { /* 忽略 */ }
+  // P4 学习记录：考试明细入档（讲师报表通过率数据源）
+  recordExamAttempt({ examId: res.examId, examName: exam?.name ?? res.examId, passed: res.passed, scorePct: res.scorePct, at: game.date });
+  touchActiveDay(game.date);
   if (res.passed && exam && !game.player.certs.includes(exam.name)) {
     game.player.certs.push(exam.name);
     game.player.attrs.pro += 5;
@@ -603,9 +614,9 @@ export function cramActive(): boolean {
   return Date.now() < until;
 }
 
-/** 每日一题（按日期确定性抽取，情绪加成） */
+/** 每日一题（按日期确定性抽取，情绪加成；含行内题包） */
 export function dailyQuestion(): { q: ExamQuestion; done: boolean } | null {
-  const pool = examBankAll.filter((q) => q.subject === 'exam_bank_law' || q.subject === 'exam_bank_pf');
+  const pool = [...examBankAll, ...packQuestions()].filter((q) => q.subject === 'exam_bank_law' || q.subject === 'exam_bank_pf');
   if (pool.length === 0) return null;
   const dateKey = Number(game.date.replace(/-/g, ''));
   const idx = dateKey % pool.length;

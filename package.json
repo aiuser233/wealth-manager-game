@@ -17,7 +17,8 @@
     "sim": "npm run sim -w @fm/tools",
     "bot": "npm run bot -w @fm/tools",
     "content:lint": "tsx tools/content-tools/build.mts",
-    "content:check": "tsx tools/content-tools/build.mts && tsx tools/content-tools/checks/ref-check.mts"
+    "content:check": "tsx tools/content-tools/build.mts && tsx tools/content-tools/checks/ref-check.mts",
+    "collect": "tsx tools/collect-server.mts"
   },
   "devDependencies": {
     "typescript": "5.9.3",

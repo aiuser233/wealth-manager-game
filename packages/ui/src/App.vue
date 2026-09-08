@@ -15,6 +15,8 @@ import QuestDialog from './components/QuestDialog.vue';
 import LifeNodeDialog from './components/LifeNodeDialog.vue';
 import TutorialOverlay from './components/TutorialOverlay.vue';
 import StartScreen from './components/StartScreen.vue';
+import TrainerPanel from './components/TrainerPanel.vue';
+import LecturerMode from './components/LecturerMode.vue';
 
 const seed = ref(42);
 const name = ref('林奇安');
@@ -27,6 +29,8 @@ const screenTitle = computed(() => {
     case 'exam': return '考试中心';
     case 'gallery': return '图鉴馆';
     case 'system': return '系统';
+    case 'trainer': return '培训后台';
+    case 'lecturer': return '讲师模式大屏';
     case 'help': return '新人手册';
     default: return '工作台';
   }
@@ -39,6 +43,8 @@ const tabs = [
   { id: 'exam', label: '考试中心' },
   { id: 'gallery', label: '图鉴馆' },
   { id: 'system', label: '系统' },
+  { id: 'trainer', label: '培训后台' },
+  { id: 'lecturer', label: '讲师模式' },
   { id: 'help', label: '手册' },
 ] as const;
 
@@ -60,6 +66,8 @@ function start() {
       <ExamPanel v-else-if="state.screen === 'exam'" />
       <GalleryPanel v-else-if="state.screen === 'gallery'" />
       <SystemPanel v-else-if="state.screen === 'system'" />
+      <TrainerPanel v-else-if="state.screen === 'trainer'" />
+      <LecturerMode v-else-if="state.screen === 'lecturer'" />
       <div v-else class="panel help">
         <h3>新人手册</h3>
         <p>· <b>接待客户</b>是对话玩法：先挖潜（选话题了解真实需求），再从当期货架推荐产品。适当性不符客户会拒签，金额超资金池会被拒绝。</p>
