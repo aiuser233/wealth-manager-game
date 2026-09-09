@@ -1,79 +1,590 @@
 # 重生之我是理财经理
 
-一款「重生 + 银行职场」题材的视觉小说 × 模拟经营单机游戏。玩家扮演重生回 2006 年的华尔街明星基金经理，在 A 国商业银行从见习理财经理做起，**历经 20 年完整经济周期**（疯牛、次贷、四万亿、钱荒、杠杆牛熊、贸易战、疫情、破净潮、AI 浪潮），边玩边学一套专业、准确的财富管理知识。
+一款「重生 + 银行职场」题材的视觉小说 × 模拟经营单机游戏，同时是一个面向银行内训的**合规培训游戏化平台**。玩家扮演重生回 2006 年的华尔街明星基金经理，在 A 国商业银行从见习理财经理做起，**历经 20 年完整经济周期**（疯牛、次贷、四万亿、钱荒、杠杆牛熊、贸易战、疫情、破净潮、AI 浪潮），边玩边学一套专业、准确的财富管理知识。
 
-> 本项目为虚构作品：所有机构（汇诚银行、玄商 300 等）、人物、产品、行情均以公开历史行情为蓝本架空改编，仅供学习与娱乐，不构成任何投资建议。
+> **虚构声明**：所有机构（汇诚银行、玄商 300 等）、人物、产品、行情均以公开历史行情为蓝本架空改编，仅供学习与娱乐，不构成任何投资建议。这条声明由代码中的内容 Lint 机器闸强制保障（见 [内容合规管线](#5-内容合规管线content-tools)）。
 
-## 当前状态：P5 内容全量完成（P6 游戏体验待启动）
+> **交接提示**：本 README 目标是让新接手的同事**不读代码也能理解每一个系统、每一个文件、每一条数据流**。规划与实施状态的逐项对照（哪些做了/没做/部分做）在 [docs/项目总体规划与实施状态.md](docs/项目总体规划与实施状态.md)；培训后台部署见 [docs/培训后台与私有化部署.md](docs/培训后台与私有化部署.md)。
 
-按 [游戏规划书 v2.0](./游戏规划书.md) 与 [推广版项目规划](./推广版项目规划.md) 推进：
+---
 
-| 里程碑 | 状态 |
+## 目录
+
+1. [快速上手](#1-快速上手)
+2. [项目定位与两份规划](#2-项目定位与两份规划)
+3. [Monorepo 结构与三铁律](#3-monorepo-结构与三铁律)
+4. [packages/core 引擎逐文件讲解](#4-packagescore-引擎逐文件讲解)
+5. [内容合规管线（content-tools）](#5-内容合规管线content-tools)
+6. [content 内容包逐文件讲解](#6-content-内容包逐文件讲解)
+7. [packages/ui 表现层逐文件讲解](#7-packagesui-表现层逐文件讲解)
+8. [核心系统逻辑详解](#8-核心系统逻辑详解)
+9. [数据流与存档机制](#9-数据流与存档机制)
+10. [tools 工具链（sim/bot/collect）](#10-tools-工具链simbotcollect)
+11. [Tauri 桌面壳](#11-tauri-桌面壳)
+12. [数据字典（全部内容 Schema）](#12-数据字典全部内容-schema)
+13. [开发工作手册（改内容/改代码/加系统）](#13-开发工作手册改内容改代码加系统)
+14. [质量保障与当前指标](#14-质量保障与当前指标)
+
+---
+
+## 1. 快速上手
+
+```bash
+npm install        # 安装依赖（npm workspaces，一次装全五个包）
+npm run dev        # 启动游戏 http://localhost:5173（Vite dev server）
+```
+
+全部命令：
+
+| 命令 | 作用 | 什么时候跑 |
+|---|---|---|
+| `npm run dev` | Vite 开发服务器（热更新） | 日常开发 |
+| `npm run typecheck` | core + ui 两包 TS 严格检查 | 每次改代码后 |
+| `npm test` | Vitest 全量单测（88 个，7 文件） | 每次改代码后 |
+| `npm run build` | UI 生产构建（Vite → packages/ui/dist） | 发布前 |
+| `npm run sim` | 无头模拟：20 年行情 + 12 锚点校验 + 游戏循环烟测 | 改市场/内容后 |
+| `npm run bot` | 机器人蒙特卡洛 3 策略×N 局数值报表（可带局数参数 `npm run bot -- 50`） | 改数值后 |
+| `npm run content:check` | 内容双机器闸：禁语 Lint + 引用完整性 | **每次改内容后必跑** |
+| `npm run collect` | 可选培训记录收集端点（零依赖 Node，JSONL 落盘） | 银行内网试点 |
+
+测试指定文件：`npx vitest run packages/core/test/team.test.ts`
+
+---
+
+## 2. 项目定位与两份规划
+
+本项目有两份源规划，已合并为一份**带实施状态标注**的执行文档：
+
+| 文件 | 角色 |
 |---|---|
-| M0 核心原型（三档时间帧 / 18 因子市场引擎 / 31 行业 / 数据日历 / 一日循环 / 行情终端） | ✅ |
-| M1 考试系统（6 科目 / 模拟机考 / 题库 / 错题本 / 每日一题） | ✅ |
-| M1.5 玩法深化（接待对话 / 净值盯市 / 晋升评审 / 随机事件 36 / 知识库 / 复盘卡 / 图鉴馆 / 存档） | ✅ |
-| M1.7 数值平衡（机器人蒙特卡洛 3 策略 × N 局 / 客户开发 / 资金回补 / KPI 品类补偿） | ✅ |
-| P1 内容管线（content-tools 双机器闸：禁语 Lint + 引用完整性 ref-check） | ✅ |
-| P2 成品化（K 线图 / 存档 v2 / 移动自适应 / 新手引导 / 学习报告 / 卷末评语） | ✅ |
-| P3 桌面与移动形态（Tauri 2 Windows 壳 / 统一存储适配层 / NSIS 安装包） | ✅ |
-| P4 培训后台 B2B（学员记录 / 讲师聚合报表 / 行内题包热加载 / 讲师大屏 / 收集端点） | ✅ |
-| P5 内容全量（五卷剧情 60 任务 / 知识库 147 / 题库 789 / 人生线 4 条 35 节点 / 复盘卡 18） | ✅ |
-| P6 完整游戏体验（团队管理 / 六结局 / 二周目扰动 / 美术音频） | ⏳ |
+| [docs/项目总体规划与实施状态.md](docs/项目总体规划与实施状态.md) | **唯一执行依据**：合并原《游戏规划书 v2.0》（世界观数值规格）与《推广版项目规划 B1.0》（银行推广阶段计划），逐项标 ✅/🟡/⬜/❌，附下一步工作清单 |
+| 游戏规划书.md / 推广版项目规划.md | 历史档案保留在仓库根目录，内容已并入上表文档 |
 
-## 快速开始
+优先级共识（推广版确立）：**内容可信 > 培训效果可见 > 游戏好玩 > 体积体验**。
+
+六阶段全部完成：P1 内容管线 → P2 卷一成品化 → P3 Tauri 桌面壳 → P4 培训后台 → P5 内容全量 → P6 游戏体验（美术音频明确跳过）。
+
+---
+
+## 3. Monorepo 结构与三铁律
+
+```
+重生之我是理财经理/
+├─ packages/
+│  ├─ core/            # 纯 TS 引擎（14 文件 2842 行）——零 DOM、零平台依赖
+│  └─ ui/              # Vue 3 表现层（18 组件 + 9 模块 4321 行）
+├─ content/            # 全部游戏内容（28 文件 4832 行，@fm/content 包）
+├─ tools/              # 数值模拟 + 机器人 + 内容合规管线（@fm/tools）
+├─ src-tauri/          # Tauri 2 Windows 桌面壳（Rust）
+└─ docs/               # 部署文档 + 规划合并文档
+```
+
+**三铁律**（违反即架构腐化，评审时一票否决）：
+
+1. **core 不 import 任何 UI / DOM / 平台 API**。market/game/exam/quest 等全部可在 Node 里无头跑——`npm run sim` 和 `npm run bot` 就是证明。UI 层发现的 bug 应能先在 core 层用单测复现。
+2. **内容与引擎分离**：写剧情/题目/词条只改 `content/`，不碰代码。内容有独立的 lint + 引用检查（`npm run content:check`），红灯即 CI 失败。
+3. **平台能力由 UI 层注入**：存档（Tauri 文件/localStorage/内存）全部在 `packages/ui/src/storage.ts` 适配，core 只操作内存对象。
+
+包依赖方向：`ui → core + content`，`tools → core + content`，`content → core`（只用类型）。core 不依赖任何其他包。
+
+---
+
+## 4. packages/core 引擎逐文件讲解
+
+### 4.1 `rng.ts`（90 行）——确定性随机与日历
+
+- **`Rng` 类**：Mulberry32 算法，`new Rng(seed)` 后的 `next()/gauss()/int()/pick()/chance()/shuffle()` 全部确定——**同 seed 必产生同序列**。这是"同种子同行情可复现"的根基，也用于考试抽卷（每场考试用独立种子流，不影响行情序列）。
+- **`GameCalendar` 类**（同文件下半部）：生成 2006-01-02 至 2025-12-31 的**交易日历**（周一~周五，5218 天）。核心 API：`at(i)` 第 i 个交易日、`indexOf(date)` 日期→序号、`tradingDaysOfMonth(date)` 当月交易日列表（月帧"推到月末"用）、`count` 总天数。日历是全引擎的时空坐标系。
+
+### 4.2 `types.ts`（247 行）——全项目数据结构定义
+
+所有跨模块的数据形状都在这里（完整字段见 [§12 数据字典](#12-数据字典全部内容-schema)）。关键枚举：
+
+- `GRADE_NAMES`：五级职阶 ['见习理财经理','普通理财经理','贵宾理财经理','私行理财经理','私行团队主管']，对应 `player.grade` 0-4。
+- `RISK_LEVEL_NAMES`：R1 保守型 ~ R5 进取型，产品风险等级必须 ≤ 客户风险等级才能推荐（适当性硬约束）。
+- `TIER_NAMES`：客户四档 mass/wealth/vip/private（大众/财富/贵宾/私行），决定资金体量与开发难度。
+
+### 4.3 `market.ts`（313 行）——市场模拟引擎（游戏的心脏）
+
+`MarketSim` 类，构造参数：因子表/行业表/导演事件/经济数据/日历/**seed**/年度漂移表/年度水平表。
+
+每个交易日 `stepToNext()` 执行四步（`stepOneDay`）：
+
+1. **导演事件触发**：`events.filter(e => e.date === 当日)` → `applyEvent` 把事件的 `shocks`（如 `equity: -0.04`）拆成"每天施加量×持续天数"压入 `activeShocks` 队列；`force_day` 事件同时被 Game 记录为"强制降帧"信号。
+2. **经济数据日历**：`checkReleases` 检查当日是否有数据发布（CPI/PMI/社融/议息），按 `expect` vs `actual` 的**预期差**生成因子冲击并写新闻流——"利好出尽是利空"由 beat/miss 与市场位置的组合表达。
+3. **因子日收益**（`evolveFactors`）：每个因子 = 年度漂移（eraDrift 决定牛熊大方向）+ 均值回复（向 eraLevel 年度目标回归，强度 mean_revert）+ 高斯噪声（sigma_daily）+ 活跃冲击叠加。利率型因子（is_rate）按"水平"而非"点位"演化。
+4. **行业与宽基**：31 行业各自 `drift/250 + 高斯特质波动`，再按 `loadings`（对因子的 β）叠加因子收益；宽基 `idx_300` 是独立综合序列。
+
+对外只读状态：`factorState/industryState/indicesState/sentiment`（当前值）、`firedEvents`（已触发事件）、`newsFeed`（新闻流）、`releaseLog`（数据公布记录）、`cursor`（已演算到第几个交易日）。
+
+### 4.4 `game.ts`（715 行）——游戏主控（最大的文件）
+
+`Game` 类聚合 MarketSim，承担全部经营逻辑。逐块拆解：
+
+- **玩家**：`player = { name, gender, grade(0-4), attrs: { pro 专业, comm 沟通, sales 销售, stress 压力, rep 口碑, fame 知名度 }, energy 精力, aum, income_month, certs[] }`。
+- **行动系统 `doAction(type)`**：8 种行动（reception 接待/lobby 厅堂/outreach 外拓/study 学习/review 复盘/aftersale 售后/social 同事/rest 休息），每种有 AP 消耗（共用帧上限）、精力消耗（帧越粗单次越耗）与属性增益/压力变化。接待走独立的对话玩法（见 §8.2）。
+- **帧系统**：`setFrame`（职级解锁 day/week/month，AP 上限 4/10/36）+ `advanceFrame`（日帧推 1 天；周帧推 5 天；月帧推到月末）+ **中断机制**：推进途中遇 `force_day` 事件立即停住切回日帧，`handledForceDays` 防同事件重复中断。
+- **月度结算 `rollMonth`**（理解数值的钥匙）：
+  1. 先按上月四品类完成度评级（`monthlyKpiScore` 0-100，S~D）；
+  2. 重置 KPI：目标额随年份增长（存款 30 万×1.15^年数），**当年代货架上没有的品类目标归零**（2006 没有理财/基金 KPI），权重自动摊入其他品类——这就是"考核指挥棒演变"的数值表达；
+  3. **客户情绪结算**：逐客户盯市（持仓现值/成本-1），浮盈加信任、浮亏扣信任——玩家 2007 年让客户追高，2015 年的信任账单自动到期；
+  4. 绩效工资 = 底薪(4500+职级×1500) + 绩效奖金（monthlyBonus，开门红 Q1 加成）；
+  5. **过劳统计**：`monthHotDays` 累计当月压力 ≥80 的交易日，月末若 ≥2/3 交易日则 `highStressMonths+1`（结局判定用）；随后**月末压力阀 -8**（生活系统兜底：不休息也顶不死）；
+  6. **团队月度结算**（见 §8.5）；
+  7. **新客户开发** `developClients`：概率 = 0.1 + fame/400 + rep/2000（上限 0.75），命则按 50/30/15/5% 掷 tier，生成随机客户入档。
+- **金手指 `useMemory`**：查"今天之后最近的 black_swan/force_day 事件"，给方向性提示；`memoryUses` 每次调用使可信度衰减 12%（最低 25%），超过 4 次或 2018 年后必然模糊/归零。
+- **晋升**：`promotionCheck()` 按当前职级取 `PROMOTION_PATH` 下一档，检查证书/AUM/贵宾户数/私行户数/近 6 月考核分/违规数/带教出师数（coached 来自团队系统）；`applyPromotion` 通过则 grade+1、涨薪、解锁更粗帧。
+- **盯市与成交**：`clientPortfolioValue`（客户持仓按当日净值现值）、`executeDeal`（校验资金池 ≥85% 上限、起购额，扣客户存款加持仓）、`dealAmount`（按客户可投资池 10%-45% 随机，剩余额度不足自动降到最小合理额）。
+
+### 4.5 `nav.ts`（111 行）——产品净值引擎
+
+两种净值模型：
+
+- **固定利率型**（存款）：`nav = 1 + fixed_rate_pa × cursor/250`，单利日计提，确定性。
+- **净值型**（理财/基金）：日收益 = 票息/365 − 费用/365 + Σ(因子β × 因子日收益)（利率因子按敏感度符号折算）+ 特质噪声。特质噪声用 **FNV 哈希(seed|productId|cursor) → 近似正态**——不是 rng 流，所以**不会因为调用顺序不同而漂移**，存档重放永远一致。
+
+带 LRU 缓存（同产品同 cursor 只算一次，>20000 条 FIFO 淘汰）。`productOnShelf(product, date)` 按产品 `era` 区间判断是否在架。
+
+### 4.6 `reception.ts`（206 行）——接待对话引擎
+
+核心思想：**客户嘴上说的 ≠ 真实需求**。会话对象 `ReceptionSession`：`need.surface`（表面诉求）/ `need.real`（真实需求，挖潜 2 次后揭示）/ `probed` / `rapport`（挖潜顺利度影响成交率）/ `trustGained`。`evaluate(session, product, client, amount)` 执行成交判定，硬校验顺序：适当性（产品风险 > 客户风险 → 拒签，信任 -2）→ 起购额 → 资金池 → 成交率掷骰（rapport 加权）。拒签话术本身就是教学（"R4 产品超出客户 R2 的承受能力，客户签不了字"）。
+
+### 4.7 `exam.ts`（181 行）——考试系统
+
+- `EXAM_DEFS`：6 科目（银行从业×2 / 基金从业 / 证券从业 / AFP / CFP），各带解锁年份（2006/2009/2014）、及格线 60%/70%、题量 20-30、限时 720/900 秒。
+- `buildPaper(exam, bank, rng)`：按**知识点分布 + 难度配比**抽卷，同场不重复。
+- `gradePaper`：单选 1 分/多选 2 分（漏选得 1）/判断 0.5，折算百分制，返回逐题判定（错题本数据源）。
+- `ReviewMeta`：`{ status: 'draft'|'reviewed'|'approved', source_notes[], era_note? }`——双审制数据结构，每题每词条必带。
+
+### 4.8 `quest.ts`（242 行）——主线剧情引擎
+
+`QuestEngine` 构造时注入全量任务与人生线，内部按日期排序。
+
+- `checkQuests(currentDate, dateShift?)`：每次帧推进后调用，返回**最早一个到期未完成任务**（含 requires 前置链）；`dateShift` 是二周目的任务日期漂移表（`{questId: 新日期}`），初见局不传。
+- `checkLifeNodes(currentDate, clientTrust)`：人生线节点按 `year+month` 到期且客户信任 ≥ `trustReq` 触发；`firedLifelines`（client@year@title 哈希）防重复。
+- `complete(choiceIdx)`：记录抉择 grade（best/good/normal/bad）进 `careerLog`（生涯日志），返回 effects 供 UI 应用。
+- `volumeReview(volume, dims)`：卷末四维评语——业绩（KPI 均分）/专业（证书×10+专业力）/红线（违规数，双倍权重）/信任（均值），各评 S/A/B/C，加权出 headline。**评语按卷号动态命名**（卷一·黄金年代终评……）。
+- 序列化：只存 id 集合（completed/lifelines）+ pending + careerLog，存档极小。
+
+### 4.9 `random-event-engine.ts`（103 行）——随机事件引擎
+
+36 条事件带 `era: [起年, 止年]` 标签，`roll(frame, year, date)` 按当前帧加权掷骰（月帧高频、日帧低频，密度对齐），年代过滤保证"2006 不会有直播间投诉，2025 不会有存折挂失"。事件分支 `choices` 带 `risk: 'comply'|'grey'|'red'`——red 分支 `violations+1` 且口碑 -10。
+
+### 4.10 `career.ts`（138 行）——晋升与 KPI 公式
+
+- `PROMOTION_PATH`：4 档晋升条件（普通/贵宾/私行/主管），字段即检查项（certsAll/certs/aum/vipClients/privateClients/seasonsAboveB/zeroViolations/coached）。
+- `monthlyKpiScore`：四品类完成率加权，**缺品类权重摊派**（2006 无理财 KPI 时 0.35 权重平摊给其他项）；全部 100% ≈ 77 分（B），130% ≈ 100（S）。
+- `monthlyBonus`：绩效 = 基数×评级系数×开门红系数。
+
+### 4.11 `ending.ts`（188 行）——六结局判定（P6）
+
+纯函数 `judgeEnding(input)`，按优先级短路：
+
+```
+违规≥3 或 investigated → 调查立案离场（Bad End）
+压力≥90 或 高压月≥60   → 猝死警示（呼应前世死因）
+NG+ 且 全主线 且 零违规 且 信任≥55 且 压力<70 → 隐藏结局"重返投资界"
+信任≥55 且 零违规 且 主线≥80% → 独立财富顾问·开办家办
+职级4 且 考核≥70      → 分行财富管理部总经理
+职级≥2               → 支行行长
+否则                  → 平凡退休
+```
+
+`ENDINGS` 表每个结局带分幕演出（scenes）+ 教学收束（epilogue）。12 个单测覆盖每条优先级边界。
+
+### 4.12 `team.ts`（175 行）——团队管理系统（P6）
+
+- 4 名下属（`SUBORDINATES`）：小唐（进取型，2023 入队）/周远航（冒进型 2024）/刘晴（稳健型 2024）/肖何（学院型 2025），`syncRoster(year)` 按年到岗、幂等。
+- `monthlyTick(year, rollRng, coachLevel)`：每成员月度——带教月数+1；能力成长 = 性格基数×(0.6+辅导等级×0.3)×(0.7+士气/200)；**出师判定**（带教 ≥18 月且能力 ≥55，出师数是晋升主管的硬条件）；**闯祸掷骰**（性格基础概率×士气系数×辅导抑制，处置不当 violations+1）；士气 <15 有 20% 离职。
+- `assignClient(subId, big)`：客户分配博弈——大客户提振个人士气 -2 团队公平感；轮岗练手 +2 能力。
+
+### 4.13 `content.ts` / `index.ts`
+
+content.ts 定义 `ContentBundle` 聚合接口（factors/industries/events/releases/products/clients）；index.ts 统一 `export *`（新增模块必须在此追加导出）。
+
+---
+
+## 5. 内容合规管线（content-tools）
+
+这是本项目给银行合规部门的"技术名片"，**所有内容必须过这两道机器闸**：
+
+### 5.1 `tools/content-tools/build.mts` —— 内容 Lint（`npm run content:lint`）
+
+遍历 content 包全部导出（题库/词条/复盘卡/剧情/人生线/事件/产品），对每段文本跑 `rules/content-lint.mts`：
+
+| 规则表 | 内容 | 效果 |
+|---|---|---|
+| `BANNED_WORDS` | 保本保息/保本保收益/稳赚/只赚不赔/零风险高收益/绝对收益/内幕消息/老鼠仓 | **一票否决**（收益承诺/违法表述）。教学引用用「」包裹可豁免（如『以下哪项属于「稳赚不赔」』） |
+| `FORBIDDEN_BRANDS` | 工商银行/中国银行/沪深300/余额宝/微信/天天基金 等 22 个真实机构名 | 一票否决，必须架空化。唯一豁免：`prototype` 字段（原型图鉴的教学功能就是显示现实原型名） |
+| `RISK_WORDS` | 保证/必涨/包赚/推荐买入/加杠杆 | 警告不阻断（人工复核教学语境） |
+| `ERA_WORDS` | 余额宝 2013+/直播间 2016+/个人养老金 2022+/雪球 2019+/净值型 2018+/LPR 2019+/双录 2016+/科创板 2019+/存折 −2015/利息税 −2008 | **年代穿越检查**：词条按 unlockYear（或 era_span 末年）、事件按新闻日期、产品按 era 起年判定 |
+
+输出统计：题库/词条/复盘卡/任务/人生线/事件计数 + 双审元数据覆盖率。红灯条件：任何 error。
+
+### 5.2 `tools/content-tools/checks/ref-check.mts` —— 引用完整性（CI 红灯条件之二）
+
+- 人生线/任务剧情的 `unlockKnowledge` 引用**必须能解析到真实词条**（按词条 id 或 tag，tag 取首个匹配）——保证"剧情奖励说解锁知识，玩家进图鉴馆一定看得到"；
+- 任务/人生线的 client 必须指向存在的客户档案；
+- 四类 id 全局唯一（题目/词条/任务/人生线节点 client@year@title）。
+
+### 5.3 `checks/with-review.mts` —— 双审元数据注入器
+
+题库批量文件的辅助：按题目 subject 与首个 knowledge_tag 自动生成 `source_notes`（如 exam_fund → 《公开募集证券投资基金销售机构监督管理办法》(2020)），status 置 draft。新写题目直接 `withReview({...})` 包裹即可合规。
+
+### 5.4 `schema/` —— JSON Schema（3 个已建：question/knowledge/common）
+
+为"行内人员写 JSON 题包"准备的结构校验（P4 的 `packs.ts` 在前端侧做同源校验；schema 目录供未来 CLI 校验用）。
+
+**新增内容的标准流程**：改 content/*.ts → `npm run content:check` 全绿 → `npm run typecheck` → 提交。
+
+---
+
+## 6. content 内容包逐文件讲解
+
+`@fm/content` 包，28 个 TS 文件，全部是**纯数据导出**，`index.ts` 聚合：
+
+### 6.1 世界观与市场
+
+| 文件 | 内容 | 关键结构 |
+|---|---|---|
+| `factors.ts` | **18 因子**（全球 8：美联储利率/美债10Y/美元指数/VIX/原油/黄金…；国内 10：A股β/大小盘/价值成长/10Y国债/信用利差/房价/汇率/流动性/情绪） | `MarketFactorDef`：start 初始值、sigma_daily 日波动、mean_revert 均值回复、is_rate 利率型标记 |
+| `industries.ts` | **31 行业指数**×6 风格族（金融地产/周期资源/消费/医药/科技成长/稳定公用），架空命名 | `IndustryIndexDef`：loadings 对因子 β、idio_sigma 特质波动 |
+| `events.ts` | **81 导演事件**（2007-10-16 疯牛顶 → 2025-06-20 AI 应用落地），每条：确切日期/type（policy/director/black_swan）/news 文案/shocks 因子冲击/duration_days 持续/sentiment 情绪/force_day 强制降帧标记/unlock_knowledge | 约 28 条 force_day/black_swan 进讲师大屏与金手指记忆 |
+| `releases.ts` | 5 条经济数据（CPI/PMI/社融/议息/降准），expect 与 actual 的预期差机制 | `EconReleaseDef`：region us/cn、month_day、expect、unit |
+| `macro.ts` | **eraDrift**（价格型因子年度对数收益——牛熊大方向）+ **eraLevel**（利率/汇率/商品型因子年度目标值） | 逐因子逐年手调，锚定校验的调节旋钮 |
+
+### 6.2 人与产品
+
+| 文件 | 内容 | 说明 |
+|---|---|---|
+| `clients.ts` | **10 核心客户**（王秀兰 48 岁教师/李建国 30 岁职员/周宏图 32 岁企业主/吴建国 35 岁出租车司机/唐薇/钱进/刘美凤 等） | `ClientDef` 全 KYC：tier 档位、risk R1-R5、finance 六项资产负债、behaviors 行为标签（yield_chasing 追高/risk_averse…）、trust 信任 0-100 |
+| `products.ts` | **32 产品**跨 20 年货架（2006 凭证式国债 → 2013 宝宝类 → 2015 分级基金 → 2018 净值型理财 → 2021 雪球 → 2024 个人养老金） | `ProductDef`：risk_level/min_amount/term_days/issuer（架空）/benchmark_pa/**era 上架区间**/nav_model（净值型因子 loading）或 fixed_rate_pa（存款） |
+
+### 6.3 剧情内容
+
+| 文件 | 内容 | 说明 |
+|---|---|---|
+| `quests.ts`~`quests5.ts` | **五卷主线各 12 任务**（共 60），日期驱动：卷一 2006-2009（疯牛→5·30→6124→1664→4万亿）、卷二 2010-2015（负利率→钱荒→杠杆牛熊）、卷三 2016-2020（熔断→贸易战→资管新规→疫情）、卷四 2021-2023（抱团瓦解→破净潮→AI 元年→第一个下属）、卷五 2024-2025（微盘股危机→9·24→个人养老金→AI 换脸防诈→传承→卷终） | `QuestItem`：dialogues 多角色对话演出（speaker/text/mood）、choices 三选一带 grade 与 effects（trust/pro/comm/sales/rep/stress/aum/unlockKnowledge）、teach 教学 tag；每卷末任务 `volN_end` 触发三维终评，卷五终章触发六结局判定 |
+| `lifelines.ts` | **4 条人生线 35 节点**：王秀兰 9（养老客群：疯牛劝阻→高息集资拦截→退休三桶金）、李建国 9（工薪客群：定投启蒙→购房→P2P→留学金）、周宏图 9（企业主：家企隔离→质押危机→家族治理）、吴建国 8（大众客群：高息传说→保单缺位→网贷→网约车冲击→强制储蓄翻盘） | `LifeLineDef`：year/month/client/title/text/trustReq 信任门槛/effects；信任达标自动触发演出 |
+| `random-events.ts` | **36 随机事件**按年代池化（存折挂失 2006 → 宝宝类冲击 2013 → 直播间投诉 2020 → AI 投顾焦虑 2023） | 分支三档 risk（稳妥/灰色/红线），红线累计违规 |
+| `knowledge.ts`~`knowledge6.ts` | **147 知识词条**六批：基础/产品/市场/规划/合规/行为金融六类 | 五件套强制：what 是什么/why 为什么/how 怎么用/pitfall 常见坑/quiz 考一考 + unlockYear 解锁年 + tags 题库映射 + review 双审元数据 |
+| `knowledge.ts` 内 `DEBRIEF_CARDS` | **18 复盘卡**：12 张行情解锁（2007 顶部/2008 危机/2013 钱荒/2015 股灾/2016 熔断/2018 贸易战/2020 疫情/2021 抱团/2022 破净/2024 9·24）+ 6 张年代卡（2011 负利率/2014 降息牛/2017 蓝筹/2019 科创板/2023 海外银行风波/2025 AI 应用年）+ 2 张窗口外历史课堂（2000 互联网泡沫/1987 黑色星期一，常驻） | `DebriefCard`：happened/cause/impact/lesson 四段教学 + prototype/prototypeDesc 原型对照（唯一允许出现真实事件名的字段） |
+
+### 6.4 题库（8 批 789 题）
+
+| 文件 | 数量 | 主题 |
+|---|---|---|
+| `exams.ts` | 65 | 银行法律法规基础（bl001~） |
+| `exams2.ts` | 150 | 深化章节（bl101~） |
+| `exams3.ts` | 180 | 第三批 150+计算案例 30（bl201~） |
+| `exams4.ts` | 90 | 计算题 30+案例题 30+卷二配套（bc001~） |
+| `exams5.ts` | 88 | 钱荒/影子银行/配资/非法集资（cc001~） |
+| `exams6.ts` | 58 | 熔断/LPR/爆款基金/ESG（cd001~） |
+| `exams7.ts` | 58 | 拥挤交易/破净应对/养老金/家办传承（ce001~） |
+| `exams8.ts` | 100 | knowledge6 全部 21 词条配套+计算案例（cg001~） |
+
+题型 helper：`s()` 单选 / `m()` 多选 / `j()` 判断，统一 `withReview()` 包裹注入双审元数据。**新增批次务必：id 前缀不与历史冲突（cf 已被占用）→ index.ts 追加 import → content:check 验证。**
+
+---
+
+## 7. packages/ui 表现层逐文件讲解
+
+### 7.1 启动链路
+
+`main.ts` → `initStorage()`（探测 Tauri/localStorage/sessionStorage/内存四后端并预载持久化 KV）→ `createApp(App).mount('#app')`。**先探测后挂载**保证首帧同步读档可用。
+
+### 7.2 `state.ts`（949 行，UI 的中枢）
+
+Vue `reactive` 全局状态 + 44 个导出函数。分区：
+
+- **游戏生命周期**：`newGame(seed, name, gender)`（建 MarketSim+Game、注入随机事件池、初始化 QuestEngine、**二周目检测**（fm_ngplus/fm_playthrough，NG+ 局生成事件漂移表）、自动存档）；`loadGameFromSave(data)`（重放市场状态机到 cursor → 覆盖数值状态 → 恢复玩家/客户/剧情/接待/考试/团队/周目）。
+- **行动与推进**：`doAction`（转 core 行动+LMS 埋点）、`advanceFrame`（帧推进后依次检查：force_day 中断 → 主线任务（带漂移）→ 人生线节点 → 随机事件掷骰）、`switchFrame`。
+- **剧情演出**：`questNext/chooseQuest/closeQuestDialog`；卷末任务（`volN_end`）触发 `computeVolumeReview`（四维评语），卷五终章触发 `computeFinalEnding`（六结局判定，隐藏结局达成则 `storage.set('fm_ngplus','1')` 永久解锁二周目并递增周目数）。
+- **接待会话**：`startReception/probeReception/recommendProduct`（会话状态+对话日志镜像到 reactive）。
+- **考试**：`startExam`（buildPaper 混入行内题包）、`submitExam`（gradePaper+错题本+LMS 记录）、每日一题池、考前冲刺。
+- **序列化**：`serializeNow()`（v2 存档，字段清单见 §9）。
+- **镜像约定**：Game 实例字段非响应式，`gameDate/apUsed/lastSnap` 等在每次操作后手动镜像进 state——**UI 只读 state，不直接绑 core 对象**（KPI 面板等少数地方经 computed 读 game，改 core 字段后记得同步镜像）。
+
+### 7.3 组件（18 个）
+
+| 组件 | 职责 |
+|---|---|
+| `App.vue` | 启动屏/主框架/九个页签路由（screen 状态机）/五个全局弹层（接待/事件/剧情/人生线/引导）+ 手册内联页 |
+| `StartScreen.vue` | 姓名/性别/种子输入（同种子同行情） |
+| `TopBar.vue` | 页签导航+日期+职级显示 |
+| `Workbench.vue` | 主工作台：行动按钮矩阵/帧切换/结算按钮/状态/KPI 四品类进度条/当前卷主线进度/日志 |
+| `MarketTerminal.vue` | 行情终端：宽基/行业/因子涨跌（四口径：今日/本周/本月/距上次查看）+ K 线 |
+| `KLineChart.vue` | 纯 SVG 日 K（120 交易日，无图表依赖） |
+| `ClientsPanel.vue` | 客户档案列表+详情（KYC/持仓盯市/信任） |
+| `ExamPanel.vue` | 考试中心：证书墙/每日一题/错题本/弱项雷达 TOP10/科目列表（锁定态显示解锁年）/机考界面（倒计时） |
+| `GalleryPanel.vue` | 图鉴馆三 tab：知识库（147 词条五件套）/历史复盘室（18 卡，按事件解锁）/原型图鉴 + **财务计算器**（复利/年金定投/房贷/养老缺口四模式） |
+| `QuestDialog.vue` | 剧情演出：对话流（mood 着色）→ 三选一抉择 → 结果（grade 徽章）；卷末显示四维评语卡；卷五末显示**结局画面**（分幕演出+判定依据+生涯摘要） |
+| `LifeNodeDialog.vue` | 人生线节点演出 |
+| `EventDialog.vue` | 随机事件弹窗（分支选择，红线分支警示样式） |
+| `ReceptionDialog.vue` | 接待对话：挖潜话题按钮→揭示真实需求→货架推荐+金额输入→成交/拒签反馈 |
+| `TeamPanel.vue` | 团队管理（P6）：成员卡（能力/士气条+性格+出师徽章）/辅导投入四档/大小客户分配按钮/本月团队事件流 |
+| `PromotionPanel.vue` | 晋升评审：条件清单（绿勾/红叉）+ 评审按钮 |
+| `SystemPanel.vue` | 存档管理（3 自动+8 手动+JSON 导入导出+存储后端诊断） |
+| `TrainerPanel.vue` | 培训后台（B 端）：学员编号/学习记录导出/多记录导入→聚合报表（通过率/弱项地图/抉择分布/活跃度）→HTML 导出/行内题包导入（机器闸）/收集端点配置 |
+| `LecturerMode.vue` | 讲师大屏：28 幕关键行情日逐幕投影（新闻+冲击+讨论题+班级投票分支分布） |
+| `TutorialOverlay.vue` | 5 步新手引导（AP/接待/行情/剧情/结算），完成过则跳过 |
+
+### 7.4 非组件模块
+
+| 模块 | 职责 |
+|---|---|
+| `storage.ts` | 四后端存储适配（Tauri invoke load_kv/save_kv 带 600ms 防抖批量落盘/localStorage/sessionStorage/内存 Map）。`storage.get/set/remove` 是全项目唯一存储入口——**禁止直接碰 localStorage** |
+| `lms.ts` | 学习记录（fm-student-record v1）：学员编号/考试记录/剧情抉择/活跃日入档 + JSON 导出 + 可选内网上传 |
+| `trainer.ts` | 讲师聚合：`aggregateTeam`（多学员记录 → 通过率/弱项 Map/抉择分布）+ `teamReportHtml`（自包含 HTML 报表，打印即 PDF）+ `parseStudentRecord`（导入校验） |
+| `packs.ts` | 行内题包热加载：`checkPack`（禁语/机构名/年代/结构机器闸，与 content:lint 同源词表内联）→ 通过并入抽题池 |
+| `report.ts` | 个人学习报告 HTML 导出（考证/错题图谱/生涯大事/合规记录） |
+| `volume-meta.ts` | 卷号→卷名映射（剧情头/评语共用） |
+
+### 7.5 样式
+
+`styles.css` 全局：CSS 变量主题（--bg1/--gold/--accent2…）、面板/按钮/表格基础类、**<768px 单列断点 + 44px 触控目标**（移动 H5 自适应）。
+
+---
+
+## 8. 核心系统逻辑详解
+
+### 8.1 一局游戏的生命周期
+
+```
+StartScreen(姓名/性别/seed) → newGame:
+  MarketSim(seed) + Game + 随机事件池 + QuestEngine
+  [NG+ 局：读 fm_ngplus/fm_playthrough → 生成任务日期漂移表 eventShifts]
+→ 工作台循环：
+  行动×N（AP 池）→ 下班结算 advanceFrame →
+    ├ 主线任务到期? → QuestDialog 演出 → 抉择 → effects 入账 + LMS 埋点
+    ├ 人生线节点到期且信任够? → LifeNodeDialog
+    ├ force_day 事件? → 强制日帧 + 中断演出
+    └ 随机事件掷骰 → EventDialog 分支
+  月末自动 rollMonth（KPI 评级/盯市情绪/绩效/过劳统计/压力阀/团队/新客）
+→ 20 年走完：卷五终章（2025-12-31）→ 六结局判定 → 结局画面 → 归档
+```
+
+### 8.2 接待对话（点击级流程）
+
+`接待客户` → 从 active 客户加权抽取 → `ReceptionDialog`：显示表面诉求 → 玩家选挖潜话题（2 次机会，命中则 rapport+1）→ 第 2 次挖潜后揭示真实需求 → 货架推荐（仅展示 era 在架且风险 ≤ 客户等级的产品）→ 输入金额（≤ 可投资池 85%）→ `evaluate` 判定 → 成交（AUM+、信任+5、绩效计入）或拒签（教学话术）→ 信任结算（挖潜收益×0.5 + 反馈 delta）→ 会话关闭。
+
+### 8.3 二周目（NG+）
+
+1. 隐藏结局达成 → `storage.set('fm_ngplus','1')`（跨局持久，Tauri 下落盘到存档文件）。
+2. `newGame` 读标记 → `playthrough = 上局 + 1` → `computeEventShifts(seed)`：对 60 个主线任务按 `Rng(seed^0x2b1bc0de)` 各掷 ±66 天漂移（钳制日历边界），**同 seed 同漂移**。
+3. `checkQuests` 接受 `dateShift` 表，任务按漂移后日期触发——"背版"失效，日志提示"靠专业，不靠背版"。
+4. 存档 v2 记录 `playthrough/eventShifts`，读档还原。
+
+### 8.4 六结局判定数据源
+
+全部来自本局真实数据：`violations`（红线事件+团队闯祸累计）、`stress` 与 `highStressMonths`（过劳口径）、`grade`（职级）、`aum`、`recentSeasonScore`（近 6 月考核）、客户信任均值、主线完成数（questEngine.volumeProgress×5）、人生线节点数（firedLifelines.size）、`playthrough ≥ 2`。
+
+### 8.5 团队月度结算链
+
+`rollMonth` → `team.syncRoster(年)`（到岗检查）→ `monthlyTick(年, rng, coachLevel)` → 产出 `TeamEvent[]`（graduation 出师/incident 闯祸/attrition 离职）→ 逐条写游戏日志 + 士气汇总 + 违规入账 → `TeamPanel` 显示本月事件。辅导等级（0-3）由玩家在团队页随时切换，影响当月成长/士气/闯祸率。
+
+### 8.6 讲师大屏与班级投票
+
+`LecturerMode` 取 28 个 force_day/black_swan 事件按日期排列，逐幕显示新闻原文+因子冲击；"班级举手投票"为本地分支分布演示（记录本班选择分布）——完整多人实时协同属 Phase 2。
+
+---
+
+## 9. 数据流与存档机制
+
+### 9.1 存储键位清单
+
+| 键 | 内容 |
+|---|---|
+| `fm_save_0`~`fm_save_2` | 3 个自动档（开局/事件后/月结钩子覆盖） |
+| `fm_save_3`~`fm_save_10` | 8 个手动档（系统页"存到槽位"写入，同一 `fm_save_N` 键空间，前 3 位标记为自动） |
+| `fm_exam_history` / `fm_exam_attempts` / `fm_wrong_book` | 考试历史/尝试/错题本 |
+| `fm_active_days` | 学习活跃日（LMS） |
+| `fm_ngplus` / `fm_playthrough` | 二周目解锁标记 / 周目数 |
+| `fm_tutorial_done` | 新手引导完成标记 |
+| `fm_custom_packs` | 行内题包（导入的 JSON） |
+| `fm_student_id` / `fm_collect_endpoint` | 培训学员编号 / 内网收集端点地址 |
+
+Tauri 下所有键合并为一个 JSON 文件存 `%APPDATA%/重生之我是理财经理/`（`kv_path` 命令可查路径），`save_kv` 写临时文件+rename 原子替换。
+
+### 9.2 存档 v2 结构（`serializeNow()`）
+
+```jsonc
+{
+  "version": 2,
+  "seed": 42, "date": "2015-06-15",
+  "player": { "grade": 2, "attrs": {...}, "aum": 0, "certs": [...], "energy": 80 },
+  "kpi": {...}, "monthScores": [...], "memoryUses": 2,
+  "frame": "week", "forceDayDays": 0, "apUsed": 3,
+  "violations": 1, "highStressMonths": 4, "coachLevel": 2,
+  "team": { "members": [...], "morale": 55 },
+  "market": { "factorState": {...}, "industryState": {...}, "indicesState": {...}, "sentiment": 0.3, "cursor": 2480 },
+  "snapHistory": [/* K 线 120 日 */],
+  "clients": [/* 全客户含 holdings/trust/status */],
+  "quest": { "completed": ["q1_01..."], "lifelines": [...], "pending": null, "careerLog": [...] },
+  "playthrough": 2, "eventShifts": { "q3_04_fuse": "2016-01-12" },
+  "reception": null, "exam": null
+}
+```
+
+读档 = 重建 sim（同 seed 重放到 cursor 保证行情一致）→ 覆盖离散状态 → 恢复剧情/接待/考试/团队。旧版本存档缺字段一律 `?? 默认值` 容错。
+
+### 9.3 确定性约定（改动前必读）
+
+行情、净值、抽卷、事件掷骰、客户生成都走**独立或共享的确定流**：
+
+- 行情主流：`Rng(seed ^ 0x9e3779b9)`（Game）+ sim 内部流；
+- 随机事件：`Rng(seed ^ 0x5f3759df)`；
+- 考试抽卷：每场 `game.rngNextInt()` 派生；
+- 产品特质噪声：FNV 哈希（与调用顺序无关）。
+
+**在 core 里插入任何"无种子"的 Math.random() 都会破坏存档重放一致性。**
+
+---
+
+## 10. tools 工具链（sim/bot/collect）
+
+### 10.1 `tools/src/simulate.ts`（`npm run sim`）
+
+三段：① 20 年行情全量演算，输出因子/行业年化排行；② **12 锚点校验**（2007 顶部应为高点、2008 底部应为低点…），偏离时打印偏差百分比——调 eraDrift/eraLevel/事件 shocks 的验收标准；③ 游戏循环烟测（2006 全年随机行动 1036 次，验证成交/KPI/客户新增链路）。
+
+### 10.2 `tools/src/bot.ts`（`npm run bot`）
+
+机器人玩家：3 策略（pro 专业型/sales 销售型/balanced 均衡型，各自行动池加权）× N 局 × 完整 20 年。每局：AP 随机行动 → 周帧提效 → 月度自动考证（6/12 月，通过率 0.55+pro/400）→ 自动晋升 → 压力 >90 强制休息。输出：终局职级分布/晋升时点年份分布/AUM/成交数/**六结局分布**/过劳率。平衡性判读写在输出尾部。
+
+### 10.3 `tools/collect-server.mts`（`npm run collect`）
+
+零依赖 Node HTTP：`POST /collect` 学员记录追加 JSONL；`GET /stats` 汇总。无数据库，IT 可直接备份文件。仅设计用于内网。
+
+---
+
+## 11. Tauri 桌面壳
+
+`src-tauri/`（Rust）：
+
+- `main.rs`：两个自定义命令——`load_kv`（启动整体预载 KV JSON）/`save_kv`（整体写盘，**tmp+rename 原子替换**）；另有 `save_kv_b64`/`kv_path` 辅助。
+- `tauri.conf.json`：窗口 1280×800（min 375×667）、`frontendDist` 指向 `packages/ui/dist`、CSP 关闭（本地单机）。
+- 打包（本机已验证产出 NSIS 安装包）：
 
 ```bash
-npm install       # 安装依赖
-npm run dev       # 启动游戏（localhost:5173）
+# GNU 工具链（无 MSVC 依赖），CARGO_TARGET_DIR 指到 ASCII 路径避开中文路径坑
+RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu CARGO_TARGET_DIR=/c/fm-target \
+  npx tauri build
+# 产物：src-tauri/target/release/bundle/nsis/*.exe
 ```
 
-其他命令：
+依赖：MSYS2 ucrt64（gcc/makensis）。环境问题速查见 git 历史 9b14453 提交说明。
 
-```bash
-npm run typecheck # TypeScript 全量检查（core + ui）
-npm test          # Vitest 单测（67 个，覆盖 rng/日历/市场锚定/考试/晋升/净值/时间帧/引擎）
-npm run sim       # 无头模拟：20 年行情演算 + 历史锚定校验 + 游戏循环烟测
-npm run bot       # 机器人蒙特卡洛：3 策略 × N 局 × 20 年数值平衡报表
-npm run build     # UI 生产构建（Vite）
-npm run content:check # 内容双机器闸：禁语/年代/品牌 Lint + 引用完整性
-npm run collect   # 可选：培训记录零依赖收集端点（内网 JSONL）
-```
+---
 
-## 架构（Monorepo 三铁律）
+## 12. 数据字典（全部内容 Schema）
 
-```
-packages/
-  core/     纯 TS 引擎：零平台依赖、零 DOM（市场/游戏主控/考试/晋升/净值/接待/事件/剧情引擎）
-  ui/       Vue 3 表现层：工作台/行情终端/客户档案/考试中心/图鉴馆/系统/培训后台/讲师模式
-  storage   （ui 内）统一存储适配层：Tauri / localStorage / sessionStorage / 内存四后端
-content/    全部游戏内容（TS 数据包）：因子/行业/事件/产品/客户/题库(789)/知识库(147)/剧情(60)/人生线(35)
-tools/      无头模拟 + 机器人蒙特卡洛 + content-tools 内容双机器闸
-src-tauri/  Tauri 2 Windows 桌面壳（文件存档 + NSIS 安装包）
-```
+### MarketFactorDef
+`{ id, name, layer: 'global'|'domestic', start, drift_pa?, sigma_daily, mean_revert?, is_rate? }`
 
-**三铁律**：① core 不 import 任何 UI/平台 API，可独立单测与无头模拟；② 内容与引擎分离，写内容只改 content；③ 平台能力（存档/文件）由 UI 层注入。
+### IndustryIndexDef
+`{ id, name, family(6风格族), start, drift_pa?, idio_sigma, loadings: {factorId: β} }`
 
-### 核心系统一览
+### GameEventDef（导演事件）
+`{ id, date?, type: 'policy'|'director'|'black_swan'|..., title, news?, shocks: {factorId: 总冲击}, duration_days?, sentiment?, force_day?, unlock_knowledge?, debrief? }`
 
-- **三档时间帧**：日帧 4AP / 周帧 10AP / 月帧 36AP，职级解锁；重大事件（5·30、钱荒、股灾、破净潮）强制降帧逐日应对
-- **市场引擎**：18 因子（全球 8 + 国内 10）+ 31 行业指数 + 81 条导演事件（2006–2025 真实金融史蓝本架空化）+ 经济数据日历预期差机制；同 seed 同行情可复现
-- **接待对话**：表面诉求 → 挖潜（话题选择）→ 诊断真实需求 → 货架推荐（适当性校验/资金池约束）→ 成交
-- **主线剧情**：五卷 60 任务覆盖 2006–2025 二十年（每卷 12 任务 + 卷末三维评语），QuestEngine 按日期自动触发，对话演出式呈现
-- **客户人生线**：4 条 35 节点 20 年长线（王秀兰/李建国/周宏图/吴建国，覆盖养老、工薪、企业主、大众四类客群），信任达标触发，抉择计入生涯档案
-- **知识库**：147 词条五件套（是什么/为什么/怎么用/坑/自测），按年代解锁；历史复盘室 18 张大事卡随行情事件解锁
-- **产品净值**：净值型产品按因子 loading 日频演算（含 2013 钱荒、2016 底、2022 破净三次债灾回撤），固收型单利计提
-- **晋升阶梯**：见习 → 普通 → 贵宾 → 私行 → 主管，证书 + AUM + 客户层级 + 近 6 月考核分 + 零违规
-- **考试系统**：789 题八批（含计算/案例题），6 科目机考 + 每日一题 + 错题本 + 弱项知识雷达 + 考前冲刺
-- **金手指记忆**：前世记忆只给方向性提示，调用加速失准，2018 年后归零
-- **随机事件**：36 条年代池化事件（存折挂失 → 宝宝类冲击 → 飞单诱惑 → AI 投顾焦虑），分支选择含红线/灰色/稳妥三档，红线累计违规影响晋升
-- **培训后台（B 端）**：学员记录匿名入档、讲师聚合报表（通过率/弱项地图/抉择分布）、行内题包热加载（禁语机器闸）、讲师模式大屏（28 幕关键行情日）
-- **存档**：Tauri 文件 / localStorage 四后端自动适配，3 自动 + 8 手动 + JSON 导入导出，引擎状态机重放恢复
+### ClientDef
+`{ id, name, age_2006, occupation, tier: 'mass'|'wealth'|'vip'|'private', risk: {level 1-5, tested_at}, behaviors[], finance: {deposits, wealth_mgmt, funds, insurance, loans, annual_cashflow}, family, trust 0-100, teach_tags[], questline? }`
 
-## 路线图（下一步：P6 完整游戏体验）
+### ProductDef
+`{ id, name, category: 'deposit'|'wealth_mgmt'|'fund'|'insurance'|'other'|'private', risk_level 1-5, min_amount, term_days, issuer, benchmark_pa, era?: [起年,止年], nav_model?: {loadings, coupon_pa, fee_pa, idio_sigma} 或 fixed_rate_pa?, desc }`
 
-1. **团队管理**：卷五带 3–5 名下属、客户分配博弈（卷四/卷五剧情已铺垫）
-2. **六结局**：当前卷五末有收官评语 teaser，扩展为完整六结局分支
-3. **二周目扰动**：关键事件 ±1 季度漂移，破除"背版"攻略
-4. **美术音频**：轻度二次元立绘 AI 初稿 + 人工精修；BGM/音效
-5. **发布**：NSIS 安装包（P3 已验证产出）+ 培训后台私有化部署包
+### QuestItem / QuestDef
+`{ id(全局唯一), volume 1-5, title, date, client?, requires?, dialogues: [{speaker, text, mood?}], choices: [{text, outcome, grade: 'best'|'good'|'normal'|'bad', effects: {trust?, pro?, comm?, sales?, rep?, stress?, aum?, unlockKnowledge?}}], teach? }`
+⚠️ effects **没有** `fame`/`violations` 字段（TS 会报错）；fame 用 rep，violations 用 stress/rep 替代。
+
+### LifeLineDef
+`{ client, year, month?, title, text, trustReq?, effects: {trust?, aum?, unlockKnowledge?} }`
+
+### KnowledgeEntry
+`{ id: 'k_xxx', title, unlockYear, category: 'basics'|'product'|'market'|'planning'|'compliance'|'behavior', tags[], what, why, how, pitfall, quiz: {q, a}, review: {status:'draft', source_notes[], era_note?}, era_span? }`
+
+### ExamQuestion
+`{ id(全局唯一), subject: 6科目枚举, chapter, knowledge_tags[], type: 'single'|'multiple'|'judge', stem, options[], answer(number|number[]), explanation, difficulty 1-5, source_note?, review? }`
+
+### DebriefCard
+`{ id: 'db_YYYY_slug', title, year, eventRef(导演事件id，窗口外可空), happened, cause, impact, lesson, prototype, prototypeDesc }`
+
+### SubordinateDef / TeamEvent
+`{ id: 'sub_xxx', name, trait: 'eager'|'steady'|'reckless'|'bookish', joinedYear, bio }` / `{ kind: 'graduation'|'incident'|'attrition', subId, subName, text, moraleDelta, violationsDelta }`
+
+### StudentRecord（fm-student-record v1）
+`{ schema, version: 1, studentId, gameDate, certs[], exams[], weakTags{}, choices[], activeDays[], violations, questsDone, exportedAt }`
+
+### EndingInput / EndingId
+见 §4.11；结局 id 七种：`investigation / burnout / plain_retire / branch_manager / division_gm / independent / reborn_investor`。
+
+---
+
+## 13. 开发工作手册（改内容/改代码/加系统）
+
+### 13.1 加一批题目
+
+1. 新建 `content/src/exams9.ts`，复制 exams8.ts 的 s/m/j helper，**换新 id 前缀**（bl/bc/cc/cd/ce/cf/cg 已用）；
+2. `content/src/index.ts`：import + 追加进 `examBankAll`；
+3. `npm run content:check` + `npm run typecheck`。
+
+### 13.2 加知识词条
+
+在对应批次文件追加 `{ id: 'k_xxx', title, unlockYear, category, tags, what, why, how, pitfall, quiz, review: R([...来源]) }`；注意禁语词表（收益承诺类词一律不得出现，「」教学引用除外）与年代穿越（unlockYear 之后才存在的工具词不能出现在更早词条）。
+
+### 13.3 加一卷剧情
+
+复制 quests5.ts 结构：12 个任务按日期排、卷末任务 id 以 `vol6_end` 结尾（自动触发终评）；`state.ts` 的 QUESTS_ALL 追加；choices.effects 只用既有字段。
+
+### 13.4 加一条人生线
+
+`content/src/lifelines.ts` 追加节点数组并加入 `LIFELINES_FULL`；client 必须存在于 clients.ts（或先加客户）；unlockKnowledge 引用必须可解析（content:check 会拦）。
+
+### 13.5 改数值平衡
+
+流程：改 eraDrift/eraLevel（macro.ts）或事件 shocks → `npm run sim` 看 12 锚点偏差 → `npm run bot -- 50` 看结局分布与过劳率 → 全绿后提交。**过劳口径**：月内 ≥2/3 交易日压力 ≥80 才计过劳月；月末压力阀 -8。
+
+### 13.6 加 UI 页签
+
+App.vue：screen 类型（state.ts）+ tabs 数组 + screenTitle + `<XxxPanel v-else-if>`；组件内只读 state/computed(game)，写操作走 state.ts 导出函数（保证镜像与埋点一致）。
+
+### 13.7 常见坑（历史踩坑记录）
+
+- 题目/词条 id 跨批次撞号 → ref-check 红灯（cf 批次曾与 exams4 撞号，改 cg）；
+- Vite 白屏（textLen: 0）= HMR 缓存被早前编译错误污染 → 杀掉 5173 进程重启 dev；
+- effects 里写 `fame`/`violations` → TS2353；重复 `rep: 8, rep: 3` → TS1117；
+- 非中文路径破坏 MinGW ld → Tauri 构建必须 `CARGO_TARGET_DIR=C:\fm-target`；
+- storage 直连 localStorage 会让 Tauri/微信 H5 环境存档丢失 → 一律走 storage.ts。
+
+---
+
+## 14. 质量保障与当前指标
+
+**五管线基线**（任何提交前应全绿）：
+
+| 管线 | 命令 | 当前 |
+|---|---|---|
+| 类型 | `npm run typecheck` | ✅ 零错误 |
+| 单测 | `npm test` | ✅ 88/88（rng/市场锚定/游戏净值/考试晋升/结局判定/团队系统/UI存档） |
+| 构建 | `npm run build` | ✅ 731.6 kB（gzip 281.7） |
+| 行情 | `npm run sim` | ✅ 12 锚点校验+烟测 |
+| 数值 | `npm run bot` | ✅ 结局分布合理、过劳 <5% |
+| 内容 | `npm run content:check` | ✅ lint 0 阻断（61 条教学语境警告）+ 引用完整 |
+
+**内容量**：题库 789 / 词条 147 / 任务 60 / 人生线 35 节点 / 复盘卡 18 / 导演事件 81 / 产品 32 / 客户 10 / 随机事件 36；双审元数据 916/936 条（status=draft 待人工审校——**发布培训包前必须人工审完翻 approved**，这是当前唯一硬性欠账，见规划合并文档 §15）。
+
+**单测清单**（`packages/core/test/` + `packages/ui/`）：
+
+| 文件 | 覆盖 |
+|---|---|
+| rng.test.ts | Mulberry32 确定性、日历 |
+| market.test.ts | 因子演化、行业、锚定 |
+| game-nav.test.ts | 帧推进/中断、成交约束、月度结算、金手指 |
+| exam-career.test.ts | 抽卷判卷、晋升、KPI |
+| ending.test.ts | 六结局判定链 12 例 |
+| team.test.ts | 团队入队/成长/出师/闯祸/离职/分配 9 例 |
+| packages/ui/test/lms.test.ts | 行内题包机器闸校验 |
+
+---
+
+*文档版本 2026-09-09，与代码同步维护；改完系统记得回来改对应章节。*
