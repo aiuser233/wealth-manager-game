@@ -138,5 +138,77 @@ export const LI_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 卷一完整人生线全量（替换旧版 4 节点表） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE];
+
+/**
+ * 周宏图企业主线（P5 第二批，9 节点 2006-2025）：
+ * "剧情即案例课"的第三条示范线——企业主的家庭现金流与家企隔离教学。
+ * 年代节点：粗放扩张(2008)→民间借贷危机(2011)→二胎与家企混同(2013)→质押危机(2018)→纾困转型(2019)→家办传承(2025)。
+ */
+export const ZHOU_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_zhout', year: 2006, month: 8,
+    title: '建材厂老板的活期账户',
+    text: '周宏图的厂子账上常年趴着 90 万活期——"流转快，懒得管"。你给他做的第一件事不是推销，是把公司备用金和家庭用钱分成两个账户。企业主的第一课：钱先分家，再谈收益。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['cash_mgmt'] },
+  },
+  {
+    client: 'cli_zhout', year: 2008, month: 10,
+    title: '危机里的订单与现金流',
+    text: '全球金融危机，下游地产停工，货款回收周期从 60 天拖到 150 天。周宏图第一次体会到"利润是观点，现金流是事实"。你帮他做了 6 个月滚动现金流预测——厂子熬过去了。',
+    trustReq: 20,
+    effects: { trust: 5, unlockKnowledge: ['cashflow', 'systemic_risk'] },
+  },
+  {
+    client: 'cli_zhout', year: 2011, month: 9,
+    title: '过桥贷的诱惑',
+    text: '信贷紧缩，银行抽贷，朋友介绍月息 3 分的"过桥资金"。他来问你意见时，合同已经在包里了。你拆给他看：年化 36%，抵押的是厂房。他撕了合同，多跑了两家银行。',
+    trustReq: 30,
+    effects: { trust: 6, unlockKnowledge: ['shadow_banking', 'leverage_risk'] },
+  },
+  {
+    client: 'cli_zhout', year: 2013, month: 5,
+    title: '二胎、厂房与个人卡',
+    text: '二孩出生，妻子全职带娃。周宏图嫌对公转账麻烦，开始用个人卡收货款。你警告他"人格混同"，他摆摆手："厂子是我的。"——四年后他会想起这句话。',
+    trustReq: 35,
+    effects: { trust: 3, unlockKnowledge: ['risk_isolation', 'family_lifecycle'] },
+  },
+  {
+    client: 'cli_zhout', year: 2015, month: 9,
+    title: '股灾里的浮盈幻觉',
+    text: '牛市顶点，周宏图把厂里 200 万流动资金搬进了股票账户——"厂里干一年不如股票三个月"。9 月股灾后资金腰斩，厂里进货的钱没了。这一课叫"经营资金与投资资金隔离"。',
+    trustReq: 40,
+    effects: { trust: 4, unlockKnowledge: ['leverage_risk', 'cashflow'] },
+  },
+  {
+    client: 'cli_zhout', year: 2018, month: 6,
+    title: '质押爆仓的深夜电话',
+    text: '他 2016 年把股权质押给了信托计划，2018 年 6 月股价砸到平仓线。深夜来电时他声音发抖："小林，他们明天就要强平。"这是你职业生涯最重的一次家企联动救援。',
+    trustReq: 50,
+    effects: { trust: 8, unlockKnowledge: ['pledge_risk', 'risk_isolation'] },
+  },
+  {
+    client: 'cli_zhout', year: 2019, month: 3,
+    title: '纾困之后：合规改造',
+    text: '纾困基金落地，厂房保住了。周宏图做的第一件事：注销个人卡收款的账户，请了专职会计，把公司财务和家庭资产彻底分账。"差点没了家"是最高效的合规教育。',
+    trustReq: 55,
+    effects: { trust: 6, unlockKnowledge: ['risk_isolation', 'employee_conduct'] },
+  },
+  {
+    client: 'cli_zhout', year: 2022, month: 5,
+    title: '女儿的留学与保单架构',
+    text: '女儿拿到海外 offer。周宏图想一次性把 300 万打过去，你拦住了：留学金分年给付+保单架构+外汇合规路径。他笑着说："2006 年那个管我活期的年轻人，现在管我们全家了。"',
+    trustReq: 60,
+    effects: { trust: 6, unlockKnowledge: ['education_fund', 'insurance_basics'] },
+  },
+  {
+    client: 'cli_zhout', year: 2025, month: 3,
+    title: '二代接班与家族治理',
+    text: '五十一岁的周宏图开始谈接班：女儿不想接厂子，想做设计。你陪他和女儿开了三次家庭会议，最后落成"家族宪章+职业经理人+家族信托"三件套。企业主客户线的终点，是治理，不是产品。',
+    trustReq: 70,
+    effects: { trust: 10, unlockKnowledge: ['family_office', 'succession'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 = 27 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE];

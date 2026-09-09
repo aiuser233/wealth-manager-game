@@ -6,7 +6,7 @@ import {
   type QuestDef, type LifeLineDef,
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { packQuestions } from './packs';
@@ -285,9 +285,9 @@ export function advanceFrame(daysOverride?: number): number {
 // ================= 主线剧情 =================
 
 export function initQuestEngine(seed: number) {
-  // 卷一+卷二全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
+  // 卷一~卷三全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
   state.questEngine = new QuestEngine(
-    [...VOLUME1_QUESTS, ...VOLUME2_QUESTS] as unknown as QuestDef[],
+    [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS] as unknown as QuestDef[],
     LIFELINES_ALL as unknown as LifeLineDef[],
   );
 }
@@ -316,6 +316,8 @@ export function chooseQuest(choiceIdx: number) {
     state.volumeReview = computeVolumeReview(1);
   } else if (d?.quest.id.endsWith('vol2_end') && state.questEngine) {
     state.volumeReview = computeVolumeReview(2);
+  } else if (d?.quest.id.endsWith('vol3_end') && state.questEngine) {
+    state.volumeReview = computeVolumeReview(3);
   }
 }
 

@@ -29,6 +29,19 @@ const questProgress = computed(() => {
   return qe.volumeProgress(1);
 });
 
+/** 按玩家当前进度推算所在卷（卷一 2006-2009 / 卷二 2010-2015 / 卷三 2016-2020） */
+const currentVolume = computed(() => {
+  const y = Number(g.value?.date?.slice(0, 4) ?? 2006);
+  if (y <= 2009) return 1;
+  if (y <= 2015) return 2;
+  return 3;
+});
+const questProgressCur = computed(() => {
+  const qe = state.questEngine;
+  if (!qe) return null;
+  return qe.volumeProgress(currentVolume.value);
+});
+
 const kpi = computed(() => {
   const k = g.value?.kpi;
   if (!k) return [];
@@ -137,8 +150,8 @@ function openPromotion() {
         </div>
         <span class="kpi-num dim">{{ item.target > 0 ? fmtMoney(item.done) + ' / ' + fmtMoney(item.target) : '本年代无此类' }}</span>
       </div>
-      <div v-if="questProgress" class="quest-prog">
-        <span class="dim">卷一主线：{{ questProgress.done }} / {{ questProgress.total }} 章</span>
+      <div v-if="questProgressCur" class="quest-prog">
+        <span class="dim">卷{{ ['一', '二', '三'][currentVolume - 1] }}主线：{{ questProgressCur.done }} / {{ questProgressCur.total }} 章</span>
       </div>
     </section>
 
