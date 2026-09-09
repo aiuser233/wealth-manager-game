@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { state, questNext, chooseQuest, closeQuestDialog } from '../state';
+import { VOLUME_META } from '../volume-meta';
 
 const d = computed(() => state.questDialog);
 const currentLine = computed(() => d.value?.quest.dialogues[d.value.idx]);
+const volLabel = computed(() => {
+  const v = d.value?.quest.volume ?? 1;
+  return VOLUME_META[v] ?? `卷${v}`;
+});
+const isFinalVol = computed(() => (d.value?.quest.volume ?? 1) === 5);
 const isSystem = computed(() => currentLine.value?.speaker === '系统');
 const moodColor = (mood?: string): string => {
   switch (mood) {
@@ -30,7 +36,7 @@ const gradeLabel = (g?: string): string => {
   <div v-if="d" class="mask" @click="d.phase === 'dialogue' && questNext()">
     <div class="panel story" @click.stop>
       <div class="head">
-        <span class="vol">卷一 · 黄金年代</span>
+        <span class="vol">{{ volLabel }}</span>
         <h3>{{ d.quest.title }}</h3>
         <span class="date dim">{{ d.quest.date }}</span>
       </div>
@@ -56,7 +62,20 @@ const gradeLabel = (g?: string): string => {
 
       <!-- 结果阶段 -->
       <div v-else class="result-stage">
-        <template v-if="state.volumeReview">
+        <template v-if="state.ending">
+          <p class="ending-title">✦ {{ state.ending.def.title }}</p>
+          <p class="ending-tag">{{ state.ending.def.tagline }}</p>
+          <div class="ending-scenes">
+            <p v-for="(sc, i) in state.ending.def.scenes" :key="i" class="line" :class="{ sys: sc.speaker === '系统' }">
+              <span class="speaker" :style="{ color: sc.speaker === '系统' ? '#8b98b8' : '#4f8cff' }">{{ sc.speaker }}</span>
+              {{ sc.text }}
+            </p>
+          </div>
+          <p class="outcome">{{ state.ending.def.epilogue }}</p>
+          <p class="dim">{{ state.ending.summary[0] }}</p>
+          <p class="dim">{{ state.ending.summary[1] }}</p>
+        </template>
+        <template v-else-if="state.volumeReview">
           <p class="vol-title">{{ state.volumeReview.headline }}</p>
           <div class="dim-grid">
             <div v-for="gd in state.volumeReview.grades" :key="gd.dim" class="dim-card">
@@ -70,7 +89,9 @@ const gradeLabel = (g?: string): string => {
           <p class="grade" :class="d.resultGrade">{{ gradeLabel(d.resultGrade) }}</p>
           <p class="outcome">{{ d.resultText }}</p>
         </template>
-        <button class="primary" @click="closeQuestDialog">{{ state.volumeReview ? '开启卷二（未完待续）' : '继续工作' }}</button>
+        <button class="primary" @click="closeQuestDialog">
+          {{ state.ending ? '结束生涯（归档）' : state.volumeReview ? (isFinalVol ? '生涯档案' : '开启下一卷') : '继续工作' }}
+        </button>
       </div>
     </div>
   </div>
@@ -107,6 +128,12 @@ h3 { font-size: 17px; flex: 1; }
 .outcome { line-height: 2; }
 
 .vol-title { font-size: 17px; font-weight: 700; color: var(--gold); line-height: 1.6; }
+.ending-title { font-size: 22px; font-weight: 800; color: var(--gold); letter-spacing: 2px; }
+.ending-tag { color: var(--text-dim); margin-top: -6px; }
+.ending-scenes { text-align: left; background: var(--bg2); border-radius: 10px; padding: 14px 18px; max-height: 260px; overflow-y: auto; }
+.ending-scenes .speaker { font-weight: 700; margin-right: 8px; }
+.ending-scenes .line { line-height: 1.9; font-size: 14px; }
+.ending-scenes .line.sys { color: var(--text-dim); font-style: italic; }
 .dim-grid { display: flex; justify-content: center; gap: 10px; }
 .dim-card { display: flex; flex-direction: column; align-items: center; background: var(--bg2); border-radius: 8px; padding: 8px 18px; min-width: 72px; }
 .dim-name { font-size: 12px; color: var(--text-dim); }

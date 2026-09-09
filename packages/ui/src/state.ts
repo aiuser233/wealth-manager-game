@@ -3,13 +3,15 @@ import {
   GameCalendar, MarketSim, Game, Rng, Reception, QuestEngine,
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
   type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession, type ExamQuestion,
-  type QuestDef, type LifeLineDef,
+  type QuestDef, type LifeLineDef, judgeEnding, ENDINGS,
+  type EndingId, type EndingInput,
   buildPaper, gradePaper, EXAM_DEFS,
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { packQuestions } from './packs';
+import { TeamSystem } from '@fm/core';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
@@ -20,7 +22,7 @@ export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 const cal = new GameCalendar('2006-01-02', '2025-12-31');
 
 export const state = reactive({
-  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer',
+  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer' | 'team',
   started: false,
   seed: 42,
   playerSeedText: '',
@@ -76,6 +78,15 @@ export const state = reactive({
 
   /** 结局闭环 v0：卷一结束的三维阶段评语 */
   volumeReview: null as null | { headline: string; lines: string[]; grades: Array<{ dim: string; grade: string; comment: string }> },
+
+  /** P6 六结局：卷五末的完整结局画面（含周目/继承） */
+  ending: null as null | { id: EndingId; def: typeof ENDINGS[EndingId]; summary: string[]; newGamePlus: boolean },
+  /** 周目数（本局是第几周目；1=初见） */
+  playthrough: 1,
+  /** 二周目解锁（隐藏结局达成后置 true，跨局持久化在 storage） */
+  ngPlusUnlocked: false,
+  /** 二周目关键事件漂移：eventId -> 实际触发日期（仅 NG+ 局使用） */
+  eventShifts: null as null | Record<string, IsoDate>,
 });
 
 let game: Game;
@@ -94,6 +105,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   game = new Game(sim, cal, seed, contentBundle.clients);
   gameRef.current = game;
   game.products = contentBundle.products;
+  game.team = new TeamSystem();
   game.player.name = name || '林奇安';
   game.player.gender = gender;
   game.hooks.onNews = (n) => state.news.unshift(n);
@@ -113,6 +125,16 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   state.lastSnap = null;
   state.baseSnap = { day: null, week: null, month: null, since_view: null };
   state.selectedClientId = game.clients[0]?.id ?? '';
+  // P6 二周目：读取 NG+ 解锁标记与本局周目数（上周目通关 → playthrough+1）
+  state.ngPlusUnlocked = storage.get('fm_ngplus') === '1';
+  const lastPt = Number(storage.get('fm_playthrough') ?? 0);
+  state.playthrough = lastPt >= 1 ? lastPt + 1 : 1;
+  state.eventShifts = null;
+  if (state.playthrough >= 2) {
+    // 二周目：关键事件 ±1 季度漂移（按 seed 确定性漂移，同 seed 同漂移）
+    state.eventShifts = computeEventShifts(seed);
+    pushLog(`【第 ${state.playthrough} 周目】前世的记忆出现了偏差——关键事件的时间不再完全重演（±1 季度漂移）。这一世，靠专业，不靠背版。`);
+  }
   refreshCaches();
   // 注入随机事件池
   game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
@@ -141,6 +163,9 @@ export function serializeNow(): string {
     forceDayDays: g.forceDayDays,
     apUsed: g.apUsed,
     violations: g.violations,
+    highStressMonths: g.highStressMonths,
+    coachLevel: g.coachLevel,
+    team: g.team?.serialize() ?? null,
     market: {
       factorState: { ...g.sim.factorState },
       industryState: { ...g.sim.industryState },
@@ -155,6 +180,9 @@ export function serializeNow(): string {
     log: state.log.slice(0, 60),
     /** 剧情进度（含进行中任务、生涯日志） */
     quest: state.questEngine?.serialize() ?? null,
+    /** P6 周目与事件漂移 */
+    playthrough: state.playthrough,
+    eventShifts: state.eventShifts,
     /** 接待会话中间态 */
     reception: state.reception ? { ...state.reception, need: state.reception.need } : null,
     receptionLog: state.reception ? state.receptionLog : [],
@@ -260,9 +288,9 @@ export function advanceFrame(daysOverride?: number): number {
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
   }
-  // 主线剧情触发（优先于随机事件）
+  // 主线剧情触发（优先于随机事件；二周目带日期漂移）
   if (state.questEngine) {
-    const q = state.questEngine.checkQuests(game.date);
+    const q = state.questEngine.checkQuests(game.date, state.eventShifts ?? undefined);
     if (q) {
       state.questDialog = { quest: q, idx: 0, phase: 'dialogue' };
       return res.daysAdvanced;
@@ -283,6 +311,27 @@ export function advanceFrame(daysOverride?: number): number {
 }
 
 // ================= 主线剧情 =================
+
+/**
+ * P6-2 二周目扰动：按 seed 确定性生成任务日期漂移（±1 季度内，最多 ±66 天）。
+ * 同 seed 同漂移；日历范围钳制；只漂移主线任务，不动人生线。
+ */
+export function computeEventShifts(seed: number): Record<string, IsoDate> {
+  const shifts: Record<string, IsoDate> = {};
+  const rng = new Rng(seed ^ 0x2b1b_c0de);
+  const all = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS];
+  for (const q of all) {
+    const roll = Math.round((rng.next() * 2 - 1) * 66); // -66 ~ +66 天
+    if (roll === 0) continue;
+    const base = cal.indexOf(q.date);
+    if (base < 0) continue;
+    const clamped = Math.max(0, Math.min(cal.count - 1, base + roll));
+    const target = cal.at(clamped);
+    if (target === q.date) continue;
+    shifts[q.id] = target;
+  }
+  return shifts;
+}
 
 export function initQuestEngine(seed: number) {
   // 卷一~卷三全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
@@ -322,7 +371,54 @@ export function chooseQuest(choiceIdx: number) {
     state.volumeReview = computeVolumeReview(4);
   } else if (d?.quest.id.endsWith('vol5_end') && state.questEngine) {
     state.volumeReview = computeVolumeReview(5);
+    // P6 六结局：卷五终章后判定完整结局
+    computeFinalEnding();
   }
+}
+
+/** P6-1 六结局判定（卷五末触发；结局画面在 QuestDialog volumeReview 之后展示） */
+export function computeFinalEnding() {
+  const g = getGame();
+  const qe = state.questEngine;
+  if (!qe) return;
+  const prog = (n: number) => qe.volumeProgress(n);
+  const questsDone = [1, 2, 3, 4, 5].reduce((a, v) => a + prog(v).done, 0);
+  const questsTotal = [1, 2, 3, 4, 5].reduce((a, v) => a + prog(v).total, 0);
+  const avgTrust = g.clients.length
+    ? g.clients.reduce((a, c) => a + c.trust, 0) / g.clients.length
+    : 0;
+  const input: EndingInput = {
+    violations: g.violations,
+    stress: g.player.attrs.stress,
+    highStressMonths: g.highStressMonths ?? 0,
+    grade: g.player.grade,
+    aum: g.player.aum,
+    seasonScore: g.recentSeasonScore(),
+    avgTrust,
+    questsDone,
+    questsTotal,
+    lifelinesDone: qe.lifelinesDone(),
+    newGamePlus: state.playthrough >= 2,
+    playerName: g.player.name,
+  };
+  const r = judgeEnding(input);
+  // 隐藏结局达成 → 永久解锁二周目，并记录周目数供下一局递增
+  if (r.id === 'reborn_investor') {
+    state.ngPlusUnlocked = true;
+    storage.set('fm_ngplus', '1');
+  }
+  storage.set('fm_playthrough', String(state.playthrough));
+  state.ending = {
+    id: r.id,
+    def: ENDINGS[r.id],
+    summary: [
+      `判定依据：${r.reasons.join('；')}`,
+      `主线：${questsDone}/${questsTotal} 章 · 人生线节点：${input.lifelinesDone} · 客户信任均值：${avgTrust.toFixed(0)}`,
+    ],
+    newGamePlus: state.playthrough >= 2,
+  };
+  pushLog(`【结局】「${ENDINGS[r.id].title}」——${ENDINGS[r.id].tagline}`);
+  pushLog(`【档案】${state.ending.summary.join('；')}`);
 }
 
 /** 三维阶段评语（结局闭环 v0） */
@@ -374,6 +470,11 @@ function finishQuest(choiceIdx: number) {
 export function closeQuestDialog() {
   state.questDialog = null;
   state.volumeReview = null;
+  // 六结局画面关闭：显示生涯档案归档提示（游戏继续可自由回顾，重开一局即二周目）
+  if (state.ending) {
+    pushLog('【归档】二十年的生涯档案已保存。重启记忆开始新一局（二周目：关键事件将不再完全重演）。');
+    state.ending = null;
+  }
 }
 
 /** 人生线确认 */
@@ -753,6 +854,12 @@ export function loadGameFromSave(data: any) {
   if (typeof data.forceDayDays === 'number') g.forceDayDays = data.forceDayDays;
   if (typeof data.apUsed === 'number') g.apUsed = data.apUsed;
   if (typeof data.violations === 'number') g.violations = data.violations;
+  if (typeof data.highStressMonths === 'number') g.highStressMonths = data.highStressMonths;
+  if (typeof data.coachLevel === 'number') g.coachLevel = data.coachLevel;
+  // 团队系统恢复（P6：旧存档无 team 字段时按当前年份补齐花名册）
+  g.team = new TeamSystem();
+  if (data.team) g.team.restore(data.team);
+  g.team.syncRoster(Number((g.date ?? '2026-01-01').slice(0, 4)), g.rng);
   if (Array.isArray(data.clients)) {
     for (const sc of data.clients) {
       const gc = g.clients.find((x) => x.id === sc.id);
@@ -809,6 +916,11 @@ export function loadGameFromSave(data: any) {
   // 恢复剧情进度
   initQuestEngine(state.seed);
   if (data.quest) state.questEngine?.restore(data.quest);
+  // P6 周目与事件漂移恢复
+  state.playthrough = Number(data.playthrough ?? 1);
+  state.eventShifts = data.eventShifts ?? null;
+  state.ngPlusUnlocked = storage.get('fm_ngplus') === '1';
+  state.ending = null;
   pushLog(`【读档】已恢复到 ${g.date} 的进度。`);
 }
 

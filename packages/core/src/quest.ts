@@ -72,12 +72,14 @@ export class QuestEngine {
   /**
    * 每月（或每次帧推进后）调用：检查是否有到期未完成任务。
    * 只弹出一个（最早的），完成后再触发下一个。
+   * dateShift：任务 id → 实际触发日期（二周目事件漂移；缺省完全按原日期）。
    */
-  checkQuests(currentDate: IsoDate): QuestDef | null {
+  checkQuests(currentDate: IsoDate, dateShift?: Record<string, IsoDate>): QuestDef | null {
     if (this.pending) return this.pending;
     for (const q of this.quests) {
       if (this.completed.has(q.id)) continue;
-      if (q.date > currentDate) break; // 排序保证后面更晚
+      const effDate = dateShift?.[q.id] ?? q.date;
+      if (effDate > currentDate) break; // 排序保证后面更晚（漂移幅度 ≤ 季度，相对顺序可能微调，此处容忍）
       if (q.requires && !this.completed.has(q.requires)) continue;
       this.pending = q;
       return q;
@@ -131,6 +133,11 @@ export class QuestEngine {
   volumeProgress(volume: number): { done: number; total: number } {
     const inVol = this.quests.filter((q) => q.volume === volume);
     return { done: inVol.filter((q) => this.completed.has(q.id)).length, total: inVol.length };
+  }
+
+  /** 已触发人生线节点数（结局档案用） */
+  lifelinesDone(): number {
+    return this.firedLifelines.size;
   }
 
   /**

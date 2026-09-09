@@ -5,6 +5,7 @@ import { MarketSim } from './market';
 import { productNavAt, productOnShelf } from './nav';
 import { monthlyKpiScore, kpiGradeName, monthlyBonus, isOpeningSeason, checkPromotion, PROMOTION_PATH, type PromotionCheckResult } from './career';
 import { RandomEventEngine, type RandomEventInstance, type RandomEventOutcome } from './random-event-engine';
+import { TeamSystem, type TeamEvent } from './team';
 
 /** 各帧的行动点上限（规划书 3.2：日 4 / 周 10 / 月 32-40，取 36） */
 export const AP_PER_FRAME: Record<TimeFrame, number> = { day: 4, week: 10, month: 36 };
@@ -396,6 +397,20 @@ export class Game {
     const salary = 4500 + this.player.grade * 1500;
     this.monthScores.push(score);
     if (this.monthScores.length > 6) this.monthScores.shift();
+    // 过劳统计：压力 ≥80 的月份数（结局判定用）
+    if (this.player.attrs.stress >= 80) this.highStressMonths += 1;
+    // 团队月度结算（P6-3：卷四 2023 起生效）
+    if (this.team) {
+      this.team.syncRoster(y, this.rng);
+      if (this.team.members.length > 0) {
+        this.teamEvents = this.team.monthlyTick(y, () => this.rng.next(), this.coachLevel);
+        for (const ev of this.teamEvents) {
+          this.team.morale = Math.max(0, Math.min(100, this.team.morale + ev.moraleDelta));
+          if (ev.violationsDelta) this.violations += ev.violationsDelta;
+          this.log.push({ date: snap.date, text: `【团队】${ev.text}` });
+        }
+      }
+    }
 
     this.log.push({
       date: snap.date,
@@ -414,6 +429,14 @@ export class Game {
 
   monthScores: number[] = [];
   violations = 0;
+  /** 压力 ≥80 的月份数（过劳结局判定用） */
+  highStressMonths = 0;
+  /** 团队系统（P6-3：卷四末 3-5 名下属；UI 读 members/事件） */
+  team: TeamSystem | null = null;
+  /** 本月团队事件（rollMonth 产出，UI 帧结算后消费展示） */
+  teamEvents: TeamEvent[] = [];
+  /** 本年辅导投入等级 0-3（团队面板设置） */
+  coachLevel = 0;
 
   /** 贵宾客户数：金融资产 ≥ 50 万 */
   vipClientCount(): number {
@@ -442,6 +465,7 @@ export class Game {
       privateClients: this.privateClientCount(),
       seasonScore: this.recentSeasonScore(),
       violations: this.violations,
+      coached: this.team?.graduatedCount() ?? 0,
     };
     return PROMOTION_PATH.map((req) => checkPromotion(this.player.grade, req, ctx));
   }
