@@ -13,11 +13,13 @@ import { examBank4 } from './exams4';
 import { examBank5 } from './exams5';
 import { examBank6 } from './exams6';
 import { examBank7 } from './exams7';
+import { examBank8 } from './exams8';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { knowledgeBatch2 } from './knowledge2';
 import { knowledgeBatch3 } from './knowledge3';
 import { knowledgeBatch4 } from './knowledge4';
 import { knowledgeBatch5 } from './knowledge5';
+import { knowledgeBatch6 } from './knowledge6';
 import { randomEvents } from './random-events';
 import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
 import { VOLUME2_QUESTS } from './quests2';
@@ -26,11 +28,11 @@ import { VOLUME4_QUESTS } from './quests4';
 import { VOLUME5_QUESTS } from './quests5';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
-/** 全量题库（七批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7];
+/** 全量题库（八批合计） */
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8];
 
-/** 知识库全量（五批合计） */
-export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5];
+/** 知识库全量（六批合计） */
+export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6];
 
 /** 剧情任务全量（卷一~卷五） */
 export const QUESTS_ALL = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS];

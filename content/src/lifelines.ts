@@ -210,5 +210,70 @@ export const ZHOU_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 = 27 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE];
+/**
+ * 吴建国大众客群线（P5 增量，8 节点 2006-2024）：
+ * "剧情即案例课"的第四条示范线——蓝领家庭的债务、保障与彩票式投机教学。
+ * 年代节点：摩托换车梦(2007)→诱惑高息(2009)→孩子上学与保单(2012)→车祸与保险缺位(2015)→
+ * 网贷危机(2018)→网约车冲击与副业(2020)→强制储蓄翻盘(2022)→儿子教育与豁免(2024)。
+ */
+export const WU_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_wuji', year: 2007, month: 6,
+    title: '出租车司机的换车梦',
+    text: '吴建国开夜班车攒了 8 万，想贷款 10 万换个新车跑长途。风险测评 R4、爱买彩票——他真正的需求是"回本快的路子"。你的第一课：先把"跑车的本钱"和"梦想的钱"分开。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['cashflow', 'suitability'] },
+  },
+  {
+    client: 'cli_wuji', year: 2009, month: 7,
+    title: '车队里的"高息传说"',
+    text: '出租车队里传遍"放贷月息 3 分"的故事，有同行把营运证都押了进去。吴建国拿着 8 万来问。你给他算了借 10 万收 3 分息的人靠什么赚钱——他听完把存折收回了兜里。',
+    trustReq: 15,
+    effects: { trust: 5, unlockKnowledge: ['high_yield_trap', 'shadow_banking'] },
+  },
+  {
+    client: 'cli_wuji', year: 2012, month: 9,
+    title: '老大上学与第一份保单',
+    text: '老大上初中、老二上小学，妻子的身体查出了问题。他第一次主动来网点——"给媳妇买份保险，还有娃上学的钱"。家庭责任顶点的配置：医疗险先于理财，一分钱都不该省。',
+    trustReq: 25,
+    effects: { trust: 6, unlockKnowledge: ['insurance_basics', 'education_fund'] },
+  },
+  {
+    client: 'cli_wuji', year: 2015, month: 11,
+    title: '车祸之后：保险缺位的代价',
+    text: '夜班追尾，人没事、车报废、对方索赔 6 万。他没买足额三者险，积蓄一下去了三分之二。来网点时他说的第一句话："小林，去年你要我加保，我嫌贵。"这一课他替所有客户上的。',
+    trustReq: 30,
+    effects: { trust: 4, unlockKnowledge: ['insurance_basics', 'cashflow'] },
+  },
+  {
+    client: 'cli_wuji', year: 2018, month: 9,
+    title: '儿子给他下的"网贷套"',
+    text: '上大学的儿子借了网贷，利滚利到 4 万，催收打到了车队。吴建国来网点时手都在抖。你陪他做了三件事：核实平台资质、报了 110、制定了还款计划。他说："丢人。"你说："这是所有家庭的必修课。"',
+    trustReq: 40,
+    effects: { trust: 8, unlockKnowledge: ['fraud_alert', 'debt'] },
+  },
+  {
+    client: 'cli_wuji', year: 2020, month: 6,
+    title: '网约车来了',
+    text: '疫情+网约车双重冲击，一个月跑车收入腰斩。54 岁的吴建国第一次认真问你："我这岁数，还能怎么 plan B？"你陪他盘了盘：营运证转让价、妻子的小卖部、还有他跟了你十四年攒下的账户。',
+    trustReq: 45,
+    effects: { trust: 5, unlockKnowledge: ['income_structure', 'cashflow'] },
+  },
+  {
+    client: 'cli_wuji', year: 2022, month: 8,
+    title: '强制储蓄的翻盘',
+    text: '转行做代驾+小卖部后，他给全家上了"发薪日储蓄"的机制——发工资当天自动转 30%。两年攒下 12 万，是他这辈子第一笔"没被花掉的钱"。他请你在小卖部吃了根冰棍："这就是复利吧？"',
+    trustReq: 55,
+    effects: { trust: 8, unlockKnowledge: ['self_control', 'dca'] },
+  },
+  {
+    client: 'cli_wuji', year: 2024, month: 7,
+    title: '儿子的第一份工资',
+    text: '毕业的儿子拿到第一份工资，吴建国把他带到网点："当年我没管好自己，也没教好他。现在他的钱，你照着教我的那套来。"大众客户线的终点，是代际的改写。',
+    trustReq: 60,
+    effects: { trust: 10, unlockKnowledge: ['self_control', 'dca', 'third_pillar'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 = 35 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE];

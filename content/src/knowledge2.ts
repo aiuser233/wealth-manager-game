@@ -290,7 +290,7 @@ export const knowledgeBatch2: KnowledgeEntry[] = [
     review: R(['个人信贷产品定价公开资料']),
   },
   {
-    id: 'k_income_structure', title: '收入结构与风险预算', unlockYear: 2010, category: 'planning', tags: ['cashflow', 'family_lifecycle'],
+    id: 'k_income_structure', title: '收入结构与风险预算', unlockYear: 2010, category: 'planning', tags: ['cashflow', 'income_structure', 'family_lifecycle'],
     what: '工资型收入稳定→可承受更高投资波动；经营型收入波动大→投资要保守对冲。',
     why: '风险承受能力不只看资产，更看"人力资本的波动性"——企业主与公务员的配置逻辑完全不同。',
     how: 'KYC 必问收入结构：固定/浮动比例、行业周期相关性；企业主的金融资产要"反周期"。',
