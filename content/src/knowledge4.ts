@@ -215,7 +215,7 @@ export const knowledgeBatch4: KnowledgeEntry[] = [
     review: R(['《信托法》（2001）', '保险金信托行业公开实践']),
   },
   {
-    id: 'k_charity_plan', title: '慈善与财富的社会维度', unlockYear: 2023, category: 'planning', tags: ['charity', 'philanthropy'],
+    id: 'k_charity_plan', title: '慈善与财富的社会维度', unlockYear: 2023, category: 'planning', tags: ['charity', 'charity_plan', 'philanthropy'],
     what: '慈善工具箱：捐赠、慈善信托、慈善基金会，各有税收与治理差异。',
     why: '高净值客户"钱给谁、怎么给"的第二答案。谈慈善不是谈情怀，是谈架构与税务。',
     how: '先问目的（避税/名声/真实意愿/家族凝聚），再配工具：一次性给→捐赠；长期给→慈善信托。',
@@ -233,7 +233,7 @@ export const knowledgeBatch4: KnowledgeEntry[] = [
     review: R(['公开长期资产回报研究（Credit Suisse Global Investment Returns 等公开文献）']),
   },
   {
-    id: 'k_rebalancing', title: '再平衡的纪律', unlockYear: 2012, category: 'planning', tags: ['rebalance', 'asset_allocation'],
+    id: 'k_rebalancing', title: '再平衡的纪律', unlockYear: 2012, category: 'planning', tags: ['rebalance', 'rebalancing', 'asset_allocation'],
     what: '再平衡：定期把偏离目标配置的组合拉回目标比例，本质是"高抛低吸的制度化"。',
     why: '客户最难做到的恰恰是卖涨买跌。纪律化再平衡把择时情绪关进制度笼子。',
     how: '两种触发：时间（年度）与阈值（偏离±5 个百分点），二选一并写进家庭 IPS。',

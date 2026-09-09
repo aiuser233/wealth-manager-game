@@ -115,7 +115,7 @@ export const knowledgeBatch2: KnowledgeEntry[] = [
     review: R(['《债券定价》经典教材（Fabozzi 等）', '中债估值中心久期计算口径']),
   },
   {
-    id: 'k_closed_periodic', title: '封闭式与定期开放式产品', unlockYear: 2014, category: 'product', tags: ['nav_product'],
+    id: 'k_closed_periodic', title: '封闭式与定期开放式产品', unlockYear: 2014, category: 'product', tags: ['nav_product', 'closed_periodic'],
     what: '封闭式在存续期不可赎回；定开式每隔固定期限开放申赎。',
     why: '封闭/定开让管理人不用应对申赎冲击，通常收益更稳——代价是客户流动性。',
     how: '按客户用钱时点选期限；讲清"这个钱锁多久、到期那天钱自动回来吗"。',

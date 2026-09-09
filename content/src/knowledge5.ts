@@ -76,7 +76,7 @@ export const knowledgeBatch5: KnowledgeEntry[] = [
     review: R(['2020 年 3 月全球市场公开数据', '海外央行无限量 QE 公告']),
   },
   {
-    id: 'k_nav_drawdown_read', title: '净值产品的历史回撤怎么读', unlockYear: 2018, category: 'product', tags: ['wealth_nav_backtest', 'nav_product'],
+    id: 'k_nav_drawdown_read', title: '净值产品的历史回撤怎么读', unlockYear: 2018, category: 'product', tags: ['wealth_nav_backtest', 'nav_product', 'nav_drawdown_read'],
     what: '读净值型理财三张图：历史净值曲线（回撤幅度与修复时长）、底层资产结构（利率/信用/权益占比）、回撤归因（涨跌因什么）。',
     why: '净值化后客户的第一问是"会不会亏"。给图不给话术，是专业与话术的分界线。',
     how: '用"最大回撤+修复天数"两个数字替代"预期收益"一个数字。',
