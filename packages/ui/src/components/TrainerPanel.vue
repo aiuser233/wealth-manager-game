@@ -169,12 +169,14 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
           </div>
           <h5>考证通过率</h5>
           <table class="mini">
-            <tr><th>科目</th><th>人次</th><th>通过</th><th>率</th></tr>
+            <thead><tr><th>科目</th><th>人次</th><th>通过</th><th>率</th></tr></thead>
+            <tbody>
             <tr v-for="p in agg.passRate.slice(0, 6)" :key="p.examName">
               <td>{{ p.examName }}</td><td>{{ p.attempts }}</td><td>{{ p.passed }}</td>
               <td :class="p.rate >= 0.7 ? 'good' : 'bad'">{{ pct(p.rate) }}</td>
             </tr>
             <tr v-if="agg.passRate.length === 0"><td colspan="4" class="dim">暂无</td></tr>
+            </tbody>
           </table>
           <h5>弱项知识 Top 8</h5>
           <div class="weakbar" v-for="w in agg.weakMap.slice(0, 8)" :key="w.tag">
@@ -185,13 +187,15 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
           <p v-if="agg.weakMap.length === 0" class="dim">暂无错题数据。</p>
           <h5>剧情抉择分布</h5>
           <table class="mini">
-            <tr><th>任务</th><th>分布</th><th>最优率</th></tr>
+            <thead><tr><th>任务</th><th>分布</th><th>最优率</th></tr></thead>
+            <tbody>
             <tr v-for="c in agg.choiceDist.slice(0, 6)" :key="c.quest">
               <td>{{ c.quest }}</td>
               <td><span v-for="(n, g) in c.dist" :key="g" class="grade-chip" :data-g="g">{{ g }}×{{ n }}</span></td>
               <td>{{ pct(c.bestRate) }}</td>
             </tr>
             <tr v-if="agg.choiceDist.length === 0"><td colspan="3" class="dim">暂无</td></tr>
+            </tbody>
           </table>
         </div>
         <p v-else class="dim">尚未导入学员记录。学员在「系统」页导出 JSON 后，讲师在此导入。</p>
@@ -215,11 +219,13 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
         </li>
       </ul>
       <table v-if="packMetas.length" class="mini">
-        <tr><th>题包</th><th>题数</th><th>导入时间</th><th></th></tr>
+        <thead><tr><th>题包</th><th>题数</th><th>导入时间</th><th></th></tr></thead>
+        <tbody>
         <tr v-for="m in packMetas" :key="m.name">
           <td>{{ m.name }}</td><td>{{ m.count }}</td><td class="dim">{{ m.importedAt.slice(0, 10) }}</td>
           <td><button class="danger" @click="deletePack(m.name)">删除</button></td>
         </tr>
+        </tbody>
       </table>
       <p class="dim">导入时自动跑合规机器闸（禁语/真实机构/答案结构），未通过不并入抽题池。题包仅存本机。</p>
     </section>
