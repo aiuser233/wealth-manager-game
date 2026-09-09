@@ -6,7 +6,7 @@
  * - AUM / 收入 / 精力压力曲线
  * - 结局分布（含 Bad End 触发率）
  */
-import { GameCalendar, MarketSim, Game, Rng, productOnShelf } from '@fm/core';
+import { GameCalendar, MarketSim, Game, Rng, productOnShelf, judgeEnding, ENDINGS, type EndingId } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents } from '@fm/content';
 
 const cal = new GameCalendar('2006-01-02', '2025-12-31');
@@ -25,6 +25,8 @@ interface BotRunResult {
   promotedAt: Record<number, string>; // grade -> date
   diedOfStress: boolean;
   dealCount: number;
+  /** P6 六结局判定（bot 无剧情引擎，主线按满额计） */
+  endingId: EndingId;
 }
 
 /** 机器人一局：从 2006 玩到 2025 */
@@ -39,6 +41,7 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
   const result: BotRunResult = {
     seed, strategy, finalGrade: 0, finalAum: 0, totalIncome: 0,
     finalStress: 0, finalEnergy: 0, certs: 0, promotedAt: {}, diedOfStress: false, dealCount: 0,
+    endingId: 'plain_retire',
   };
 
   // 行动池按策略加权
@@ -113,6 +116,23 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
   result.finalStress = game.player.attrs.stress;
   result.finalEnergy = game.player.energy;
   result.certs = game.player.certs.length;
+  // P6 六结局判定（bot 不跑剧情/人生线，questsDone 按总数、trust 用客户均值）
+  const avgTrust = game.clients.length
+    ? game.clients.reduce((a, c) => a + c.trust, 0) / game.clients.length
+    : 0;
+  const judge = judgeEnding({
+    violations: game.violations,
+    stress: game.player.attrs.stress,
+    highStressMonths: game.highStressMonths,
+    grade: game.player.grade,
+    aum: game.player.aum,
+    seasonScore: game.recentSeasonScore(),
+    avgTrust,
+    questsDone: 60,
+    questsTotal: 60,
+    lifelinesDone: 0,
+  });
+  result.endingId = result.diedOfStress ? 'burnout' : judge.id;
   return result;
 }
 
@@ -139,6 +159,13 @@ for (const strat of strategies) {
   console.log(`  晋升普通: ${promo1.length}/${N} 局（年份分布 ${mode(promo1)}）`);
   console.log(`  晋升贵宾: ${promo2.length}/${N} 局（年份分布 ${mode(promo2)}）`);
   console.log(`  过劳结局: ${runs.filter((r) => r.diedOfStress).length}/${N}`);
+  // P6 六结局分布
+  const endingDist: Record<string, number> = {};
+  for (const r of runs) endingDist[r.endingId] = (endingDist[r.endingId] ?? 0) + 1;
+  const endingText = Object.entries(endingDist)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, n]) => `${ENDINGS[id as EndingId].title} ${n}`).join('，');
+  console.log(`  六结局分布: ${endingText}`);
   console.log('');
 }
 

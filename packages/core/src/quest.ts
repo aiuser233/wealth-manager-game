@@ -194,16 +194,17 @@ export class QuestEngine {
       { dim: '信任', grade: trustGrade, comment: trustComment[trustGrade] },
     ];
 
-    // 头条：三维加权总评
+    // 头条：三维加权总评（按卷号显示）
+    const volName = ['卷一 · 黄金年代', '卷二 · 膨胀与幻灭', '卷三 · 净值化前夜', '卷四 · 私行纵深', '卷五 · 传承与终局'][volume - 1] ?? `卷${volume}`;
     const scoreMap: Record<string, number> = { S: 4, A: 3, B: 2, C: 1 };
     const total3 = scoreMap[redGrade] * 2 + scoreMap[perfGrade] + scoreMap[proGrade]; // 红线双倍权重
     const headline = total3 >= 12
-      ? '卷一终评 · 「穿越牛熊的新星」——牛熊交替之间，你守住了底线也赢得了信任。'
+      ? `${volName}终评 · 「穿越牛熊的新星」——牛熊交替之间，你守住了底线也赢得了信任。`
       : total3 >= 9
-        ? '卷一终评 · 「稳健起步的理财经理」——专业在长，业绩在涨，红线在手。'
+        ? `${volName}终评 · 「稳健前行的理财经理」——专业在长，业绩在涨，红线在手。`
         : total3 >= 6
-          ? '卷一终评 · 「磕磕绊绊的新人」——这一世比上一世强，但距离合格还有距离。'
-          : '卷一终评 · 「重蹈覆辙的前世」——被行情和欲望牵着走的人生，需要再来一次。';
+          ? `${volName}终评 · 「磕磕绊绊的进阶者」——这一卷比上一卷强，但距离合格还有距离。`
+          : `${volName}终评 · 「被行情牵着走的人」——被行情和欲望牵着走的一段路，需要复盘重来。`;
 
     const lines = [
       `主线章节：${done}/${total} 完成。`,

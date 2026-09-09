@@ -327,6 +327,9 @@ export class Game {
       this.lastSnap = snap;
       this.pushSnapHistory(snap);
       out.push(snap);
+      // 过劳口径统计：每天收盘时点的压力（帧末行动全部做完之后）
+      this.monthTradingDays += 1;
+      if (this.player.attrs.stress >= 80) this.monthHotDays += 1;
       for (const nw of this.sim.newsFeed) {
         if (nw.date === snap.date) this.hooks.onNews?.(nw);
       }
@@ -397,8 +400,15 @@ export class Game {
     const salary = 4500 + this.player.grade * 1500;
     this.monthScores.push(score);
     if (this.monthScores.length > 6) this.monthScores.shift();
-    // 过劳统计：压力 ≥80 的月份数（结局判定用）
-    if (this.player.attrs.stress >= 80) this.highStressMonths += 1;
+    // 过劳统计（结局判定用）：口径为"月内压力 ≥80 的天数 ≥ 2/3"——月末瞬时点会被
+    // 帧末休息等动作拉低/抬高，不能反映当月常态；按"压着 80 过完整个月"才算过劳月。
+    if (this.monthHotDays >= this.monthTradingDays * 2 / 3 && this.monthTradingDays > 0) {
+      this.highStressMonths += 1;
+    }
+    // 生活系统压力阀：月末统一自然回落（睡眠/周末），玩家不休息也无法把压力顶死在高位
+    this.player.attrs.stress = Math.max(0, this.player.attrs.stress - 8);
+    this.monthHotDays = 0;
+    this.monthTradingDays = 0;
     // 团队月度结算（P6-3：卷四 2023 起生效）
     if (this.team) {
       this.team.syncRoster(y, this.rng);
@@ -431,6 +441,10 @@ export class Game {
   violations = 0;
   /** 压力 ≥80 的月份数（过劳结局判定用） */
   highStressMonths = 0;
+  /** 当月压力 ≥80 的交易日数（过劳口径：≥2/3 交易日算过劳月） */
+  monthHotDays = 0;
+  /** 当月已演算交易日数 */
+  monthTradingDays = 0;
   /** 团队系统（P6-3：卷四末 3-5 名下属；UI 读 members/事件） */
   team: TeamSystem | null = null;
   /** 本月团队事件（rollMonth 产出，UI 帧结算后消费展示） */
