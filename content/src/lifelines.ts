@@ -2,6 +2,7 @@
  * 完整客户人生线（P1 规划 3.4）："剧情即案例课"的示范线。
  * 王秀兰线（9 节点）：2006-2020，适当性/防诈/养老三支柱教学。
  * 李建国线（9 节点）：2006-2025，家庭生命周期/杠杆/断供/传承启动教学。
+ * 何志敏线（9 节点）：2006-2025，年轻客群/职场新人/飞单案镜像/合规成长教学。
  * 与 VOLUME1_LIFELINES 中的重叠节点已合并（本表为全量版，替换旧表使用）。
  */
 import type { LifeLineDef } from '@fm/core';
@@ -275,5 +276,76 @@ export const WU_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 = 35 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE];
+
+/** 何志敏线（9 节点）：2006-2025，年轻客群/职场新人/飞单案镜像/从柜员到合规顾问的教学线。
+ *  教学主题：定投启蒙 → 理财盲从 → 兄长飞单案的信任修复 → 合规与职业选择 → 二代客户与 AI 时代。
+ */
+export const HE_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_hezm', year: 2006, month: 4,
+    title: '新同事的第一笔工资',
+    text: '柜员岗的何志敏拿着第一个月 1800 元工资来问你："林老师，这钱放哪？"24 岁、单身、住家里——她是最典型的"理财白纸"：没有负债、没有经验、有的是时间这个最大的资产。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['dca', 'fund_basics'] },
+  },
+  {
+    client: 'cli_hezm', year: 2007, month: 9,
+    title: '同事都在买基金',
+    text: '6124 之前的网点里，连保洁阿姨都在谈基金。何志敏问："大家都买，我不买是不是亏了？"你反问她："大家的钱和你的钱，目标一样吗？"从众是职场新人理财的第一课。',
+
+    trustReq: 20,
+    effects: { trust: 3, unlockKnowledge: ['herding', 'chasing_high'] },
+  },
+  {
+    client: 'cli_hezm', year: 2009, month: 6,
+    title: '熊市里的坚持',
+    text: '她的定投浮亏 18%，坚持了 18 个月。今天她把对账单拍在桌上："林老师，我到底在坚持什么？"你给她看了定投的份额曲线——亏损的熊市里，她买到的是最便宜的份额。',
+    trustReq: 30,
+    effects: { trust: 5, unlockKnowledge: ['dca', 'self_control'] },
+  },
+  {
+    client: 'cli_hezm', year: 2012, month: 6,
+    title: '朋友圈卖产品的边界',
+    text: '她接了行里的社交平台营销指标，问能不能在朋友圈发产品广告。你让她先想清楚三件事：能不能说收益、要不要报备、出了投诉谁负责。她在自己的朋友圈第一条写了风险提示。',
+    trustReq: 40,
+    effects: { trust: 4, unlockKnowledge: ['red_lines', 'employee_conduct'] },
+  },
+  {
+    client: 'cli_hezm', year: 2016, month: 7,
+    title: '兄长的案卷',
+    text: '何俊飞单案移送司法，全行通报。她做了家属说明后提交了调岗申请："我是不是也该离开这一行？"你告诉她：哥哥踩的是红线，不是她的人生——把耻辱翻译成专业，才是真正的修复。',
+    trustReq: 55,
+    effects: { trust: 8, unlockKnowledge: ['employee_conduct', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_hezm', year: 2018, month: 5,
+    title: '从柜员到合规专员',
+    text: '她考过了合规岗位认证，转岗到合规部。第一件工作就是参与适当性检查——检查对象里，有你。她按流程指出了你的一份双录瑕疵，然后认真说了句"谢谢林老师当年教的"。制度与师恩，她分得很清。',
+    trustReq: 60,
+    effects: { trust: 5, unlockKnowledge: ['suitability', 'red_lines'] },
+  },
+  {
+    client: 'cli_hezm', year: 2020, month: 9,
+    title: '疫情期的家人账户',
+    text: '她母亲的储蓄险到期，家里为"继续买保险还是买基金"吵翻了。她以合规专员的身份回避了自家单子，私下问你："这次，你可以只当我的顾问吗？"角色边界与专业信任，她都守住了。',
+    trustReq: 65,
+    effects: { trust: 5, unlockKnowledge: ['family_lifecycle', 'insurance_basics'] },
+  },
+  {
+    client: 'cli_hezm', year: 2023, month: 4,
+    title: 'AI 合规官的新课题',
+    text: '行里上线智能投顾，她负责算法合规审查。她来找你做"人肉测试"：让 AI 给王秀兰出方案，看它会不会把 R4 产品推给 R2 客户。你们一起写下第一条 AI 销售红线：机器出初稿，人负全责。',
+    trustReq: 70,
+    effects: { trust: 5, unlockKnowledge: ['ai_advisor', 'suitability'] },
+  },
+  {
+    client: 'cli_hezm', year: 2025, month: 8,
+    title: '她带出了自己的徒弟',
+    text: '合规部新来的年轻人问她："何姐，做合规是不是就是得罪人？"她想起 2006 年那个问"钱放哪"的自己："我哥教会我红线在哪，我师傅教会我专业长什么样。现在轮到我了。"年轻客群线的终点，是行业的下一代。',
+    trustReq: 75,
+    effects: { trust: 10, unlockKnowledge: ['team_coaching', 'red_lines'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 = 44 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE];
