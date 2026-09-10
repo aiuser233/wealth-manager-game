@@ -51,6 +51,28 @@ export interface PackCheckResult {
 }
 
 const KEY_PACKS = 'fm_custom_packs';
+/** 双审过滤开关（P4 强制启用）：'0'=正式模式（只放行 approved），'1'=开发模式（放行全部）。
+ *  人工双审完成后删除/置 '0' 该键，draft 内容即退出正式包。 */
+const KEY_REVIEW_GATE = 'fm_review_gate';
+
+/** 当前是否处于开发模式（放行未过审内容） */
+export function reviewGateDevMode(): boolean {
+  return storage.get(KEY_REVIEW_GATE) === '1';
+}
+
+/** 切换双审过滤模式（仅开发/演示用；正式培训包环境必须为关闭） */
+export function setReviewGateDevMode(on: boolean) {
+  storage.set(KEY_REVIEW_GATE, on ? '1' : '0');
+}
+
+/**
+ * 双审门禁：正式模式下只放行 review.status === 'approved' 的内容。
+ * 规划 §15-A1：人工双审完成后，approved 才进抽题池——本函数是"审完生效"的执行点。
+ */
+export function passesReviewGate(q: ExamQuestion): boolean {
+  if (reviewGateDevMode()) return true;
+  return q.review?.status === 'approved';
+}
 
 /** 行内题包元信息 */
 export interface CustomPackMeta {
@@ -159,14 +181,17 @@ export function listPacks(): CustomPackMeta[] {
   }
 }
 
-/** 已导入的全部行内题目（并入抽题池用） */
+/** 已导入的全部行内题目（并入抽题池用；受双审门禁过滤） */
 export function packQuestions(): ExamQuestion[] {
   const metas = listPacks();
   const out: ExamQuestion[] = [];
   for (const m of metas) {
     try {
       const raw = storage.get(`${KEY_PACKS}:${m.name}`);
-      if (raw) out.push(...(JSON.parse(raw) as ExamQuestion[]));
+      if (raw) {
+        const qs = JSON.parse(raw) as ExamQuestion[];
+        out.push(...qs.filter(passesReviewGate));
+      }
     } catch { /* 单包损坏跳过 */ }
   }
   return out;

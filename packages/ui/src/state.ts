@@ -10,7 +10,7 @@ import {
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
-import { packQuestions } from './packs';
+import { packQuestions, passesReviewGate } from './packs';
 import { TeamSystem } from '@fm/core';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
@@ -593,7 +593,8 @@ export function startExam(examId: string): boolean {
   rngExam ??= new Rng(game.rngNextInt());
   // 抽卷用 rng；判分通过率由专业力影响（简化：通过线降低 = pro 加成）
   // P4：并入行内题包（同科目追加进池，抽卷配比算法自动兼容）
-  const pool = [...examBankAll, ...packQuestions()];
+  // 双审门禁（规划 §15-A1）：正式模式只放行 review.status==='approved' 的题
+  const pool = [...examBankAll, ...packQuestions()].filter(passesReviewGate);
   const paper = buildPaper(exam, pool, rngExam);
   if (cramBoost) game.player.attrs.pro = savedPro; // 还原，buff 在判分阶段再乘
   state.examPaper = paper;
@@ -727,9 +728,11 @@ export function cramActive(): boolean {
   return Date.now() < until;
 }
 
-/** 每日一题（按日期确定性抽取，情绪加成；含行内题包） */
+/** 每日一题（按日期确定性抽取，情绪加成；含行内题包；受双审门禁过滤） */
 export function dailyQuestion(): { q: ExamQuestion; done: boolean } | null {
-  const pool = [...examBankAll, ...packQuestions()].filter((q) => q.subject === 'exam_bank_law' || q.subject === 'exam_bank_pf');
+  const pool = [...examBankAll, ...packQuestions()]
+    .filter(passesReviewGate)
+    .filter((q) => q.subject === 'exam_bank_law' || q.subject === 'exam_bank_pf');
   if (pool.length === 0) return null;
   const dateKey = Number(game.date.replace(/-/g, ''));
   const idx = dateKey % pool.length;

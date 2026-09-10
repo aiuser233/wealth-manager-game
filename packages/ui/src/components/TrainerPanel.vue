@@ -12,7 +12,8 @@ import {
   uploadStudentRecord, getCollectEndpoint, setCollectEndpoint, examHistory, choiceHistory,
 } from '../lms';
 import { aggregateTeam, parseStudentRecord, teamReportHtml, type StudentRecord } from '../trainer';
-import { checkPack, listPacks, savePack, removePack, packQuestions, type PackIssue, type CustomPackMeta } from '../packs';
+import { checkPack, listPacks, savePack, removePack, packQuestions, reviewGateDevMode, setReviewGateDevMode, type PackIssue, type CustomPackMeta } from '../packs';
+import { examBankAll } from '@fm/content';
 
 const studentId = ref(getStudentId());
 const savedId = ref('');
@@ -118,6 +119,17 @@ function deletePack(name: string) {
   packMetas.value = listPacks();
   packPoolCount.value = packQuestions().length;
   packMsg.value = `题包「${name}」已删除。`;
+}
+
+/** 双审门禁（规划 §15-A1）：draft 过滤开关 */
+const gateDev = ref(reviewGateDevMode());
+/** 正式模式下进入抽题池的题数（approved + 行内已过滤） */
+const gatedPoolCount = ref([...examBankAll, ...packQuestions()].filter((q) => q.review?.status === 'approved' || gateDev.value).length);
+function toggleGate(on: boolean) {
+  setReviewGateDevMode(on);
+  gateDev.value = reviewGateDevMode();
+  packPoolCount.value = packQuestions().length;
+  gatedPoolCount.value = [...examBankAll, ...packQuestions()].length;
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
@@ -228,6 +240,13 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
         </tbody>
       </table>
       <p class="dim">导入时自动跑合规机器闸（禁语/真实机构/答案结构），未通过不并入抽题池。题包仅存本机。</p>
+      <div class="gate-row">
+        <label class="gate">
+          <input type="checkbox" :checked="gateDev" @change="toggleGate(($event.target as HTMLInputElement).checked)" />
+          开发模式（放行未过审 draft 内容）
+        </label>
+        <span class="dim">正式培训包模式：抽题池只含 review.status = approved 的题目（人工双审后生效）。当前池内正式题 {{ gatedPoolCount }} 题。</span>
+      </div>
     </section>
   </div>
 </template>
@@ -250,6 +269,8 @@ td.bad { color: #c0665a; font-weight: 700; }
 .weakbar .bar { display: inline-block; height: 12px; background: var(--gold, #b5893c); border-radius: 3px; }
 .grade-chip { color: #fff; padding: 1px 6px; border-radius: 3px; margin-right: 4px; font-size: 12px; background: #6f8fb5; }
 .grade-chip[data-g='best'], .grade-chip[data-g='A'] { background: #c9a227; }
+.gate-row { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.gate { font-size: 13px; display: flex; gap: 6px; align-items: center; }
 .grade-chip[data-g='good'], .grade-chip[data-g='B'] { background: #7da65a; }
 .grade-chip[data-g='bad'], .grade-chip[data-g='D'] { background: #c0665a; }
 ul.issues { max-height: 160px; overflow: auto; margin: 6px 0; padding-left: 18px; font-size: 12px; }
