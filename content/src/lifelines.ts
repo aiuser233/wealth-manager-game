@@ -347,5 +347,68 @@ export const HE_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 = 44 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE];
+
+/** 周远航线（9 节点）：2015-2025，00 后徒弟线（与团队系统 sub_zhouyh 同人同弧）。
+ *  教学主题：少年股民 → 大学生虚拟盘 → 新人冲业绩与红线 → AI 原住民的质询 → 从冒进到分寸 → 独当一面。
+ */
+export const ZHOuyh_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_zhouyh', year: 2015, month: 7,
+    title: '跟着舅舅看盘的初中生',
+    text: '2015 年 6 月股灾，营业部里一个初中生盯着大屏看了一下午。周远航，11 岁，舅舅是老股民。"叔叔，为什么大家都在卖，昨天还在赚？"杠杆的第一次目击，刻在了一个孩子眼里。',
+    trustReq: 0,
+    effects: { trust: 2, unlockKnowledge: ['leverage_risk', 'forced_liquidation'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2018, month: 8,
+    title: '十四岁的模拟盘',
+    text: '14 岁的周远航开了模拟盘，三个月收益率跑赢了你大半个网点。他得意地问你服不服。你问他："如果这是真钱，第几天你会睡不着？"风险承受力不等于收益率，这是他记下的第一课。',
+    trustReq: 10,
+    effects: { trust: 3, unlockKnowledge: ['risk_rating', 'self_control'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2022, month: 10,
+    title: '大学生的第一笔实盘',
+    text: '18 岁生日刚过，他拿奖学金开了实盘账户，买了热搜第一的基金，一个月浮亏 12%。他来找你时嘴硬："技术性回调。"你只问了一句："这笔钱，是你下学期的生活费吗？"',
+    trustReq: 20,
+    effects: { trust: 4, unlockKnowledge: ['chasing_high', 'attention'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2024, month: 3,
+    title: '入职：你带的新下属',
+    text: '00 后理财经理周远航入职，分给你带。单产冒尖、花样频出、双录总想省步骤——"前辈，这些流程 AI 都能替代了，客户要的是结果。"业绩冲动型的画像与你 2006 年见过的何俊，重合得让你警惕。',
+    trustReq: 30,
+    effects: { trust: 4, unlockKnowledge: ['team_coaching', 'red_lines'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2024, month: 9,
+    title: '9·24 之夜的冲动',
+    text: '政策组合拳引爆行情，他连夜给 80 个客户群发"满仓短信"。你拦下了第 81 条："短信里那个「稳」字，敢写进双录吗？"他盯着屏幕看了很久，删掉了整段话。行情越火，纪律越值钱。',
+    trustReq: 45,
+    effects: { trust: 5, unlockKnowledge: ['policy_stimulus', 'chasing_high'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2025, month: 1,
+    title: 'AI 原住民的质询',
+    text: '行里 AI 助手全面上线。他在晨会上当众问出那个问题："前辈，AI 三秒出方案，我们还有什么用？"全网点安静。你把 2023 年何志敏写的 AI 红线递给他："机器管效率。王秀兰的儿子在外地这件事，机器不知道。"',
+    trustReq: 55,
+    effects: { trust: 6, unlockKnowledge: ['ai_advisor', 'team_coaching'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2025, month: 6,
+    title: '第一次拦住自己',
+    text: '他发现一张单子的客户测评快到期、风险等级又对不上——没人看见，签了就是单产。他自己做了"超风险特别程序"并跑来向你报备。你批了，然后说："这不是流程，这是你在这行的立足点。"',
+    trustReq: 65,
+    effects: { trust: 8, unlockKnowledge: ['suitability', 'red_lines'] },
+  },
+  {
+    client: 'cli_zhouyh', year: 2025, month: 12,
+    title: '出师答辩',
+    text: '带教满 18 个月，能力考核出师。答辩最后一题他答的是："带教教我的第一课是什么？"他说："师傅让我把每张单子想象成有人会拿着它来找我哭。"你在台下，想起了 2006 年的陈曼看着你。',
+    trustReq: 75,
+    effects: { trust: 10, unlockKnowledge: ['team_coaching'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 = 52 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE];

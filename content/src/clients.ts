@@ -90,4 +90,13 @@ export const clients: ClientDef[] = [
     family: '单身，与父母同住',
     trust: 55, teach_tags: ['dca', 'fund_basics'],
   },
+  {
+    id: 'cli_zhouyh', name: '周远航', age_2006: -4, // 负值约定：2004 年出生（2006 年尚未成年，2024 年入行），UI 显示为出生年份
+    occupation: '理财经理新人（00 后，2004 年生，2024 年入行）', tier: 'mass',
+    risk: { level: 4, tested_at: '2024-03-01' },
+    behaviors: ['impatient', 'yield_chasing', 'tech_native'],
+    finance: { deposits: 50000, wealth_mgmt: 0, funds: 20000, insurance: 0, loans: 0, annual_cashflow: 120000 },
+    family: '单身，与父母同住',
+    trust: 45, teach_tags: ['ai_advisor', 'team_coaching', 'red_lines'],
+  },
 ];

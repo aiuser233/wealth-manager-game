@@ -16,6 +16,7 @@ import { examBank7 } from './exams7';
 import { examBank8 } from './exams8';
 import { examBank9 } from './exams9';
 import { examBank10 } from './exams10';
+import { examBank11 } from './exams11';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { knowledgeBatch2 } from './knowledge2';
 import { knowledgeBatch3 } from './knowledge3';
@@ -30,8 +31,8 @@ import { VOLUME4_QUESTS } from './quests4';
 import { VOLUME5_QUESTS } from './quests5';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
-/** 全量题库（十批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10];
+/** 全量题库（十一批合计） */
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11];
 
 /** 知识库全量（六批合计） */
 export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6];

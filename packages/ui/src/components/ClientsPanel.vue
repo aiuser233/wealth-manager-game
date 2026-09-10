@@ -41,7 +41,7 @@ function riskClass(level: number): string {
       <div class="cols">
         <div class="col">
           <h4>基本信息</h4>
-          <p><span class="dim">年龄(2006)</span> {{ selected.age_2006 }} 岁</p>
+          <p><span class="dim">{{ selected.age_2006 > 0 ? '年龄(2006)' : '出生年份' }}</span> {{ selected.age_2006 > 0 ? selected.age_2006 + ' 岁' : 2006 - selected.age_2006 + ' 年生' }}</p>
           <p><span class="dim">职业</span> {{ selected.occupation }}</p>
           <p><span class="dim">家庭</span> {{ selected.family }}</p>
           <p>
