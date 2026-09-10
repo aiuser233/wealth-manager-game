@@ -7,7 +7,7 @@ import type { QuestDef } from '@fm/core';
  */
 export const VOLUME2_QUESTS: QuestDef[] = [
   {
-    id: 'q2_01_inflation_2010', volume: 2, title: '负利率时代的第一课', date: '2010-10-20',
+    id: 'q2_01_inflation_2010', requires: 'q1_12_vol1_end', volume: 2, title: '负利率时代的第一课', date: '2010-10-20',
     dialogues: [
       { speaker: '系统', text: 'CPI 同比突破 4%，一年期定存利率 2.5%。负利率第一个完整年份，网点里"钱越存越薄"的抱怨此起彼伏。' },
       { speaker: '陈曼', text: '卷二开场题：客户问"存款是不是越存越穷"，你怎么答？记住，这一题的答案，会决定客户是"换个人问"还是"一直问你"。' },
@@ -59,7 +59,7 @@ export const VOLUME2_QUESTS: QuestDef[] = [
     teach: 'marketing_compliance',
   },
   {
-    id: 'q2_05_money_fund_2013', volume: 2, title: '宝宝类冲击波', date: '2013-06-25',
+    id: 'q2_05_money_fund_2013', requires: 'q2_01_inflation_2010', volume: 2, title: '宝宝类冲击波', date: '2013-06-25',
     dialogues: [
       { speaker: '系统', text: '钱荒余波未平，互联网货币基金以"1 元起存、随存随取、6% 七日年化"横扫市场。网点存款大搬家，大厅里的中老年客户都举着手机。' },
       { speaker: '王建平', text: '存款流失 800 万！小林，你想想办法！' },
@@ -85,7 +85,7 @@ export const VOLUME2_QUESTS: QuestDef[] = [
     teach: 'fd_vs_wealth',
   },
   {
-    id: 'q2_07_2014_bull_start', volume: 2, title: '牛市来了：第一批追涨的客户', date: '2014-12-08',
+    id: 'q2_07_2014_bull_start', requires: 'q2_05_money_fund_2013', volume: 2, title: '牛市来了：第一批追涨的客户', date: '2014-12-08',
     dialogues: [
       { speaker: '系统', text: '降息引爆行情，沪指两周上涨 20%，券商营业部排起开户长队。沉默了七年的老股民群聊全部复活。' },
       { speaker: '陈曼', mood: 'serious', text: '行情来得又快又急。现在，全支行的客户都在问同一句话：买什么？这一题考验的不是判断，是节奏。' },
@@ -111,7 +111,7 @@ export const VOLUME2_QUESTS: QuestDef[] = [
     teach: 'leverage_risk',
   },
   {
-    id: 'q2_09_5178_top', volume: 2, title: '5178：山顶的众生相', date: '2015-06-12',
+    id: 'q2_09_5178_top', requires: 'q2_07_2014_bull_start', volume: 2, title: '5178：山顶的众生相', date: '2015-06-12',
     dialogues: [
       { speaker: '系统', text: '沪指站上 5178 点。营业部人声鼎沸，"改革牛""国家牛"刷屏。所有人都在谈论 6124 什么时候突破。' },
       { speaker: '陈曼', mood: 'serious', text: '你经历过 6124。你知道山顶的风有多冷。今天，轮到你来做那个"说冷话"的人。' },
@@ -124,7 +124,7 @@ export const VOLUME2_QUESTS: QuestDef[] = [
     teach: 'euphoria_top',
   },
   {
-    id: 'q2_10_crash_july', volume: 2, title: '千股跌停的那两周', date: '2015-07-08',
+    id: 'q2_10_crash_july', requires: 'q2_09_5178_top', volume: 2, title: '千股跌停的那两周', date: '2015-07-08',
     dialogues: [
       { speaker: '系统', text: '连续千股跌停，两融强平、配资爆仓潮涌。营业部电话被打爆，大厅里坐着不肯走的客户。' },
       { speaker: '赵树理', mood: 'sad', text: '小林……我那 60 万，是不是就没了？我孙子下个月要交学费……' },
@@ -151,7 +151,7 @@ export const VOLUME2_QUESTS: QuestDef[] = [
     teach: 'fraud_alert',
   },
   {
-    id: 'q2_12_vol2_end', volume: 2, title: '卷末：贵宾评审', date: '2015-12-18',
+    id: 'q2_12_vol2_end', requires: 'q2_10_crash_july', volume: 2, title: '卷末：贵宾评审', date: '2015-12-18',
     dialogues: [
       { speaker: '王建平', mood: 'serious', text: '股灾这一年，全支行投诉率上升 40%，你的客户投诉是零。评审组问我要理由，我说：去查他的通话记录，47 个止盈电话都在。' },
       { speaker: '陈曼', mood: 'smile', text: '十年了。从见习到贵宾理财经理。卷三开始的年代是资管新规的前夜——整个行业都要变天。说说吧，这五年你记住了什么？' },

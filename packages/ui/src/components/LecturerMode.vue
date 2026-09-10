@@ -9,6 +9,7 @@
 import { ref, computed } from 'vue';
 import { contentBundle, KNOWLEDGE_ALL } from '@fm/content';
 import type { GameEventDef } from '@fm/core';
+import { storage } from '../storage';
 
 /** 关键行情日：强制日帧处理的事件 + 黑天鹅（教学价值最高） */
 const keyDays = computed(() =>
@@ -18,6 +19,27 @@ const keyDays = computed(() =>
 );
 
 const selected = ref<GameEventDef | null>(null);
+
+// ============ 会话持久化（课堂投票跨刷新保留 + JSON 导出） ============
+const SESSION_KEY = 'fm_lecture_session';
+interface LectureSession {
+  /** 会话名（默认"第 N 次课"） */
+  name: string;
+  startedAt: string;
+  votes: Array<{ eventId: string; title: string; q: string; a: number; b: number; at: string }>;
+}
+function loadSession(): LectureSession {
+  try {
+    const raw = storage.get(SESSION_KEY);
+    if (raw) return JSON.parse(raw) as LectureSession;
+  } catch { /* 损坏则新建 */ }
+  return { name: '', startedAt: new Date().toISOString(), votes: [] };
+}
+const session = ref<LectureSession>(loadSession());
+function persistSession() {
+  storage.set(SESSION_KEY, JSON.stringify(session.value));
+}
+
 function pick(e: GameEventDef) {
   selected.value = e;
   votes.value = { a: 0, b: 0 };
@@ -55,17 +77,50 @@ const discussion = computed(() => {
   ];
 });
 
-/** 班级投票（讲师举手统计） */
+/** 班级投票（讲师举手统计，写入持久化会话） */
 const votes = ref<{ a: number; b: number }>({ a: 0, b: 0 });
 const voteTotal = computed(() => votes.value.a + votes.value.b);
 const pctA = computed(() => (voteTotal.value ? Math.round((votes.value.a / voteTotal.value) * 100) : 0));
 const pctB = computed(() => (voteTotal.value ? 100 - pctA.value : 0));
-const voteHistory = ref<Array<{ title: string; a: number; b: number }>>([]);
 function closeVote() {
   if (!selected.value || voteTotal.value === 0) return;
-  voteHistory.value.unshift({ title: selected.value.title, a: votes.value.a, b: votes.value.b });
+  const q = discussion.value.find((d) => d.options[0] !== undefined);
+  session.value.votes.push({
+    eventId: selected.value.id,
+    title: selected.value.title,
+    q: q?.q ?? '',
+    a: votes.value.a,
+    b: votes.value.b,
+    at: new Date().toISOString(),
+  });
+  persistSession();
   votes.value = { a: 0, b: 0 };
 }
+/** 会话导出：JSON 文件（课后归档/导入报表系统） */
+function exportSession() {
+  const blob = new Blob([JSON.stringify(session.value, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `课堂投票_${session.value.name || 'session'}_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+function resetSession() {
+  if (!confirm('开新课将清空当前投票记录（建议先导出），确认？')) return;
+  session.value = { name: `第 ${session.value.votes.length + 1} 次课`, startedAt: new Date().toISOString(), votes: [] };
+  persistSession();
+}
+const sessionSummary = computed(() => {
+  const byEvent = new Map<string, { title: string; a: number; b: number }>();
+  for (const v of session.value.votes) {
+    const e = byEvent.get(v.eventId) ?? { title: v.title, a: 0, b: 0 };
+    e.a += v.a;
+    e.b += v.b;
+    byEvent.set(v.eventId, e);
+  }
+  return [...byEvent.values()];
+});
 </script>
 
 <template>
@@ -112,10 +167,16 @@ function closeVote() {
           </div>
           <button class="gold-btn" :disabled="!voteTotal" @click="closeVote">记录本轮投票并开下一题</button>
 
-          <div v-if="voteHistory.length" class="vh">
-            <h5>已记录 {{ voteHistory.length }} 轮</h5>
-            <p v-for="(v, i) in voteHistory" :key="i" class="dim">
-              {{ v.title }} — A {{ v.a }} : B {{ v.b }}（{{ Math.round((v.a / (v.a + v.b)) * 100) }}% 选 A）
+          <div class="session-bar">
+            <span class="dim">本会话已记录 {{ session.votes.length }} 轮投票（跨刷新保留）</span>
+            <button @click="exportSession">⬇ 导出投票 JSON</button>
+            <button class="danger" @click="resetSession">开新课</button>
+          </div>
+
+          <div v-if="sessionSummary.length" class="vh">
+            <h5>本会话分支分布（{{ sessionSummary.length }} 幕）</h5>
+            <p v-for="v in sessionSummary" :key="v.title" class="dim">
+              {{ v.title }} — A {{ v.a }} : B {{ v.b }}（{{ Math.round((v.a / Math.max(1, v.a + v.b)) * 100) }}% 选 A）
             </p>
           </div>
         </template>
@@ -147,6 +208,9 @@ function closeVote() {
 .bar.a { background: #6f8fb5; }
 .bar.b { background: #c9a227; }
 .vh { margin-top: 10px; }
+.session-bar { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.session-bar button { font-size: 12px; }
+.session-bar .danger { border-color: #c0665a; color: #c0665a; }
 .big-hint { margin-top: 30vh; text-align: center; }
 @media (max-width: 767px) { .lect-cols { grid-template-columns: 1fr; } }
 </style>

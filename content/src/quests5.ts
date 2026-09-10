@@ -7,7 +7,7 @@ import type { QuestDef } from '@fm/core';
  */
 export const VOLUME5_QUESTS: QuestDef[] = [
   {
-    id: 'q5_01_microcap', volume: 5, title: '微盘股流动性危机', date: '2024-01-22',
+    id: 'q5_01_microcap', requires: 'q4_12_vol4_end', volume: 5, title: '微盘股流动性危机', date: '2024-01-22',
     dialogues: [
       { speaker: '系统', text: '量化中性策略踩踏，微盘股连续跌停，雪球产品集中敲入。"挂了两周都没卖出去"成为股吧高频词。' },
       { speaker: '小唐', mood: 'normal', text: '林总，有个客户买的产品底层是雪球，敲入了。他打电话来语气很平静——平静得吓人。' },
@@ -46,7 +46,7 @@ export const VOLUME5_QUESTS: QuestDef[] = [
     teach: 'pension_2024',
   },
   {
-    id: 'q5_04_sep24', volume: 5, title: '9·24：一揽子政策组合拳', date: '2024-09-24',
+    id: 'q5_04_sep24', requires: 'q5_01_microcap', volume: 5, title: '9·24：一揽子政策组合拳', date: '2024-09-24',
     dialogues: [
       { speaker: '系统', text: '降准降息+创设新货币政策工具支持股市+地产政策松绑，一揽子政策公布。沪指一周暴涨，成交额创历史纪录。' },
       { speaker: '陈曼', text: '（视频连线）退休前没赶上 9·24。小林，这是你职业生涯的第四次大底。前三次你都在场——这一次，全网点的人都在看你怎么做。' },
@@ -150,7 +150,7 @@ export const VOLUME5_QUESTS: QuestDef[] = [
     teach: 'risk_isolation',
   },
   {
-    id: 'q5_12_vol5_end', volume: 5, title: '卷末·二十年：你的结局', date: '2025-12-31',
+    id: 'q5_12_vol5_end', requires: 'q5_04_sep24', volume: 5, title: '卷末·二十年：你的结局', date: '2025-12-31',
     dialogues: [
       { speaker: '系统', text: '2025 年 12 月 31 日。二十年前重生回来的那天，你 25 岁，在城东支行的大厅里签到。今天，一切尘埃落定。' },
       { speaker: '陈曼', text: '（退休返聘仪式）我看着你从见习到私行团队负责人。二十年，你说说——如果重来一次，你会怎么走？' },

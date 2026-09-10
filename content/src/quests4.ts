@@ -7,7 +7,7 @@ import type { QuestDef } from '@fm/core';
  */
 export const VOLUME4_QUESTS: QuestDef[] = [
   {
-    id: 'q4_01_crowding_crash', volume: 4, title: '抱团瓦解：春节后的回撤', date: '2021-03-09',
+    id: 'q4_01_crowding_crash', requires: 'q3_12_vol3_end', volume: 4, title: '抱团瓦解：春节后的回撤', date: '2021-03-09',
     dialogues: [
       { speaker: '系统', text: '"核心资产"集体回撤 25%+。去年顶流基金的客户群从"膜拜"切换到"讨伐"，群里刷屏"坤坤害我"。' },
       { speaker: '陈曼', text: '（卷四开场）去年你拦住了几个梭哈的？今年他们就替你说好话。去年你怂恿的？今年他们就在你投诉单上。' },
@@ -72,7 +72,7 @@ export const VOLUME4_QUESTS: QuestDef[] = [
     teach: 'fx_risk',
   },
   {
-    id: 'q4_06_nav_break', volume: 4, title: '破净赎回潮：最长的两周', date: '2022-11-18',
+    id: 'q4_06_nav_break', requires: 'q4_01_crowding_crash', volume: 4, title: '破净赎回潮：最长的两周', date: '2022-11-18',
     dialogues: [
       { speaker: '系统', text: '债市调整引发理财大面积破净，赎回负反馈螺旋。客服电话爆线，网点玻璃门被拍响。"稳健理财亏了"上同城热搜。' },
       { speaker: '王秀兰', mood: 'sad', text: '小林，我那个 R2 的理财，怎么红字了？你是不是骗我……' },
@@ -99,7 +99,7 @@ export const VOLUME4_QUESTS: QuestDef[] = [
     teach: 'fraud_alert',
   },
   {
-    id: 'q4_08_team_lead', volume: 4, title: '带团队：第一个下属', date: '2023-03-15',
+    id: 'q4_08_team_lead', requires: 'q4_06_nav_break', volume: 4, title: '带团队：第一个下属', date: '2023-03-15',
     dialogues: [
       { speaker: '王建平', text: '总行批了你的"私行团队负责人"职级试用。给你配了个人：新来的研究生小唐，三个月了一单没开。你带带。' },
       { speaker: '小唐', mood: 'normal', text: '林老师，我每天都在打电话，话术都背下来了……为什么客户就是不签？' },
@@ -151,7 +151,7 @@ export const VOLUME4_QUESTS: QuestDef[] = [
     teach: 'family_office',
   },
   {
-    id: 'q4_12_vol4_end', volume: 4, title: '卷末：二十年的最后冲刺', date: '2023-12-20',
+    id: 'q4_12_vol4_end', requires: 'q4_08_team_lead', volume: 4, title: '卷末：二十年的最后冲刺', date: '2023-12-20',
     dialogues: [
       { speaker: '陈曼', mood: 'smile', text: '我正式退休了。从 2006 年大厅里那个紧张的新人，到私行团队负责人——你的前二十年，一卷一卷走完了。' },
       { speaker: '陈曼', text: '最后一卷（2024-2025）是收官：个人养老金全面推开、市场熊牛转换、还有你的二周目。有什么想对我说的，师傅先说为敬——这卷你的成绩单，业绩、专业、红线、信任，都写在档案里了。' },

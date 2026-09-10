@@ -3,6 +3,9 @@ import { computed, ref } from 'vue';
 import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow } from '../state';
 import { buildReport, reportHtml, downloadReport } from '../report';
 import { storage } from '../storage';
+import DossierPanel from './DossierPanel.vue';
+
+const sysTab = ref<'save' | 'dossier'>('save');
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
@@ -115,6 +118,11 @@ function importSave(file: File) {
 
 <template>
   <div v-if="g" class="panel sys full">
+    <div class="tabs">
+      <button :class="{ active: sysTab === 'save' }" @click="sysTab = 'save'">存档与报告</button>
+      <button :class="{ active: sysTab === 'dossier' }" @click="sysTab = 'dossier'">生涯档案</button>
+    </div>
+    <template v-if="sysTab === 'save'">
     <h3>系统 · 存档</h3>
     <p v-if="message" class="msg">{{ message }}</p>
 
@@ -151,10 +159,14 @@ function importSave(file: File) {
       <p class="dim">本游戏为虚构作品：所有机构（汇诚银行、玄商 300 等）、人物、产品、行情均以公开历史行情为蓝本架空改编，仅供学习与娱乐，不构成任何投资建议；市场数据为模拟生成，不代表任何真实产品表现。题库参考真实考试公开大纲原创改编。</p>
       <p class="dim">seed={{ state.seed }} · 引擎 v0.1 · 同种子同行情可复现</p>
     </div>
+    </template>
+    <DossierPanel v-else />
   </div>
 </template>
 
 <style scoped>
+.tabs { display: flex; gap: 8px; margin-bottom: 6px; }
+.tabs button.active { border-color: var(--gold); color: var(--gold); }
 .sys.full { height: 100%; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 h3 { margin-bottom: 4px; }
 h4 { font-size: 13px; color: var(--text-dim); margin: 8px 0 6px; }

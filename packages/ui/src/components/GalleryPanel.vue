@@ -26,6 +26,33 @@ const triggeredDebriefs = computed(() => {
   return DEBRIEF_CARDS.filter((d) => !d.eventRef || fired.has(d.eventRef) || d.year < year.value);
 });
 
+/** 复盘室日历视图：全部 18 卡按年代排时间线，未解锁卡灰态并显示解锁条件 */
+const calendarDebriefs = computed(() => {
+  const fired = new Set(getGame()?.sim.firedEvents.map((f) => f.ev.id) ?? []);
+  return DEBRIEF_CARDS.map((d) => {
+    const unlocked = !d.eventRef || fired.has(d.eventRef) || d.year < year.value;
+    const ev = contentBundle.events.find((e) => e.id === d.eventRef);
+    return {
+      id: d.id, year: d.year, title: d.title, lesson: d.lesson,
+      unlocked,
+      unlockHint: unlocked ? '' : ev ? `亲历「${ev.title}」（${ev.date}）后解锁` : '随剧情推进解锁',
+    };
+  }).sort((a, b) => a.year - b.year);
+});
+const calendarMode = ref(false);
+
+/** 日历视图按年代分组（1990s / 2000s / 2010s / 2020s） */
+const calendarGroups = computed(() => {
+  const groups: Array<{ decade: string; items: typeof calendarDebriefs.value }> = [];
+  for (const d of calendarDebriefs.value) {
+    const decade = `${Math.floor(d.year / 10) * 10}s`;
+    const last = groups[groups.length - 1];
+    if (last && last.decade === decade) last.items.push(d);
+    else groups.push({ decade, items: [d] });
+  }
+  return groups;
+});
+
 const catNames: Record<string, string> = {
   basics: '基础', product: '产品', market: '市场', compliance: '合规', planning: '规划', behavior: '行为金融',
 };
@@ -141,10 +168,30 @@ function npvOf(cfs: number[], r: number): number {
     <!-- 历史复盘室 -->
     <div v-else-if="tab === 'debrief'" class="cols">
       <div class="panel list">
-        <p v-for="d in triggeredDebriefs" :key="d.id" class="k-item" :class="{ active: selectedD === d.id }" @click="selectedD = d.id">
-          <span class="tag">{{ d.year }}</span>{{ d.title }}
-        </p>
-        <p class="dim note">复盘卡在大行情事件触发后解锁；窗口外的经典周期（互联网泡沫、黑色星期一）作为历史课堂常驻。</p>
+        <div class="cal-head">
+          <b>复盘日历（{{ triggeredDebriefs.length }}/{{ DEBRIEF_CARDS.length }} 已解锁）</b>
+          <button class="mini" @click="calendarMode = !calendarMode">{{ calendarMode ? '列表视图' : '日历视图' }}</button>
+        </div>
+        <template v-if="calendarMode">
+          <div v-for="grp in calendarGroups" :key="grp.decade" class="cal-group">
+            <p class="cal-decade">{{ grp.decade }}</p>
+            <p
+              v-for="d in grp.items" :key="d.id"
+              class="k-item cal-item"
+              :class="{ active: selectedD === d.id, locked: !d.unlocked }"
+              :title="d.unlockHint"
+              @click="d.unlocked && (selectedD = d.id)"
+            >
+              <span class="tag">{{ d.year }}</span>{{ d.unlocked ? d.title : `？？？ ${d.unlockHint}` }}
+            </p>
+          </div>
+        </template>
+        <template v-else>
+          <p v-for="d in triggeredDebriefs" :key="d.id" class="k-item" :class="{ active: selectedD === d.id }" @click="selectedD = d.id">
+            <span class="tag">{{ d.year }}</span>{{ d.title }}
+          </p>
+        </template>
+        <p class="dim note">复盘卡在大行情事件触发后解锁；窗口外的经典周期（互联网泡沫、黑色星期一）作为历史课堂常驻。日历视图可预览全部卡片的解锁条件。</p>
       </div>
       <div v-if="activeD" class="panel detail">
         <h3>{{ activeD.title }} <span class="dim">({{ activeD.year }})</span></h3>
@@ -255,6 +302,12 @@ function npvOf(cfs: number[], r: number): number {
 .note { font-size: 12px; line-height: 1.7; margin-bottom: 10px; }
 .gallery-item { border-bottom: 1px solid var(--bg2); padding: 8px 0; }
 .proto { color: var(--gold); font-size: 12px; }
+
+.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.cal-head .mini { padding: 2px 10px; font-size: 12px; }
+.cal-group { margin-bottom: 8px; }
+.cal-decade { color: var(--accent); font-size: 12px; font-weight: 700; margin: 6px 0 2px; }
+.cal-item.locked { opacity: 0.5; font-size: 12px; }
 
 .calc-box { background: var(--bg2); border-radius: 8px; padding: 10px 12px; }
 .calc-tabs { display: flex; gap: 4px; margin: 8px 0; }

@@ -7,7 +7,7 @@ import type { QuestDef } from '@fm/core';
  */
 export const VOLUME3_QUESTS: QuestDef[] = [
   {
-    id: 'q3_01_fuse', volume: 3, title: '熔断首日：提前收盘', date: '2016-01-04',
+    id: 'q3_01_fuse', requires: 'q2_12_vol2_end', volume: 3, title: '熔断首日：提前收盘', date: '2016-01-04',
     dialogues: [
       { speaker: '系统', text: '新年首个交易日，熔断机制实施首日即两次触发提前收盘。大厅里刚刚买完"开门红"产品的客户面面相觑。' },
       { speaker: '陈曼', text: '卷三开场。2015 年的伤疤还没结痂，2016 年第一天就补了一刀。开门红刚卖出去的基金，今天全部浮亏——你的柜台前站满了人。' },
@@ -47,7 +47,7 @@ export const VOLUME3_QUESTS: QuestDef[] = [
     teach: 'employee_conduct',
   },
   {
-    id: 'q3_04_nav_transition', volume: 3, title: '净值化的第一只产品', date: '2017-11-20',
+    id: 'q3_04_nav_transition', requires: 'q3_01_fuse', volume: 3, title: '净值化的第一只产品', date: '2017-11-20',
     dialogues: [
       { speaker: '陈曼', mood: 'serious', text: '总行通知：明年起试点净值型产品，"预期收益率"四个字要逐步退出历史舞台。你来做支行第一个卖净值型的人。' },
       { speaker: '王秀兰', mood: 'normal', text: '（首批客户）小林啊，这个"净值"和"预期收益"，到底有啥不一样？' },
@@ -112,7 +112,7 @@ export const VOLUME3_QUESTS: QuestDef[] = [
     teach: 'net_value_transition',
   },
   {
-    id: 'q3_09_covid_crash', volume: 3, title: '2020：三千股跌停的线上开市日', date: '2020-02-03',
+    id: 'q3_09_covid_crash', requires: 'q3_04_nav_transition', volume: 3, title: '2020：三千股跌停的线上开市日', date: '2020-02-03',
     dialogues: [
       { speaker: '系统', text: '春节后首个交易日，超三千只个股跌停。网点不营业，你的"柜台"变成了三十七个客户群。' },
       { speaker: '陈曼', text: '没有大厅，没有双录设备，只有手机。这一仗，打的是你十年攒下的信任底子。' },
@@ -151,7 +151,7 @@ export const VOLUME3_QUESTS: QuestDef[] = [
     teach: 'crowded_trade',
   },
   {
-    id: 'q3_12_vol3_end', volume: 3, title: '卷末：私行评审', date: '2020-09-18',
+    id: 'q3_12_vol3_end', requires: 'q3_09_covid_crash', volume: 3, title: '卷末：私行评审', date: '2020-09-18',
     dialogues: [
       { speaker: '王建平', mood: 'smile', text: '十五年。熔断、贸易战、爆雷、疫情，四个大坎你都站住了。总行的私行牌照岗位，给你留了位置。' },
       { speaker: '陈曼', mood: 'smile', text: '我也快退了。最后一课：私行服务的是"家族"，不是"账户"。这五年，你记住了什么？' },

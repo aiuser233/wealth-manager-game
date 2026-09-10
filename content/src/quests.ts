@@ -92,7 +92,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'suitability',
   },
   {
-    id: 'q1_04_qiandd_millions', volume: 1, title: '钱进的十万拆迁款', date: '2006-05-20', client: 'cli_qiandd',
+    id: 'q1_04_qiandd_millions', requires: 'q1_03_fund_craze', volume: 1, title: '钱进的十万拆迁款', date: '2006-05-20', client: 'cli_qiandd',
     dialogues: [
       { speaker: '钱进', text: '林哥！拆迁款到手一百五十万！你说买啥基金好？全买！就要收益最高的！' },
       { speaker: '陈曼', text: '（敲打）百万级客户，也是百万级的雷。他要是亏了，哭得最响。' },
@@ -105,7 +105,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'suitability',
   },
   {
-    id: 'q1_05_530', volume: 1, title: '5·30：深夜的印花税', date: '2007-05-30',
+    id: 'q1_05_530', requires: 'q1_04_qiandd_millions', volume: 1, title: '5·30：深夜的印花税', date: '2007-05-30',
     dialogues: [
       { speaker: '系统', text: '凌晨，财政部突然宣布上调印花税。两市暴跌，数百只股票连续跌停。' },
       { speaker: '王秀兰', mood: 'sad', text: '小林！我那基金三天跌了这么多……我儿子结婚的钱都在里面啊！' },
@@ -118,7 +118,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'chasing_high',
   },
   {
-    id: 'q1_06_6100_top', volume: 1, title: '6124：疯狂的顶点', date: '2007-10-17',
+    id: 'q1_06_6100_top', requires: 'q1_05_530', volume: 1, title: '6124：疯狂的顶点', date: '2007-10-17',
     dialogues: [
       { speaker: '朱大同', text: '六千一百点了！营业部的大爷大妈都在讨论股票，报纸头版全是牛市！' },
       { speaker: '陈曼', mood: 'serious', text: '我在这个行当十一年，只见过山顶的风景，没见过山顶的人全身而退。' },
@@ -143,7 +143,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'qdii_risk',
   },
   {
-    id: 'q1_08_1664', volume: 1, title: '1664：至暗时刻', date: '2008-10-29',
+    id: 'q1_08_1664', requires: 'q1_06_6100_top', volume: 1, title: '1664：至暗时刻', date: '2008-10-29',
     dialogues: [
       { speaker: '系统', text: '沪指跌破 1700 点，一年跌去七成。网点冷清，客户电话里带着哭腔。（正文由下方补全逻辑注入）' },
     ],
@@ -165,7 +165,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'red_lines',
   },
   {
-    id: 'q1_10_4trillion', volume: 1, title: '四万亿：V 型反转', date: '2008-11-11',
+    id: 'q1_10_4trillion', requires: 'q1_08_1664', volume: 1, title: '四万亿：V 型反转', date: '2008-11-11',
     dialogues: [
       { speaker: '系统', text: '四万亿投资计划公布，货币宽松全面开启。市场应声暴涨。' },
       { speaker: '王建平', mood: 'smile', text: '机会来了！信贷任务翻倍，存款立行！小林，今年开门红就看你的了！' },
@@ -177,7 +177,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'policy_stimulus',
   },
   {
-    id: 'q1_11_wangxl_2009', volume: 1, title: '王秀兰的退休规划', date: '2009-03-10', client: 'cli_wangxl',
+    id: 'q1_11_wangxl_2009', requires: 'q1_10_4trillion', volume: 1, title: '王秀兰的退休规划', date: '2009-03-10', client: 'cli_wangxl',
     dialogues: [
       { speaker: '王秀兰', mood: 'smile', text: '小林，我明年就退休了。这大半辈子攒的钱，你给我参谋参谋，怎么安排稳妥？' },
       { speaker: '陈曼', text: '（提醒）养老钱三原则：保本、现金流、别碰看不懂的。她信你，这是福气也是责任。' },
@@ -189,7 +189,7 @@ export const VOLUME1_QUESTS: QuestItem[] = [
     teach: 'retirement_plan',
   },
   {
-    id: 'q1_12_vol1_end', volume: 1, title: '卷末：晋升评审', date: '2009-06-15',
+    id: 'q1_12_vol1_end', requires: 'q1_11_wangxl_2009', volume: 1, title: '卷末：晋升评审', date: '2009-06-15',
     dialogues: [
       { speaker: '王建平', text: '三年了。从喊口号的新人，到能扛任务的骨干。评审材料我看了，合规记录干净。' },
       { speaker: '陈曼', mood: 'smile', text: '说点什么吧，徒弟。这一卷，你学到的最重要的一课是什么？' },
