@@ -410,5 +410,137 @@ export const ZHOuyh_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 = 52 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE];
+
+/** 陈曼线（9 节点）：2006-2025，师父线——从带教者到同路人，兼教学"理财经理自己的人生账"。
+ *  与剧情中陈曼的出场（卷一教学/卷五返聘）互为映照；她是客户，也是这行的活教材。
+ */
+export const CHENMAN_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_chenman', year: 2006, month: 6,
+    title: '师父自己买什么',
+    text: '带了你半年的陈曼，自己的 80 万金融资产却配得毫无亮点：存款+国债+一份重疾。"教人的人不炒股？"她说："我见过 2001 年的 2245。我教你们管别人的钱，先得管好自己的心跳。"',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['asset_allocation', 'self_control'] },
+  },
+  {
+    client: 'cli_chenman', year: 2008, month: 5,
+    title: '婚礼上的周期议题',
+    text: '她结婚。喜糖盒里塞着一张纸条给你："经济周期和婚姻一样，重要资产要长期持有，但每年都要体检。"全网点都笑，你知道她是认真的——她把重疾险受益人改成了丈夫。',
+    trustReq: 20,
+    effects: { trust: 3, unlockKnowledge: ['insurance_basics', 'family_lifecycle'] },
+  },
+  {
+    client: 'cli_chenman', year: 2010, month: 6,
+    title: '女儿的出生与教育金',
+    text: '女儿出生。她拿出一份手写表格：教育金 18 年 60 万按 5% 折现，现在每月要存 1900。"我天天教人算这个，轮到自己才明白：规划不是算术，是自律。"',
+    trustReq: 35,
+    effects: { trust: 4, unlockKnowledge: ['education_fund', 'dca'] },
+  },
+  {
+    client: 'cli_chenman', year: 2013, month: 9,
+    title: '跳槽的诱惑',
+    text: '第三方财富公司开三倍薪水挖她。她把 offer 拿给你看："他们卖的产品我都不敢给妈买。"最终她留下了。"钱挣多少是够？客户信任攒了八年，搬不走。"',
+    trustReq: 45,
+    effects: { trust: 5, unlockKnowledge: ['high_yield_trap', 'suitability'] },
+  },
+  {
+    client: 'cli_chenman', year: 2015, month: 9,
+    title: '股灾里的她',
+    text: '三轮股灾，她的客户一个都没伤到——因为 2007 年她就给每个客户画了风险预算线。她自己 40% 的基金仓位跌掉 15%，面不改色地再平衡。"年轻人，这就是当年我教你的第一课的利息。"',
+    trustReq: 55,
+    effects: { trust: 5, unlockKnowledge: ['rebalancing', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_chenman', year: 2019, month: 4,
+    title: '升任财富管理部副总',
+    text: '她升任分行财富管理部副总，管全区理财经理。第一天给她以前的客户（包括你）发了同一条短信："我的手机号没变。"位置越高，她越明白：她真正的资产名单没变过。',
+    trustReq: 60,
+    effects: { trust: 4, unlockKnowledge: ['team_coaching'] },
+  },
+  {
+    client: 'cli_chenman', year: 2021, month: 2,
+    title: '她也被顶流基金套过',
+    text: '抱团瓦解，她 2020 年跟风买的"网红基金"回撤 28%。她主动在部门会上把这单当反面教材："我看报表看了二十年，也会被故事打动。所以永远不要觉得客户蠢，要帮他建制度。"',
+    trustReq: 65,
+    effects: { trust: 5, unlockKnowledge: ['crowded_trade', 'take_profit'] },
+  },
+  {
+    client: 'cli_chenman', year: 2023, month: 10,
+    title: '退休返聘与传承',
+    text: '她退休返聘，做新人培训师。第一课点名让你去讲。你在她当年的教室讲适当性，她在最后一排听课记笔记。下课后她说："我把 2006 年的教案给了你，现在你把它变成你自己的了。"',
+    trustReq: 70,
+    effects: { trust: 6, unlockKnowledge: ['team_coaching', 'suitability'] },
+  },
+  {
+    client: 'cli_chenman', year: 2025, month: 10,
+    title: '师徒账本',
+    text: '她拿出一本泛黄的笔记本——2006 年以来她给每个客户、每个学生记的"人生账"。"这行最公平：你存进别人人生的，复利最高。"她把笔记本复印了一本给你。师父线的终点，是传承的完成。',
+    trustReq: 80,
+    effects: { trust: 10, unlockKnowledge: ['succession', 'team_coaching'] },
+  },
+];
+
+/** 唐薇线（8 节点）：2013-2025，年轻客群线——从大学生到互联网新中产的行为金融教学线。
+ *  与卷三/卷四剧情（止盈/抱团/破净）联动；她是"数字原生代投资者"的样本。
+ */
+export const TANGWEI_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_tangwei', year: 2013, month: 6,
+    title: '大学生与她的第一只宝宝类',
+    text: '唐薇，2006 年还在读高中，2013 年大学实习第一次发工资。她拿着手机问："学长说这个比银行利息高，真的假的？"你是她人生第一个"金融客服"。你讲了流动性收益三角，她开了人生第一个理财户。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['money_fund', 'deposit_migration'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2015, month: 4,
+    title: '牛市里的兼职收入',
+    text: '她把实习攒的 3 万全买了基金——室友都在买。4 月她浮盈 30%，5 月她想辞职专职炒股。你让她算了一笔账：工资现金流 vs 账户波动。"输不起的钱，别给它上杠杆般的期待。"',
+    trustReq: 15,
+    effects: { trust: 3, unlockKnowledge: ['chasing_high', 'herding'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2015, month: 9,
+    title: '股灾后的骂声',
+    text: '她的 3 万变 1.8 万。她冲进网点时在哭："你们银行的人都是骗子！"你递上纸巾，然后把 2015 年 4 月的谈话记录翻出来给她看。她看完沉默很久："当时你劝了，是我自己不听。"',
+    trustReq: 25,
+    effects: { trust: 4, unlockKnowledge: ['crisis_communication', 'self_control'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2018, month: 10,
+    title: '工作三年的定投重启',
+    text: '互联网运营月薪 1.5 万。她主动来找你："这次按你说的来。"发薪日自动定投，3 年下来的第 100 期她截图发你："原来坚持比预测简单。"',
+    trustReq: 35,
+    effects: { trust: 5, unlockKnowledge: ['dca', 'self_control'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2021, month: 3,
+    title: '抱团基金腰斩',
+    text: '2020 年她重仓"顶流"基金，春节后回撤 30%。群里都说要补仓，她第一次学你的话反问群里："回撤来源查了吗？"她来做归因：风格拥挤+估值极值。这回，她没有恐慌赎回。',
+    trustReq: 50,
+    effects: { trust: 6, unlockKnowledge: ['crowded_trade', 'nav_drawdown_read'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2022, month: 11,
+    title: '理财破净与她的第一次转介绍',
+    text: '破净潮里她妈的 R2 理财回撤，她替母亲来问。你做了完整归因演示，她说："能不能给我妈也讲一遍？"那场家庭视频会议后，她母亲成了你的客户。年轻客户的终局价值：她带你进她的家庭。',
+    trustReq: 60,
+    effects: { trust: 6, unlockKnowledge: ['family_lifecycle', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2024, month: 5,
+    title: '新房贷与家庭账本',
+    text: '她要结婚了，首付+房贷+彩礼三线作战。她带来一份自己做的 Excel："你看看我这个资产负债表及格吗？"从 2013 年的"学长说"到自建账本，十一年，一个数字原生代的理财成人礼。',
+    trustReq: 70,
+    effects: { trust: 5, unlockKnowledge: ['housing_vs_invest', 'family_lifecycle'] },
+  },
+  {
+    client: 'cli_tangwei', year: 2025, month: 9,
+    title: '她开始给同事讲配置',
+    text: '公司在搞理财讲座请她分享，她把你的四笔钱框架讲给 300 个年轻人，PPT 最后一页写着你 2015 年对她说过的话："输不起的钱，别给它杠杆般的期待。"她@了你。年轻客群线的终点：她成了传播节点。',
+    trustReq: 80,
+    effects: { trust: 10, unlockKnowledge: ['asset_allocation', 'third_pillar'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 = 69 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE];

@@ -429,6 +429,21 @@ export class Game {
     aumGainBuffer.length = 0;
     // 新客户开发：知名度驱动的月度获客
     this.developClients(snap);
+    // 世代交替：每年 1 月检视高龄核心客户退场 → 子女继承回流
+    if (m === 1) this.retireElderly(y, snap);
+    this.developHeirs(snap);
+  }
+
+  /** 高龄核心客户退场检视（规划 6.2 世代交替的触发端） */
+  private retireElderly(year: number, snap: MarketSnapshot) {
+    for (const c of this.clients) {
+      if (c.id.startsWith('cli_gen_') || c.id.startsWith('cli_heir_') || c.status !== 'active') continue;
+      const age = c.age_2006 + (year - 2006);
+      if (age >= 80 && this.rng.chance(0.25)) {
+        c.status = 'dormant';
+        this.log.push({ date: snap.date, text: `【岁月】${c.name}（${age} 岁）随子女迁居外地，账户转入休眠。人生线暂告段落，但故事未必结束。` });
+      }
+    }
   }
 
   /** 近 6 月平均考核分（晋升用） */
@@ -436,6 +451,49 @@ export class Game {
     if (this.monthScores.length === 0) return 0;
     return this.monthScores.reduce((a, b) => a + b, 0) / this.monthScores.length;
   }
+
+  /**
+   * 世代交替（P6 补全，规划 6.2）：核心客户离世/流失时，其子女以继承关系成为新客户。
+   * - 继承者带父辈的部分资产与"世交信任"加成入场
+   * - 教学点：传承不是剧本而是机制——老客户的一生资产通过子女回流到网点
+   */
+  private developHeirs(snap: MarketSnapshot) {
+    if (this.rng.chance(0.85)) return; // 每月 15% 概率检视一次（发生即有继承事件）
+    // 找"故去/迁居"的核心客户（status 非 active 的剧情客户）
+    const gone = this.clients.filter((c) => c.status !== 'active' && !c.id.startsWith('cli_gen_') && !this.heirsSpawned.has(c.id));
+    if (gone.length === 0) return;
+    const parent = gone[0];
+    this.heirsSpawned.add(parent.id);
+    const heirName = '小' + parent.name.slice(0, 1);
+    const heirTier = parent.tier === 'private' ? 'vip' : parent.tier;
+    const inheritAmt = Math.round(parent.finance.deposits * 0.5);
+    const id = `cli_heir_${parent.id}_${snap.date}`;
+    this.clients.push({
+      id,
+      name: heirName,
+      age_2006: this.rng.int(24, 34), // 继承者入场时 24-34 岁
+      occupation: `${parent.occupation}之子/女`,
+      tier: heirTier,
+      risk: { level: Math.max(1, Math.min(5, parent.risk.level)) as 1 | 2 | 3 | 4 | 5, tested_at: snap.date },
+      behaviors: ['tech_native'],
+      finance: {
+        deposits: inheritAmt,
+        wealth_mgmt: Math.round(parent.finance.wealth_mgmt * 0.3),
+        funds: Math.round(parent.finance.funds * 0.3),
+        insurance: 0,
+        loans: 0,
+        annual_cashflow: Math.round(parent.finance.annual_cashflow * 0.6),
+      },
+      family: `${parent.name}的子女（世交）`,
+      trust: Math.min(80, Math.round(parent.trust * 0.6 + 20)),
+      teach_tags: ['succession', 'family_lifecycle'],
+      holdings: [],
+      status: 'active',
+    });
+    this.log.push({ date: snap.date, text: `【传承】${parent.name}的子女${heirName}来网点办理继承，带着父辈半生的信任与资产成为你的客户。` });
+  }
+  /** 已触发过继承的核心客户 id */
+  private heirsSpawned = new Set<string>();
 
   monthScores: number[] = [];
   violations = 0;

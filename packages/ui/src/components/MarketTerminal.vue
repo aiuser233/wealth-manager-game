@@ -78,6 +78,25 @@ const familyNames: Record<string, string> = {
   tech: '科技成长',
   utility: '稳定公用',
 };
+
+/** 指数 mini 走势（从 K 线历史缓冲取近 40 个点的指数序列，画 sparkline） */
+function sparkPath(id: string): string {
+  const hist = g.value?.snapHistory ?? [];
+  if (hist.length < 2) return '';
+  const pts = hist.slice(-40).map((s) => s.indices[id]).filter((v) => v !== undefined) as number[];
+  if (pts.length < 2) return '';
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = Math.max(0.0001, max - min);
+  const W = 88;
+  const H = 22;
+  return pts.map((v, i) => {
+    const x = (i / (pts.length - 1)) * W;
+    const y = H - ((v - min) / span) * H;
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+const sparkIds = ['idx_main', 'idx_300', 'idx_500', 'idx_growth'];
 </script>
 
 <template>
@@ -99,12 +118,17 @@ const familyNames: Record<string, string> = {
       <section class="panel">
         <h3>指数</h3>
         <table>
-          <thead><tr><th>名称</th><th>点位</th><th>{{ scopes.find((s) => s.id === state.quoteScope)!.label }}</th></tr></thead>
+          <thead><tr><th>名称</th><th>点位</th><th>{{ scopes.find((s) => s.id === state.quoteScope)!.label }}</th><th>近 40 日</th></tr></thead>
           <tbody>
             <tr v-for="(v, id) in g.lastSnap?.indices" :key="id">
               <td>{{ indexNames[id] ?? id }}</td>
               <td class="num">{{ v.toFixed(0) }}</td>
               <td class="num" :class="pctClass(changeOf('indices', id as string, state.quoteScope))">{{ fmtPct(changeOf('indices', id as string, state.quoteScope)) }}</td>
+              <td class="spark-cell">
+                <svg v-if="sparkIds.includes(id as string)" width="88" height="22" class="spark">
+                  <path :d="sparkPath(id as string)" fill="none" :stroke="pctClass(changeOf('indices', id as string, state.quoteScope)) === 'up' ? '#c0564a' : '#4a8a5a'" stroke-width="1.4" />
+                </svg>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -179,7 +203,8 @@ export default {
 .panel { padding: 12px 14px; overflow: hidden; }
 h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-dim); font-weight: 600; }
 
-table { width: 100%; border-collapse: collapse; }
+table {
+  /* sparkline cell */ width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--bg2); }
 th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
 .num { font-variant-numeric: tabular-nums; }
@@ -201,4 +226,6 @@ th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
 
 .news { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .news-list { flex: 1; overflow-y: auto; line-height: 1.8; font-size: 13px; }
+.spark-cell { width: 92px; }
+.spark { display: block; }
 </style>

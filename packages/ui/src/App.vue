@@ -18,6 +18,7 @@ import StartScreen from './components/StartScreen.vue';
 import TrainerPanel from './components/TrainerPanel.vue';
 import LecturerMode from './components/LecturerMode.vue';
 import TeamPanel from './components/TeamPanel.vue';
+import AchievementPanel from './components/AchievementPanel.vue';
 
 const seed = ref(42);
 const name = ref('林奇安');
@@ -33,6 +34,7 @@ const screenTitle = computed(() => {
     case 'trainer': return '培训后台';
     case 'lecturer': return '讲师模式大屏';
     case 'team': return '团队管理';
+    case 'ach': return '成就馆';
     case 'help': return '新人手册';
     default: return '工作台';
   }
@@ -46,6 +48,7 @@ const tabs = [
   { id: 'gallery', label: '图鉴馆' },
   { id: 'system', label: '系统' },
   { id: 'team', label: '团队' },
+  { id: 'ach', label: '成就' },
   { id: 'trainer', label: '培训后台' },
   { id: 'lecturer', label: '讲师模式' },
   { id: 'help', label: '手册' },
@@ -70,6 +73,7 @@ function start() {
       <GalleryPanel v-else-if="state.screen === 'gallery'" />
       <SystemPanel v-else-if="state.screen === 'system'" />
       <TeamPanel v-else-if="state.screen === 'team'" />
+      <AchievementPanel v-else-if="state.screen === 'ach'" />
       <TrainerPanel v-else-if="state.screen === 'trainer'" />
       <LecturerMode v-else-if="state.screen === 'lecturer'" />
       <div v-else class="panel help">

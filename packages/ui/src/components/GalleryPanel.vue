@@ -39,11 +39,15 @@ const galleryItems = computed(() => {
 });
 
 /** 财务计算器 */
-const calcTab = ref<'compound' | 'annuity' | 'mortgage' | 'retire'>('compound');
+const calcTab = ref<'compound' | 'annuity' | 'mortgage' | 'retire' | 'irr' | 'sharp' | 'duration' | 'fx'>('compound');
 const c1 = ref({ principal: 100000, rate: 6, years: 10 });
 const c2 = ref({ monthly: 2000, rate: 6, years: 20 });
 const c3 = ref({ loan: 1000000, rate: 4.2, years: 30 });
 const c4 = ref({ age: 30, retireAge: 60, monthlyExpense: 8000, saved: 200000, rate: 5, infl: 2.5 });
+const c5 = ref({ cashflows: [-100000, 20000, 25000, 30000, 30000, 35000] });
+const c6 = ref({ ret: 12, rf: 2, vol: 18 });
+const c7 = ref({ dur: 4.5, rateChg: 0.5, notional: 1000000 });
+const c8 = ref({ amount: 10000, from: 7.2, to: 6.9 });
 
 function compoundFV(p: number, r: number, y: number): number {
   return p * Math.pow(1 + r / 100, y);
@@ -72,6 +76,35 @@ function retireGap(c: typeof c4.value): { need: number; gap: number; saveMonthly
   const n = years * 12;
   const saveMonthly = gap > 0 && i > 0 ? gap / ((Math.pow(1 + i, n) - 1) / i) : 0;
   return { need: needPV, gap, saveMonthly };
+}
+/** IRR：牛顿法解 NPV=0 */
+function irrOf(cfs: number[]): number {
+  const npv = (r: number) => cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
+  let lo = -0.99, hi = 10;
+  // 二分法：NPV 在 (−0.99, 10) 内单调
+  if (npv(lo) * npv(hi) > 0) return NaN;
+  for (let k = 0; k < 100; k++) {
+    const mid = (lo + hi) / 2;
+    if (npv(lo) * npv(mid) <= 0) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+/** 夏普比率 */
+function sharpe(ret: number, rf: number, vol: number): number {
+  return vol <= 0 ? NaN : (ret - rf) / vol;
+}
+/** 久期近似价格变动 */
+function durPriceChange(dur: number, rateChgPct: number, notional: number): { pct: number; abs: number } {
+  const pct = -dur * (rateChgPct / 100);
+  return { pct: pct * 100, abs: notional * pct };
+}
+/** 汇率换算 */
+function fxConvert(amount: number, from: number, to: number): number {
+  return from <= 0 ? 0 : amount * (from / to);
+}
+/** 净现值展示 */
+function npvOf(cfs: number[], r: number): number {
+  return cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
 }
 </script>
 
@@ -133,6 +166,10 @@ function retireGap(c: typeof c4.value): { need: number; gap: number; saveMonthly
             <button :class="{ active: calcTab === 'annuity' }" @click="calcTab = 'annuity'">年金定投</button>
             <button :class="{ active: calcTab === 'mortgage' }" @click="calcTab = 'mortgage'">房贷</button>
             <button :class="{ active: calcTab === 'retire' }" @click="calcTab = 'retire'">养老缺口</button>
+            <button :class="{ active: calcTab === 'irr' }" @click="calcTab = 'irr'">IRR</button>
+            <button :class="{ active: calcTab === 'sharp' }" @click="calcTab = 'sharp'">夏普</button>
+            <button :class="{ active: calcTab === 'duration' }" @click="calcTab = 'duration'">久期</button>
+            <button :class="{ active: calcTab === 'fx' }" @click="calcTab = 'fx'">汇率</button>
           </div>
           <div v-if="calcTab === 'compound'" class="calc-body">
             <label>本金 <input type="number" v-model.number="c1.principal" /></label>
@@ -158,6 +195,29 @@ function retireGap(c: typeof c4.value): { need: number; gap: number; saveMonthly
             <label>月支出 <input type="number" v-model.number="c4.monthlyExpense" step="1000" /></label>
             <label>已存 <input type="number" v-model.number="c4.saved" step="10000" /></label>
             <p class="result">退休后总需求约 <b>{{ retireGap(c4).need.toFixed(0) }}</b> 元<br />缺口 <b class="up">{{ retireGap(c4).gap.toFixed(0) }}</b> 元<br />需月存 ≈ <b>{{ retireGap(c4).saveMonthly.toFixed(0) }}</b> 元</p>
+          </div>
+          <div v-if="calcTab === 'irr'" class="calc-body">
+            <p class="dim">现金流序列（首笔为投资，负数）：{{ c5.cashflows.join(', ') }}</p>
+            <label v-for="(v, i) in c5.cashflows" :key="i">第 {{ i }} 期 <input type="number" v-model.number="c5.cashflows[i]" /></label>
+            <p class="result">IRR ≈ <b>{{ (irrOf(c5.cashflows) * 100).toFixed(2) }}%</b> / 年<br />折现 5% 的 NPV ≈ <b>{{ npvOf(c5.cashflows, 0.05).toFixed(0) }}</b> 元</p>
+          </div>
+          <div v-if="calcTab === 'sharp'" class="calc-body">
+            <label>年化收益% <input type="number" v-model.number="c6.ret" step="0.5" /></label>
+            <label>无风险% <input type="number" v-model.number="c6.rf" step="0.1" /></label>
+            <label>年化波动% <input type="number" v-model.number="c6.vol" step="1" /></label>
+            <p class="result">夏普比率 ≈ <b>{{ sharpe(c6.ret, c6.rf, c6.vol).toFixed(2) }}</b><br /><span class="dim">>1 优秀 · 0.5-1 尚可 · <0 收益未补偿波动</span></p>
+          </div>
+          <div v-if="calcTab === 'duration'" class="calc-body">
+            <label>组合久期 <input type="number" v-model.number="c7.dur" step="0.5" /></label>
+            <label>利率变动 % <input type="number" v-model.number="c7.rateChg" step="0.1" /></label>
+            <label>本金 <input type="number" v-model.number="c7.notional" step="100000" /></label>
+            <p class="result">净值变动 ≈ <b :class="durPriceChange(c7.dur, c7.rateChg, c7.notional).pct > 0 ? 'up' : ''">{{ durPriceChange(c7.dur, c7.rateChg, c7.notional).pct.toFixed(2) }}%</b><br />盈亏 ≈ <b>{{ durPriceChange(c7.dur, c7.rateChg, c7.notional).abs.toFixed(0) }}</b> 元<br /><span class="dim">利率与债券价格反向；久期是利率敏感度的刻度</span></p>
+          </div>
+          <div v-if="calcTab === 'fx'" class="calc-body">
+            <label>金额（外币） <input type="number" v-model.number="c8.amount" step="1000" /></label>
+            <label>现汇率（1 外币=? 本币） <input type="number" v-model.number="c8.from" step="0.01" /></label>
+            <label>目标汇率 <input type="number" v-model.number="c8.to" step="0.01" /></label>
+            <p class="result">按目标汇率折算 ≈ <b>{{ fxConvert(c8.amount, c8.from, c8.to).toFixed(0) }}</b> 外币<br />本币成本差 ≈ <b>{{ (c8.amount * (c8.from - c8.to)).toFixed(0) }}</b> 元<br /><span class="dim">刚性支出换汇宜分批，不赌单点</span></p>
           </div>
         </div>
       </div>

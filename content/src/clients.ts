@@ -99,4 +99,21 @@ export const clients: ClientDef[] = [
     family: '单身，与父母同住',
     trust: 45, teach_tags: ['ai_advisor', 'team_coaching', 'red_lines'],
   },
+  {
+    id: 'cli_chenman', name: '陈曼', age_2006: 32, occupation: '资深理财经理（你的师父）', tier: 'wealth',
+    risk: { level: 3, tested_at: '2006-01-09' },
+    behaviors: ['risk_averse', 'diligent_learner'],
+    finance: { deposits: 400000, wealth_mgmt: 200000, funds: 150000, insurance: 100000, loans: 200000, annual_cashflow: 240000 },
+    family: '已婚（2008），女儿 2010 年生',
+    trust: 60, teach_tags: ['suitability', 'crisis_communication', 'team_coaching'],
+  },
+  {
+    id: 'cli_tangwei', name: '唐薇', age_2006: -4, // 负值约定：1988 年生（2006 年在读高中，2013 年成为客户）
+    occupation: '大学生→互联网运营（2013 年起为客户）', tier: 'wealth',
+    risk: { level: 4, tested_at: '2013-06-01' },
+    behaviors: ['yield_chasing', 'tech_native', 'impatient'],
+    finance: { deposits: 50000, wealth_mgmt: 0, funds: 30000, insurance: 0, loans: 0, annual_cashflow: 180000 },
+    family: '未婚',
+    trust: 40, teach_tags: ['take_profit', 'behavior_finance', 'herding'],
+  },
 ];

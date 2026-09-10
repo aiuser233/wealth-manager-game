@@ -10,6 +10,7 @@ import {
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
+import { refreshAchievements, recordEnding } from './achievements';
 import { packQuestions, passesReviewGate } from './packs';
 import { TeamSystem } from '@fm/core';
 
@@ -22,7 +23,7 @@ export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 const cal = new GameCalendar('2006-01-02', '2025-12-31');
 
 export const state = reactive({
-  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer' | 'team',
+  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer' | 'team' | 'ach',
   started: false,
   seed: 42,
   playerSeedText: '',
@@ -270,6 +271,34 @@ export function switchFrame(f: TimeFrame): boolean {
   return ok;
 }
 
+/** 市场波动降帧提示（粗帧+玄商300 单日 |收益|>3% 或持仓客户均浮亏 >8% 时建议降帧） */
+function volatilityHint(): string | null {
+  const g = getGame();
+  if (g.frame === 'day' || !g.lastSnap) return null;
+  const hist = g.snapHistory;
+  if (hist.length >= 2) {
+    const prev = hist[hist.length - 2].indices['idx_300'];
+    const cur = g.lastSnap.indices['idx_300'];
+    if (prev > 0 && Math.abs(cur / prev - 1) > 0.03) {
+      return `【提示】玄商 300 单日波动超 3%（${((cur / prev - 1) * 100).toFixed(1)}%）。建议切回日帧逐日应对。`;
+    }
+  }
+  // 持仓客户浮亏检查
+  const holding = g.clients.filter((c) => c.status === 'active' && c.holdings.length > 0);
+  if (holding.length > 0) {
+    const losses = holding.map((c) => {
+      const pv = g.clientPortfolioValue(c.id);
+      const cost = c.holdings.reduce((s, h) => s + h.amount, 0);
+      return cost > 0 ? pv / cost - 1 : 0;
+    });
+    const avg = losses.reduce((a, b) => a + b, 0) / losses.length;
+    if (avg < -0.08) {
+      return `【提示】持仓客户平均浮亏 ${(avg * 100).toFixed(1)}%。建议切回日帧，逐一做安抚与归因。`;
+    }
+  }
+  return null;
+}
+
 /** 金手指：调用记忆碎片 */
 export function useMemoryHint() {
   const r = game.useMemory();
@@ -287,6 +316,10 @@ export function advanceFrame(daysOverride?: number): number {
   for (const s of res.snaps) cacheSnap(s, 0);
   if (res.interrupted) {
     pushLog(`【中断】${res.interruptDate} ${res.interruptEvent?.title}——切换为日帧处理。`);
+  } else {
+    // 市场驱动降帧提示（规划 3.3-3）：粗帧下波动超阈值时建议切日帧
+    const hint = volatilityHint();
+    if (hint) pushLog(hint);
   }
   // 主线剧情触发（优先于随机事件；二周目带日期漂移）
   if (state.questEngine) {
@@ -307,6 +340,8 @@ export function advanceFrame(daysOverride?: number): number {
   // 帧末掷骰随机事件（中断日也掷，UI 弹窗决策）
   const ev = game.rollRandomEvent();
   if (ev) state.modal = { kind: 'event', payload: ev };
+  // 成就检测（月度粒度足够）
+  refreshAchievements();
   return res.daysAdvanced;
 }
 
@@ -402,6 +437,7 @@ export function computeFinalEnding() {
     playerName: g.player.name,
   };
   const r = judgeEnding(input);
+  recordEnding(r.id);
   // 隐藏结局达成 → 永久解锁二周目，并记录周目数供下一局递增
   if (r.id === 'reborn_investor') {
     state.ngPlusUnlocked = true;

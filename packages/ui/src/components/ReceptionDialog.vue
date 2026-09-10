@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { state, gameReady, getGame, probeReception, cancelReception, recommendReception } from '../state';
 import { productOnShelf } from '@fm/core';
 import { fmtMoney } from '@fm/core';
+import Avatar from './Avatar.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 const s = computed(() => state.reception);
@@ -32,6 +33,7 @@ function riskClass(level: number): string {
   <div v-if="s && g" class="mask">
     <div class="panel dialog">
       <div class="head">
+        <Avatar :seed="s.clientId" :size="44" />
         <h3>接待中：{{ s.clientName }}<span v-if="client" class="tag" :class="riskClass(client.risk.level)">R{{ client.risk.level }}</span></h3>
         <span class="dim">可投资池约 {{ fmtMoney(s.pool) }} · 意向 {{ fmtMoney(state.receptionAmount) }}</span>
       </div>
@@ -88,7 +90,7 @@ function riskClass(level: number): string {
   z-index: 50;
 }
 .dialog { width: 680px; max-height: 84vh; display: flex; flex-direction: column; padding: 16px 20px; }
-.head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
 h3 { font-size: 15px; }
 .log { flex: 1; min-height: 180px; overflow-y: auto; background: var(--bg2); border-radius: 8px; padding: 10px 14px; line-height: 1.8; font-size: 13px; }
 .cname { color: var(--gold); }

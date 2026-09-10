@@ -11,3 +11,4 @@ export * from './random-event-engine';
 export * from './quest';
 export * from './ending';
 export * from './team';
+export * from './achievements';

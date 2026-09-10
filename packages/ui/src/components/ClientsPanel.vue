@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { state, gameReady, getGame } from '../state';
 import { TIER_NAMES, RISK_LEVEL_NAMES, fmtMoney } from '@fm/core';
+import Avatar from './Avatar.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
@@ -23,13 +24,16 @@ function riskClass(level: number): string {
           class="cli" :class="{ active: state.selectedClientId === c.id }"
           @click="state.selectedClientId = c.id"
         >
-          <div class="l1">
-            <b>{{ c.name }}</b>
-            <span class="tag">{{ TIER_NAMES[c.tier] }}</span>
-          </div>
-          <div class="l2 dim">
-            <span>{{ c.occupation }}</span>
-            <span>信任 {{ Math.round(c.trust) }}</span>
+          <Avatar :seed="c.id" :size="38" />
+          <div class="cli-text">
+            <div class="l1">
+              <b>{{ c.name }}</b>
+              <span class="tag">{{ TIER_NAMES[c.tier] }}</span>
+            </div>
+            <div class="l2 dim">
+              <span>{{ c.occupation }}</span>
+              <span>信任 {{ Math.round(c.trust) }}</span>
+            </div>
           </div>
         </button>
       </div>
@@ -37,7 +41,10 @@ function riskClass(level: number): string {
 
     <!-- 右：档案详情 -->
     <section v-if="selected" class="panel detail">
-      <h3>{{ selected.name }} 的档案</h3>
+      <div class="detail-head">
+        <Avatar :seed="selected.id" :size="56" />
+        <h3>{{ selected.name }} 的档案</h3>
+      </div>
       <div class="cols">
         <div class="col">
           <h4>基本信息</h4>
@@ -85,6 +92,9 @@ function riskClass(level: number): string {
 
 <style scoped>
 .wrap { height: 100%; display: grid; grid-template-columns: 300px 1fr; gap: 12px; }
+.cli { display: flex; gap: 10px; align-items: center; text-align: left; }
+.cli-text { flex: 1; min-width: 0; }
+.detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .panel { padding: 14px 16px; overflow: hidden; display: flex; flex-direction: column; }
 h3 { font-size: 15px; margin-bottom: 10px; }
 h4 { font-size: 13px; color: var(--text-dim); margin: 12px 0 6px; }

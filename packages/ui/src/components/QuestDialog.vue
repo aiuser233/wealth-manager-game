@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { state, questNext, chooseQuest, closeQuestDialog } from '../state';
 import { VOLUME_META } from '../volume-meta';
+import Avatar from './Avatar.vue';
+import EndingBadge from './EndingBadge.vue';
 
 const d = computed(() => state.questDialog);
 const currentLine = computed(() => d.value?.quest.dialogues[d.value.idx]);
@@ -11,6 +13,12 @@ const volLabel = computed(() => {
 });
 const isFinalVol = computed(() => (d.value?.quest.volume ?? 1) === 5);
 const isSystem = computed(() => currentLine.value?.speaker === '系统');
+/** 系统旁白无头像；玩家固定身份，其余角色按名字生成 */
+const speakerSeed = computed(() => {
+  const name = currentLine.value?.speaker ?? '';
+  if (!name || name === '系统') return '';
+  return name === '林奇安' ? 'player_main' : `npc_${name}`;
+});
 const moodColor = (mood?: string): string => {
   switch (mood) {
     case 'smile': return '#f0b429';
@@ -44,8 +52,11 @@ const gradeLabel = (g?: string): string => {
       <!-- 对话阶段 -->
       <div v-if="d.phase === 'dialogue'" class="dialog-stage" @click="questNext()">
         <div class="dialog-box">
-          <div class="speaker" :style="{ color: isSystem ? '#8b98b8' : moodColor(currentLine?.mood) }">
-            {{ currentLine?.speaker }}
+          <div class="speaker-row">
+            <Avatar v-if="speakerSeed" :seed="speakerSeed" :size="42" />
+            <div class="speaker" :style="{ color: isSystem ? '#8b98b8' : moodColor(currentLine?.mood) }">
+              {{ currentLine?.speaker }}
+            </div>
           </div>
           <p class="line" :class="{ sys: isSystem }">{{ currentLine?.text }}</p>
         </div>
@@ -63,8 +74,14 @@ const gradeLabel = (g?: string): string => {
       <!-- 结果阶段 -->
       <div v-else class="result-stage">
         <template v-if="state.ending">
-          <p class="ending-title">✦ {{ state.ending.def.title }}</p>
-          <p class="ending-tag">{{ state.ending.def.tagline }}</p>
+          <div class="ending-head">
+            <EndingBadge :id="state.ending.id" :size="96" />
+            <div>
+              <p class="ending-title">{{ state.ending.def.title }}</p>
+              <p class="ending-tag">{{ state.ending.def.tagline }}</p>
+              <p v-if="state.ending.newGamePlus" class="ngp-tag">二周目通关</p>
+            </div>
+          </div>
           <div class="ending-scenes">
             <p v-for="(sc, i) in state.ending.def.scenes" :key="i" class="line" :class="{ sys: sc.speaker === '系统' }">
               <span class="speaker" :style="{ color: sc.speaker === '系统' ? '#8b98b8' : '#4f8cff' }">{{ sc.speaker }}</span>
@@ -110,6 +127,7 @@ h3 { font-size: 17px; flex: 1; }
 
 .dialog-stage { cursor: pointer; min-height: 220px; display: flex; flex-direction: column; }
 .dialog-box { flex: 1; background: var(--bg2); border-radius: 10px; padding: 18px 22px; }
+.speaker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .speaker { font-weight: 700; font-size: 15px; margin-bottom: 8px; letter-spacing: 1px; }
 .line { line-height: 2; font-size: 15px; }
 .line.sys { color: var(--text-dim); font-style: italic; }
@@ -129,7 +147,9 @@ h3 { font-size: 17px; flex: 1; }
 
 .vol-title { font-size: 17px; font-weight: 700; color: var(--gold); line-height: 1.6; }
 .ending-title { font-size: 22px; font-weight: 800; color: var(--gold); letter-spacing: 2px; }
-.ending-tag { color: var(--text-dim); margin-top: -6px; }
+.ending-tag { color: var(--text-dim); margin-top: 2px; }
+.ending-head { display: flex; align-items: center; gap: 16px; text-align: left; }
+.ngp-tag { color: var(--gold); font-size: 12px; letter-spacing: 2px; border: 1px solid var(--gold); border-radius: 4px; display: inline-block; padding: 1px 8px; margin-top: 4px; }
 .ending-scenes { text-align: left; background: var(--bg2); border-radius: 10px; padding: 14px 18px; max-height: 260px; overflow-y: auto; }
 .ending-scenes .speaker { font-weight: 700; margin-right: 8px; }
 .ending-scenes .line { line-height: 1.9; font-size: 14px; }
