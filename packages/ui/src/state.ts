@@ -5,7 +5,7 @@ import {
   type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession, type ExamQuestion,
   type QuestDef, type LifeLineDef, judgeEnding, ENDINGS,
   type EndingId, type EndingInput,
-  buildPaper, gradePaper, EXAM_DEFS,
+  buildPaper, gradePaper, questionScore, EXAM_DEFS,
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
@@ -37,6 +37,8 @@ export const state = reactive({
   todayActions: [] as Array<{ name: string; text: string }>,
 
   news: [] as NewsItem[],
+  /** 已读新闻数（TopBar 红点=未读新闻数，进入行情终端即视为已读） */
+  newsSeen: 0,
   log: [] as LogItem[],
 
   lastSnap: null as MarketSnapshot | null,
@@ -49,6 +51,10 @@ export const state = reactive({
 
   /** 考试系统 */
   examScreen: 'list' as 'list' | 'taking' | 'result',
+  /** 考试模式：formal 正式考 / mock 模考（全真计时）/ practice 练习（不限时即时反馈） */
+  examMode: 'formal' as ExamMode,
+  /** 练习模式单题反馈（对/错 + 解析展示） */
+  practiceFeedback: null as null | { idx: number; correct: boolean },
   examPaper: null as ExamPaper | null,
   examAnswers: [] as Array<number | number[]>,
   examResult: null as ExamResult | null,
@@ -120,6 +126,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   };
   state.started = true;
   state.news = [];
+  state.newsSeen = 0;
   state.log = [];
   state.todayActions = [];
   state.apUsed = 0;
@@ -203,15 +210,28 @@ function refreshCaches() {
   state.apUsed = game.apUsed;
   state.apMax = game.apMax;
   state.gameDate = game.date;
-  // 各口径基准：当日=昨收；周=上周五；月=上月末；since_view=上次查看
-  const d = game.date;
-  const weekDays = cal.tradingDaysOfWeek(d);
-  const monthDays = cal.tradingDaysOfMonth(d);
-  const dayBase = game.sim.cursor >= 2 ? game.sim.at?.(game.sim.cursor - 2) : undefined;
-  state.baseSnap.day = dayBase ?? null;
-  state.baseSnap.week = state.baseSnap.week && weekDays.includes(state.baseSnap.week.date) ? state.baseSnap.week : null;
-  state.baseSnap.month = state.baseSnap.month && monthDays.includes(state.baseSnap.month.date) ? state.baseSnap.month : null;
-  void monthDays;
+  // 各口径基准全部从 K 线历史缓冲（snapHistory，近 120 日）推导：
+  // 当日=昨收（倒数第 2 个）；周=上周五（当前本周第 1 个交易日之前）；月=上月末
+  const hist = game.snapHistory;
+  const cur = hist[hist.length - 1];
+  if (cur) {
+    state.baseSnap.day = hist.length >= 2 ? hist[hist.length - 2] : null;
+    const d = cur.date;
+    const weekDays = cal.tradingDaysOfWeek(d);
+    const weekIdx = weekDays.indexOf(d);
+    if (weekIdx > 0) {
+      // 本周内第 weekIdx 个交易日 → 基准=历史中再往前 weekIdx 个交易日
+      state.baseSnap.week = hist.length > weekIdx ? hist[hist.length - 1 - weekIdx] : null;
+    } else if (hist.length >= 2) {
+      // 周一：基准=上周五（倒数第 2 个）
+      state.baseSnap.week = hist[hist.length - 2];
+    }
+    const monthDays = cal.tradingDaysOfMonth(d);
+    const monthIdx = monthDays.indexOf(d);
+    if (monthIdx > 0 && hist.length > monthIdx) {
+      state.baseSnap.month = hist[hist.length - 1 - monthIdx];
+    }
+  }
 }
 
 /** sim 快照缓存（用于口径基准）——用简单 Map 缓存最近快照 */
@@ -257,7 +277,14 @@ export function doAction(type: ActionType, name: string): ActionResult {
   state.todayActions.push({ name, text: r.text });
   state.lastResult = r.text;
   touchActiveDay(game.date);
-  if (r.income_delta) pushLog(`[${game.date}] ${r.text}`);
+  // 全操作入日志：每次行动的完整反馈（结果+数值变化）都写进工作台日志
+  const deltas: string[] = [];
+  if (r.trust_delta) deltas.push(`信任 ${r.trust_delta > 0 ? '+' : ''}${r.trust_delta}`);
+  if (r.pro_delta) deltas.push(`专业力 +${r.pro_delta.toFixed(1)}`);
+  if (r.stress_delta) deltas.push(`压力 ${r.stress_delta > 0 ? '+' : ''}${r.stress_delta}`);
+  if (r.aum_delta) deltas.push(`AUM +${fmtMoneyCN(r.aum_delta)}`);
+  if (r.income_delta) deltas.push(`现金 +${fmtMoneyCN(r.income_delta)}`);
+  pushLog(`【${name}】${r.text}${deltas.length ? `（${deltas.join('，')}）` : ''}`);
   return r;
 }
 
@@ -267,6 +294,7 @@ export function switchFrame(f: TimeFrame): boolean {
   if (ok) {
     state.apUsed = game.apUsed;
     state.todayActions = [];
+    pushLog(`【操作】主动切换到${f === 'day' ? '日帧' : f === 'week' ? '周帧' : '月帧'}，行动点重置为 ${state.apMax}。`);
   }
   return ok;
 }
@@ -303,6 +331,7 @@ function volatilityHint(): string | null {
 export function useMemoryHint() {
   const r = game.useMemory();
   state.memoryHint = r.hint;
+  pushLog(`【记忆】${r.hint}`);
   return r;
 }
 
@@ -587,7 +616,19 @@ export function tutorialNext() {
 
 /** 玩家对随机事件做出选择 */
 export function resolveEventChoice(choiceIdx?: number) {
-  game.resolveEvent(choiceIdx);
+  const res = game.resolveEvent(choiceIdx);
+  // 事件处理结果入日志：玩家怎么处理的、造成什么影响
+  if (res) {
+    const eff = res.effects;
+    const effTexts: string[] = [];
+    if (eff?.trust) effTexts.push(`全体客户信任 ${eff.trust > 0 ? '+' : ''}${eff.trust}`);
+    if (eff?.stress) effTexts.push(`压力 ${eff.stress > 0 ? '+' : ''}${eff.stress}`);
+    if (eff?.fame) effTexts.push(`知名度 ${eff.fame > 0 ? '+' : ''}${eff.fame}`);
+    if (eff?.aum) effTexts.push(`AUM ${fmtMoneyCN(eff.aum)}`);
+    if (eff?.income) effTexts.push(`现金 ${fmtMoneyCN(eff.income)}`);
+    const tag = res.risk === 'red' ? ' ⚠️ 触碰红线，违规 +1、口碑 -10！' : res.risk === 'grey' ? '（灰色地带处理）' : '';
+    pushLog(`【事件】「${res.title}」${tag} ${res.outcomeText || '处理完毕'}${effTexts.length ? `（${effTexts.join('，')}）` : ''}`);
+  }
   state.modal = null;
   // 月初自动存档钩子：事件结算后落一个自动档
   storage.set('fm_save_1', serializeNow());
@@ -600,10 +641,19 @@ export function pushLog(text: string) {
 
 export function markViewed() {
   if (game.lastSnap) state.baseSnap.since_view = game.lastSnap;
+  // 进入行情终端视为已读新闻：红点清零
+  state.newsSeen = state.news.length;
+}
+
+/** 未读新闻数（TopBar 工作台 tab 红点的数据源） */
+export function unreadNews(): number {
+  return Math.max(0, state.news.length - state.newsSeen);
 }
 
 // ================= 考试系统 =================
 
+/** 考试模式：formal 正式考（发证书/耗精力/入档）· mock 模考（计时全流程，不发证书）· practice 练习（不限时，即时对错） */
+export type ExamMode = 'formal' | 'mock' | 'practice';
 /** 当前可报名的科目（按年份解锁） */
 export function availableExams() {
   const y = Number(game.date.slice(0, 4));
@@ -617,62 +667,160 @@ export function myCerts(): string[] {
 
 let rngExam: Rng | null = null;
 
+/** 考前最后做的一套卷（冲刺押题的来源），LRU 只留最近一次 */
+export interface LastPracticePaper {
+  label: string;          // 如「模拟考·AFP 金融理财师认证」
+  examId: string;
+  /** 做错的题目（含错题本兜底前的本次错题），押题池 */
+  wrong: ExamQuestion[];
+  wrongCount: number;
+  at: string;             // 游戏内日期
+}
+let lastPractice: LastPracticePaper | null = null;
+/** 冲刺押题时被抽中的题（判分加成用） */
+let crammedQuestionIds = new Set<string>();
+
+/** lastPractice 的响应式版本号：Vue computed 无法追踪模块内 let，赋值时手动 +1 */
+const lastPracticeVersion = ref(0);
+
+export function lastPracticePaper(): LastPracticePaper | null {
+  void lastPracticeVersion.value; // 建立响应式依赖
+  return lastPractice;
+}
+
 /** 开始一场考试：抽卷并进入答题界面 */
-export function startExam(examId: string): boolean {
+export function startExam(examId: string, mode: ExamMode = 'formal'): boolean {
   const exam = EXAM_DEFS.find((e) => e.id === examId);
   if (!exam) return false;
-  if (game.player.certs.includes(exam.name)) return false;
+  if (mode === 'formal' && game.player.certs.includes(exam.name)) return false;
+  // 冲刺 buff：正式考试抽卷时，把考前最后做的一套卷中 20% 错题押进正题
+  crammedQuestionIds = new Set();
   // 冲刺 buff：临时专业力加成（仅在考试判定内使用）
-  const cramBoost = cramActive() ? 6 : 0;
+  const cramBoost = mode === 'formal' && cramActive() ? 6 : 0;
   const savedPro = game.player.attrs.pro;
   if (cramBoost) game.player.attrs.pro += cramBoost;
   rngExam ??= new Rng(game.rngNextInt());
   // 抽卷用 rng；判分通过率由专业力影响（简化：通过线降低 = pro 加成）
   // P4：并入行内题包（同科目追加进池，抽卷配比算法自动兼容）
-  // 双审门禁（规划 §15-A1）：正式模式只放行 review.status==='approved' 的题
-  const pool = [...examBankAll, ...packQuestions()].filter(passesReviewGate);
-  const paper = buildPaper(exam, pool, rngExam);
+  // 双审门禁（规划 §15-A1）：正式模式只放行 review.status==='approved' 的题；
+  // 练习/模考为学习用途，放行全部题（当前题库均为 draft 待人工审，正式考需培训后台开开发模式或人工审完后可用）
+  const bankPool = [...examBankAll, ...packQuestions()];
+  const pool = mode === 'formal' ? bankPool.filter(passesReviewGate) : bankPool;
+  if (pool.length === 0) {
+    // 正式考过审题不足：给出明确提示而不是崩溃（draft 题在人工双审完成后自动可用）
+    pushLog(`【考证】「${exam.name}」暂无过审题目（人工双审进行中），请先用练习/模考备考，或在培训后台开启开发模式。`);
+    return false;
+  }
+  let paper = buildPaper(exam, pool, rngExam);
   if (cramBoost) game.player.attrs.pro = savedPro; // 还原，buff 在判分阶段再乘
+  // 冲刺押题：把押题池中属于本科目的错题替换进卷子（至多卷面的 20%）
+  if (mode === 'formal' && cramActive() && lastPractice) {
+    const candidates = lastPractice.wrong.filter((q) => q.subject === examId && !paper.questions.some((p) => p.id === q.id));
+    const maxCram = Math.max(1, Math.floor(paper.questions.length * 0.2));
+    const picks = candidates.slice(0, Math.min(maxCram, candidates.length));
+    if (picks.length > 0) {
+      // 从卷尾替换（保住题型交错的开头；同题型优先替换，简化：直接顶替末尾 n 题）
+      for (let i = 0; i < picks.length; i++) {
+        paper.questions[paper.questions.length - 1 - i] = picks[i];
+      }
+      // 重建分值表
+      paper = { ...paper, questions: [...paper.questions], scores: paper.questions.map(questionScore) };
+      paper.scores = paper.questions.map(questionScore);
+      paper.totalScore = paper.scores.reduce((a, b) => a + b, 0);
+      crammedQuestionIds = new Set(picks.map((q) => q.id));
+      pushLog(`【押题】冲刺 buff 生效：${picks.length} 道最近做错的题被押进了「${exam.name}」考卷（复习没白费）。`);
+    }
+  }
+  state.examMode = mode;
   state.examPaper = paper;
   state.examAnswers = paper.questions.map((q) => (q.type === 'multiple' ? [] : -1));
   state.examIdx = 0;
   state.examResult = null;
   state.examScreen = 'taking';
-  state.examSecondsLeft = exam.time_limit_sec;
+  // 练习模式不限时；模考/正式按科目限时
+  state.examSecondsLeft = mode === 'practice' ? -1 : exam.time_limit_sec;
   if (state.examTimer) clearInterval(state.examTimer);
-  state.examTimer = setInterval(() => {
-    state.examSecondsLeft -= 1;
-    if (state.examSecondsLeft <= 0) submitExam();
-  }, 1000);
+  if (mode !== 'practice') {
+    state.examTimer = setInterval(() => {
+      state.examSecondsLeft -= 1;
+      if (state.examSecondsLeft <= 0) submitExam();
+    }, 1000);
+  }
   return true;
+}
+
+/** 练习模式：单题即时判对错（提交本题，直接展示正误与解析） */
+export function checkPracticeAnswer(idx: number): boolean {
+  const paper = state.examPaper;
+  if (!paper || state.examMode !== 'practice') return false;
+  const q = paper.questions[idx];
+  const ans = state.examAnswers[idx];
+  let correct = false;
+  if (q.type === 'multiple') {
+    const right = [...(q.answer as number[])].sort();
+    const given = Array.isArray(ans) ? [...ans].sort() : [];
+    correct = given.length === right.length && given.every((v, i) => v === right[i]);
+  } else {
+    correct = ans === q.answer;
+  }
+  state.practiceFeedback = { idx, correct };
+  return correct;
+}
+
+export function clearPracticeFeedback() {
+  state.practiceFeedback = null;
 }
 
 export function submitExam() {
   if (!state.examPaper || state.examScreen !== 'taking') return;
   if (state.examTimer) { clearInterval(state.examTimer); state.examTimer = 0; }
+  const mode = state.examMode;
   const res = gradePaper(state.examPaper, state.examAnswers);
-  // 冲刺 buff：通过线判定时给 3 分宽限（临时抱佛脚的临场效应）
-  if (cramActive()) res.scorePct = Math.min(100, res.scorePct + 3);
+  // 冲刺 buff：正式考通过线判定时给 3 分宽限（临时抱佛脚的临场效应）
+  if (mode === 'formal' && cramActive()) res.scorePct = Math.min(100, res.scorePct + 3);
   state.examResult = res;
   state.examScreen = 'result';
   const exam = EXAM_DEFS.find((e) => e.id === state.examPaper!.examId);
+  const examName = exam?.name ?? res.examId;
+  // 记录"考前最后做的一套卷"（冲刺押题数据源：正式/模考/练习都算）
+  const wrongQs = state.examPaper.questions.filter((_, i) => res.perQuestion[i] < 1);
+  lastPractice = {
+    label: `${mode === 'formal' ? '正式考' : mode === 'mock' ? '模拟考' : '练习卷'}·${examName}`,
+    examId: res.examId,
+    wrong: wrongQs,
+    wrongCount: wrongQs.length,
+    at: game.date,
+  };
+  lastPracticeVersion.value += 1;
   pushWrongQuestions(state.examPaper, res.perQuestion);
-  try {
-    const attempts = Number(storage.get('fm_exam_attempts') ?? 0) + 1;
-    storage.set('fm_exam_attempts', String(attempts));
-  } catch { /* 忽略 */ }
-  // P4 学习记录：考试明细入档（讲师报表通过率数据源）
-  recordExamAttempt({ examId: res.examId, examName: exam?.name ?? res.examId, passed: res.passed, scorePct: res.scorePct, at: game.date });
   touchActiveDay(game.date);
-  if (res.passed && exam && !game.player.certs.includes(exam.name)) {
-    game.player.certs.push(exam.name);
-    game.player.attrs.pro += 5;
-    pushLog(`【考证】通过「${exam.name}」考试（${res.scorePct.toFixed(1)} 分），证书已入库，专业力 +5。`);
+  if (mode === 'formal') {
+    try {
+      const attempts = Number(storage.get('fm_exam_attempts') ?? 0) + 1;
+      storage.set('fm_exam_attempts', String(attempts));
+    } catch { /* 忽略 */ }
+    // P4 学习记录：考试明细入档（讲师报表通过率数据源）
+    recordExamAttempt({ examId: res.examId, examName, passed: res.passed, scorePct: res.scorePct, at: game.date });
+    if (res.passed && exam && !game.player.certs.includes(exam.name)) {
+      game.player.certs.push(exam.name);
+      game.player.attrs.pro += 5;
+      pushLog(`【考证】通过「${examName}」考试（${res.scorePct.toFixed(1)} 分），证书已入库，专业力 +5。`);
+    } else {
+      pushLog(`【考证】「${examName}」正式考成绩 ${res.scorePct.toFixed(1)} 分，未通过。复盘错题，下季度再战。`);
+    }
+    game.player.energy = Math.max(0, game.player.energy - 20);
+    game.player.attrs.stress += 8;
   } else {
-    pushLog(`【考证】「${exam?.name}」成绩 ${res.scorePct.toFixed(1)} 分，未通过。下季度再战。`);
+    // 练习/模考：只给轻微成长反馈，不耗精力不入档
+    const tag = mode === 'mock' ? '【模考】' : '【练习】';
+    pushLog(`${tag}「${examName}」${mode === 'mock' ? '全真模拟' : '自主练习'}完成，成绩 ${res.scorePct.toFixed(1)} 分（${res.correctCount}/${state.examPaper.questions.length} 题）。错题已入错题本，正式考试不收报名费、不发证——先练后战。`);
+    if (mode === 'mock') {
+      game.player.attrs.pro += 1; // 全真模考的临场经验
+    } else {
+      game.player.attrs.pro += 0.5;
+      game.player.attrs.stress = Math.max(0, game.player.attrs.stress - 1); // 刷题减压
+    }
   }
-  game.player.energy = Math.max(0, game.player.energy - 20);
-  game.player.attrs.stress += 8;
 }
 
 export function quitExam() {
@@ -744,18 +892,20 @@ export function weakSpotRadar(): Array<{ tag: string; count: number }> {
     .slice(0, 10);
 }
 
-/** 考前冲刺：消耗 AP 换通过率 buff（规划书 7.5"临时抱佛脚"） */
+/** 考前冲刺：点击后激活 buff——下一次正考抽卷时，考前最后做的一套卷（练习/模考/正式）中
+ *  做错的 20% 题目会被直接选进考卷正题（规划书 7.5"临时抱佛脚"的具象化）。 */
 export function cramForExam(): string {
   const g = getGame();
   if (state.apUsed >= state.apMax) return '本帧行动点已用完，无法冲刺。';
   state.apUsed += 1;
-  g.player.attrs.pro += 0.5;
   g.player.attrs.stress += 3;
   g.player.energy = Math.max(0, g.player.energy - 8);
-  // 冲刺 buff：24h 内通过率提升（简单实现为 pro 临时加成记录）
+  // 冲刺 buff：真实时间戳实现，开启下一次正式考试的"错题押题"效果
   storage.set('fm_cram_until', String(Date.now() + 24 * 3600 * 1000));
-  pushLog('【考前冲刺】熬了个通宵刷题……专业力 +0.5，通过率临时提升，但压力 +3、精力 -8。');
-  return '冲刺完成！通过率临时提升（持续到明天）。';
+  const last = lastPracticePaper();
+  const poolNote = last ? `押题池来源：${last.label}（${last.wrongCount} 道错题）。` : '提示：先做一套练习/模考攒下错题，冲刺押题才有子弹。';
+  pushLog(`【考前冲刺】通宵复盘近期错卷（压力 +3、精力 -8）。激活押题 buff：下一次正式考试会把考前最后做的一套卷中 20% 错题带进考卷。${poolNote}`);
+  return '冲刺完成！下一次正式考试将押中最近一套卷的 20% 错题（持续到明天）。';
 }
 
 /** 冲刺 buff 是否生效 */
@@ -830,6 +980,7 @@ export function cancelReception() {
   if (state.reception) {
     const c = g.clients.find((x) => x.id === state.reception!.clientId);
     if (c) c.trust = Math.max(0, c.trust - 2);
+    pushLog(`【接待】${state.reception.clientName}提前送客，未做推荐（信任 -2）。接待了但没聊透，下次记得先挖潜。`);
   }
   state.reception = null;
   state.receptionLog = [];
@@ -846,12 +997,27 @@ export function recommendReception(productId: string) {
   const evalRes = receptionEngine.evaluate(s, product, client, state.receptionAmount);
   state.receptionLog.push({ who: 'me', text: `我推荐了「${product.name}」，建议投入 ${fmtMoneyCN(state.receptionAmount)}。` });
   state.receptionLog.push({ who: 'client', text: evalRes.reason });
+  let dealResult = '';
   if (evalRes.deal) {
     const res = g.executeDeal(client, product, state.receptionAmount);
-    state.receptionLog.push({ who: 'sys', text: res.ok ? `✓ 成交！AUM +${fmtMoneyCN(state.receptionAmount)}` : `✗ ${res.reason}` });
+    if (res.ok) {
+      dealResult = `✓ 成交！AUM +${fmtMoneyCN(state.receptionAmount)}`;
+      state.receptionLog.push({ who: 'sys', text: dealResult });
+    } else {
+      dealResult = `✗ 成交失败：${res.reason}`;
+      state.receptionLog.push({ who: 'sys', text: dealResult });
+    }
   }
   // 信任结算（挖潜收益 + 推荐反馈）
   client.trust = Math.max(0, Math.min(100, client.trust + s.trustGained * 0.5 + evalRes.trustDelta));
+  // 接待结果完整入工作台日志：客户/产品/结果/信任变化
+  const probeCnt = s.probed;
+  const probeNote = probeCnt >= 2 ? '充分挖潜后推荐' : probeCnt === 1 ? '简单挖潜后推荐' : '未挖潜直接推荐';
+  const trustNow = Math.round(client.trust);
+  pushLog(
+    `【接待】${s.clientName}到访，${probeNote}「${product.name}」（${fmtMoneyCN(state.receptionAmount)}）。结果：${evalRes.deal ? dealResult : `未成交——${evalRes.reason}`}${evalRes.trustDelta ? `，客户反馈信任 ${evalRes.trustDelta > 0 ? '+' : ''}${evalRes.trustDelta}` : ''}。当前信任 ${trustNow}。`,
+  );
+  touchActiveDay(game.date);
   // 结束会话
   state.reception = null;
 }

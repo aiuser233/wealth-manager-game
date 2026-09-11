@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { state, gameReady, getGame, cal, markViewed, fmtPct, pctClass, snapAt } from '../state';
-import { MarketSim } from '@fm/core';
+import { state, gameReady, getGame, markViewed, fmtPct, pctClass } from '../state';
 import KLineChart from './KLineChart.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
+
+/** K 线图默认收起（点开展开），避免挤占行情表格空间 */
+const klineOpen = ref(false);
 
 const scopes = [
   { id: 'day', label: '当日' },
@@ -15,32 +17,21 @@ const scopes = [
 
 onMounted(() => markViewed());
 
-/** 计算某口径相对基准的涨跌：基准点 = 缓存里能找到的最早对应快照 */
+/** 计算某口径相对基准的涨跌：数据源统一用 game.snapHistory（近 120 交易日 K 线缓冲，
+ *  读档后也恢复），避免依赖会话内存 snapCache（推进时间后为空 → 涨跌列全 '--'） */
 function changeOf(key: 'indices' | 'industries' | 'factors', id: string, scope: string): number | undefined {
   const cur = g.value?.lastSnap;
   if (!cur) return undefined;
+  const hist = g.value?.snapHistory ?? [];
+  const nBack = scope === 'since_view' ? 0 : scope === 'day' ? 1 : scope === 'week' ? 5 : 21;
   const base = scope === 'since_view'
     ? state.baseSnap.since_view
-    : scope === 'day'
-      ? findPrevCursorSnap(1)
-      : scope === 'week'
-        ? findPrevCursorSnap(5)
-        : findPrevCursorSnap(21);
+    : hist.length > nBack ? hist[hist.length - 1 - nBack] : null;
   if (!base || base.date === cur.date) return undefined;
   const a = base[key]?.[id];
   const b = cur[key]?.[id];
   if (a === undefined || b === undefined) return undefined;
   return (b / a - 1) * 100;
-}
-
-/** 在快照缓存中找 cursor- n 对应的快照 */
-function findPrevCursorSnap(n: number) {
-  const cursor = g.value!.sim.cursor;
-  for (let i = n; i < n + 10; i++) {
-    const s = snapAt(cursor - i);
-    if (s) return s;
-  }
-  return null;
 }
 
 const indexNames: Record<string, string> = {
@@ -107,11 +98,13 @@ const sparkIds = ['idx_main', 'idx_300', 'idx_500', 'idx_growth'];
           {{ s.label }}
         </button>
       </div>
+      <!-- K 线折叠/展开：默认收起，点开再看走势，避免挤占行情表 -->
+      <button class="kline-toggle" @click="klineOpen = !klineOpen">{{ klineOpen ? '收起 K 线 ▲' : '展开 K 线走势 ▼' }}</button>
       <span class="dim">数据日：{{ g.lastSnap?.date ?? '--' }} · 行情为架空模拟</span>
     </div>
 
-    <!-- K 线走势图（宽基/行业，近 60/120 日） -->
-    <KLineChart />
+    <!-- K 线走势图（可折叠：宽基/行业，近 60/120 日） -->
+    <KLineChart v-if="klineOpen" />
 
     <div class="cols">
       <!-- 宽基指数 -->
@@ -195,7 +188,8 @@ export default {
 
 <style scoped>
 .wrap { height: 100%; display: flex; flex-direction: column; gap: 10px; }
-.bar { display: flex; justify-content: space-between; align-items: center; }
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.kline-toggle { white-space: nowrap; font-size: 12px; padding: 3px 10px; }
 .scopes { display: flex; gap: 6px; }
 .scopes button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 

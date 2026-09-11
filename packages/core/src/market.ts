@@ -151,10 +151,10 @@ export class MarketSim {
           // rets 单位是小数（0.0001 = 1bp），乘以 100 折算为百分点敏感度。
           r += beta * v * 100;
         } else if (fid === 'vix' || fid === 'risk_g' || fid === 'liquidity' || fid === 'sentiment_dom') {
-          // 指数型情绪/状态因子：按变化率缩放
-          const lvl = this.factorState[fid];
-          const chg = Math.abs(lvl) > 1e-6 ? v / lvl : 0;
-          r += beta * chg;
+          // 指数型情绪/状态因子：rets 已是该因子的对数收益率，直接按 β 进入行业收益。
+          // （旧实现 v/lvl 在低水平因子上会放大百倍——sentiment_dom 长期在 0.01 附近，
+          //   导致券商/科技等行业单日 ±70% 假波动；对高水平的 vix/liquidity 则反向缩小。）
+          r += beta * v;
         } else {
           r += beta * v;
         }

@@ -173,14 +173,17 @@ function openPromotion() {
   height: 100%;
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: 12px;
 }
 .panel { padding: 14px 16px; overflow: hidden; display: flex; flex-direction: column; }
 .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 h3 { font-size: 15px; }
 
-.act { grid-row: 1 / 3; }
+.act { grid-column: 1; grid-row: 1 / 4; }
+.me { grid-column: 2; grid-row: 1; }
+.kpi { grid-column: 2; grid-row: 2; }
+.logs { grid-column: 2; grid-row: 3; }
 .ap b { color: var(--accent); font-size: 16px; }
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
 .result { flex: 1; overflow-y: auto; border-top: 1px dashed var(--line); padding-top: 10px; line-height: 1.7; }
@@ -210,6 +213,6 @@ h3 { font-size: 15px; }
 .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.4s; }
 .kpi-num { font-size: 12px; white-space: nowrap; }
 
-.logs { min-height: 0; }
+
 .log-list { flex: 1; overflow-y: auto; line-height: 1.9; font-size: 13px; }
 </style>

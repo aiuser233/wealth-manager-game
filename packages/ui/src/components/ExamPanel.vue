@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive } from '../state';
+import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper } from '../state';
 import { storage } from '../storage';
 import { EXAM_DEFS } from '@fm/core';
 
@@ -41,8 +41,16 @@ function doCram() {
   dailyFeedback.value = cramForExam();
 }
 
-function prevQ() { if (state.examIdx > 0) state.examIdx -= 1; }
-function nextQ() { if (state.examIdx < total.value - 1) state.examIdx += 1; }
+/** 冲刺押题数据源（考前最后做的一套卷） */
+const lastPaper = computed(() => lastPracticePaper());
+
+function prevQ() { if (state.examIdx > 0) { clearPracticeFeedback(); state.examIdx -= 1; } }
+function nextQ() { if (state.examIdx < total.value - 1) { clearPracticeFeedback(); state.examIdx += 1; } }
+
+function quitExamLocal() {
+  clearPracticeFeedback();
+  quitExam();
+}
 
 function mmss(sec: number): string {
   const m = Math.floor(Math.max(0, sec) / 60);
@@ -51,6 +59,41 @@ function mmss(sec: number): string {
 }
 
 function jump(i: number) { state.examIdx = i; }
+
+/** ===== 练习模式辅助 ===== */
+const practiceChecked = computed(() => !!state.practiceFeedback && state.practiceFeedback.idx === state.examIdx);
+const answeredCurrent = computed(() => {
+  const a = state.examAnswers[state.examIdx];
+  return Array.isArray(a) ? a.length > 0 : a >= 0;
+});
+
+function checkCurrent() {
+  checkPracticeAnswer(state.examIdx);
+}
+
+/** 练习模式已核对时：正确选项标绿、误选标红 */
+function practiceRight(oi: number): boolean {
+  const fb = state.practiceFeedback;
+  if (!fb || fb.idx !== state.examIdx) return false;
+  const qv = paper.value!.questions[fb.idx];
+  return qv.type === 'multiple' ? (qv.answer as number[]).includes(oi) : qv.answer === oi;
+}
+function practiceWrong(oi: number): boolean {
+  const fb = state.practiceFeedback;
+  if (!fb || fb.idx !== state.examIdx || fb.correct) return false;
+  const a = state.examAnswers[fb.idx];
+  return Array.isArray(a) ? a.includes(oi) : a === oi;
+}
+function isPracticeCorrect(i: number): boolean {
+  const fb = state.practiceFeedback;
+  return !!fb && fb.idx === i && fb.correct;
+}
+
+function formatAnswer(qv: { type: string; answer: number | number[] }): string {
+  return qv.type === 'multiple'
+    ? (qv.answer as number[]).map((x) => String.fromCharCode(65 + x)).join('、')
+    : String.fromCharCode(65 + (qv.answer as number));
+}
 </script>
 
 <template>
@@ -81,8 +124,9 @@ function jump(i: number) { state.examIdx = i; }
 
       <div class="tools">
         <button @click="showWrong = !showWrong; refreshWrong()">错题本（{{ wrongList.length }}）</button>
-        <button :disabled="state.apUsed >= state.apMax" @click="doCram" title="消耗 1 AP 换取通过率临时提升（规划书 7.5）">考前冲刺（1 AP）</button>
-        <span v-if="cramActive()" class="gold">✦ 冲刺 buff 生效中</span>
+        <button :disabled="state.apUsed >= state.apMax" @click="doCram" title="消耗 1 AP：下一次正式考试会把考前最后做的一套卷中 20% 错题押进考卷（规划书 7.5）">考前冲刺（1 AP）</button>
+        <span v-if="cramActive()" class="gold" title="押题 buff：下一次正式考试的卷子里，会带上考前最后做的一套卷中 20% 的错题">✦ 押题 buff 生效中（下次正式考试押中最近一套卷 20% 错题）</span>
+        <span v-if="lastPaper" class="dim" title="冲刺押题的数据来源">押题池：{{ lastPaper.label }}（{{ lastPaper.wrongCount }} 道错题）</span>
       </div>
 
       <!-- 弱项雷达 -->
@@ -114,8 +158,12 @@ function jump(i: number) { state.examIdx = i; }
             <p class="meta dim">及格 {{ Math.round(e.pass_mark * 100) }} 分 · {{ e.question_count[0] }}–{{ e.question_count[1] }} 题 · 限时 {{ Math.round(e.time_limit_sec / 60) }} 分钟</p>
           </div>
           <div class="op">
-            <span v-if="certs.includes(e.name)" class="gold">已通过 ✓</span>
-            <button v-else-if="availableExams().some((a) => a.id === e.id)" class="primary" @click="startExam(e.id)">进入考场</button>
+            <template v-if="availableExams().some((a) => a.id === e.id)">
+              <span v-if="certs.includes(e.name)" class="gold">已通过 ✓</span>
+              <button v-if="!certs.includes(e.name)" class="primary" @click="startExam(e.id, 'formal')">进入考场</button>
+              <button class="ghost-btn" @click="startExam(e.id, 'mock')" title="全真计时模拟：与正式考同规则但不发证书、不耗精力，成绩作为冲刺押题来源">模考</button>
+              <button class="ghost-btn" @click="startExam(e.id, 'practice')" title="不限时练习：每题即时判对错并看解析，刷题减压，错题入错题本">练习</button>
+            </template>
             <span v-else class="dim">{{ e.unlock_year }} 年解锁</span>
           </div>
         </div>
@@ -125,8 +173,9 @@ function jump(i: number) { state.examIdx = i; }
     <!-- 答题界面（模拟机考） -->
     <div v-else-if="state.examScreen === 'taking' && paper" class="panel taking full">
       <div class="exam-head">
-        <b>{{ EXAM_DEFS.find((e) => e.id === paper.examId)?.name }}</b>
-        <span class="timer" :class="{ urgent: state.examSecondsLeft < 60 }">{{ mmss(state.examSecondsLeft) }}</span>
+        <b>{{ EXAM_DEFS.find((e) => e.id === paper.examId)?.name }}<span class="mode-tag" :class="state.examMode">{{ state.examMode === 'formal' ? '正式考' : state.examMode === 'mock' ? '模考' : '练习' }}</span></b>
+        <span v-if="state.examSecondsLeft >= 0" class="timer" :class="{ urgent: state.examSecondsLeft < 60 }">{{ mmss(state.examSecondsLeft) }}</span>
+        <span v-else class="dim">练习模式 · 不限时</span>
       </div>
       <div class="q-body">
         <p class="q-stem">第 {{ state.examIdx + 1 }} / {{ total }} 题（{{ q!.type === 'single' ? '单选' : q!.type === 'multiple' ? '多选' : '判断' }}）<span class="dim" v-if="q!.type === 'multiple'">（漏选得一半分）</span></p>
@@ -137,9 +186,17 @@ function jump(i: number) { state.examIdx = i; }
             class="opt"
             :class="{
               picked: q!.type === 'multiple' ? (state.examAnswers[state.examIdx] as number[]).includes(oi) : state.examAnswers[state.examIdx] === oi,
+              right: practiceRight(oi),
+              wrong: practiceWrong(oi),
             }"
             @click="q!.type === 'multiple' ? toggleMulti(state.examIdx, oi) : answerSingle(state.examIdx, oi)"
           >{{ String.fromCharCode(65 + oi) }}. {{ opt }}</button>
+        </div>
+        <!-- 练习模式即时反馈 -->
+        <div v-if="state.practiceFeedback && state.practiceFeedback.idx === state.examIdx" class="p-feedback" :class="state.practiceFeedback.correct ? 'ok' : 'no'">
+          <p class="verdict-line">{{ state.practiceFeedback.correct ? '✓ 答对了！' : '✗ 答错了。' }}</p>
+          <p class="dim">正确答案：{{ formatAnswer(q!) }}</p>
+          <p class="dim expl">{{ q!.explanation }}</p>
         </div>
       </div>
       <div class="q-foot">
@@ -147,23 +204,35 @@ function jump(i: number) { state.examIdx = i; }
         <div class="dots">
           <button
             v-for="(a, i) in state.examAnswers" :key="i"
-            class="dot" :class="{ done: Array.isArray(a) ? a.length > 0 : a >= 0, cur: i === state.examIdx }"
+            class="dot" :class="{ done: Array.isArray(a) ? a.length > 0 : a >= 0, cur: i === state.examIdx, rightDot: isPracticeCorrect(i), wrongDot: state.practiceFeedback?.idx === i && !state.practiceFeedback.correct }"
             @click="jump(i)"
           >{{ i + 1 }}</button>
         </div>
-        <button v-if="state.examIdx < total - 1" class="primary" @click="nextQ">下一题</button>
-        <button v-else class="warn" @click="submitExam">交卷（已答 {{ answeredCount }}/{{ total }}）</button>
+        <!-- 练习模式：先"核对本题"再翻页 -->
+        <template v-if="state.examMode === 'practice'">
+          <button v-if="!practiceChecked" class="primary" :disabled="!answeredCurrent" @click="checkCurrent">核对本题</button>
+          <button v-else-if="state.examIdx < total - 1" class="primary" @click="nextQ">下一题</button>
+          <button v-else class="warn" @click="submitExam">完成练习（已答 {{ answeredCount }}/{{ total }}）</button>
+        </template>
+        <template v-else>
+          <button v-if="state.examIdx < total - 1" class="primary" @click="nextQ">下一题</button>
+          <button v-else class="warn" @click="submitExam">交卷（已答 {{ answeredCount }}/{{ total }}）</button>
+        </template>
       </div>
     </div>
 
     <!-- 成绩页 -->
     <div v-else-if="state.examScreen === 'result' && state.examResult" class="panel result full">
-      <h3>考试结果</h3>
+      <h3>{{ state.examMode === 'formal' ? '考试结果' : state.examMode === 'mock' ? '模考结果' : '练习成绩' }}</h3>
       <p class="score" :class="state.examResult.passed ? 'gold' : 'dim'">
         {{ state.examResult.scorePct.toFixed(1) }} 分
       </p>
       <p class="verdict" :class="state.examResult.passed ? 'gold' : 'dim'">
-        {{ state.examResult.passed ? '恭喜通过！证书已入库，专业力 +5。' : '很遗憾，未通过。复盘错题，下季度再战。（陈曼：年轻人，急什么）' }}
+        {{ state.examMode === 'formal'
+          ? (state.examResult.passed ? '恭喜通过！证书已入库，专业力 +5。' : '很遗憾，未通过。复盘错题，下季度再战。（陈曼：年轻人，急什么）')
+          : state.examMode === 'mock'
+            ? '全真模考完成：不发证书不耗精力，临场经验 +1。正式考遇到原题时，冲刺押题会帮你。'
+            : '练习完成：错题已入错题本，专业力 +0.5、压力 -1。考前最后做的一套卷将成为冲刺押题池。' }}
       </p>
       <p class="dim">答对 {{ state.examResult.correctCount }} / {{ state.examResult.totalScore > 0 ? state.examPaper!.questions.length : 0 }} 题</p>
       <div class="review">
@@ -176,7 +245,7 @@ function jump(i: number) { state.examIdx = i; }
           <p class="dim expl">{{ qq.explanation }}</p>
         </div>
       </div>
-      <button class="primary" @click="quitExam">返回考试中心</button>
+      <button class="primary" @click="quitExamLocal">返回考试中心</button>
     </div>
   </div>
 </template>
@@ -224,6 +293,22 @@ h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .opts { display: flex; flex-direction: column; gap: 8px; }
 .opt { text-align: left; padding: 10px 14px; border-radius: 8px; line-height: 1.5; }
 .opt.picked { border-color: var(--accent); background: rgba(79, 140, 255, 0.15); }
+/* 练习模式即时反馈配色 */
+.opt.right { border-color: var(--down); background: rgba(61, 207, 142, 0.12); }
+.opt.wrong { border-color: var(--up); background: rgba(255, 90, 90, 0.12); }
+.p-feedback { margin-top: 12px; background: var(--bg2); border-radius: 8px; padding: 10px 14px; line-height: 1.7; }
+.p-feedback.ok { border-left: 3px solid var(--down); }
+.p-feedback.no { border-left: 3px solid var(--up); }
+.verdict-line { font-weight: 600; }
+.expl { font-size: 12px; }
+.mode-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+.mode-tag.formal { background: rgba(240, 180, 41, 0.15); color: var(--gold); }
+.mode-tag.mock { background: rgba(79, 140, 255, 0.15); color: var(--accent); }
+.mode-tag.practice { background: rgba(61, 207, 142, 0.15); color: var(--down); }
+.dot.rightDot { background: var(--down); border-color: var(--down); color: #fff; }
+.dot.wrongDot { background: var(--up); border-color: var(--up); color: #fff; }
+.ghost-btn { border-color: var(--accent); color: var(--accent); background: transparent; }
+.ghost-btn:hover { background: rgba(79, 140, 255, 0.12); }
 .q-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .dots { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .dot { width: 26px; height: 26px; padding: 0; font-size: 11px; border-radius: 50%; }

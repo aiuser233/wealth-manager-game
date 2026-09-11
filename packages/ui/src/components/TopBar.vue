@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { state, gameReady, getGame } from '../state';
+import { state, gameReady, getGame, unreadNews } from '../state';
 import { GRADE_NAMES } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
@@ -12,7 +12,8 @@ defineProps<{
   title: string;
 }>();
 
-const newsCount = computed(() => state.news.length);
+/** 未读新闻数（红点只在该值 > 0 时出现；进入行情终端即已读） */
+const unread = computed(() => unreadNews());
 
 function switchTab(id: string) {
   state.screen = id as typeof state.screen;
@@ -31,8 +32,9 @@ export default {};
       <button
         v-for="t in tabs" :key="t.id"
         :class="{ active: state.screen === t.id }"
+        :title="t.id === 'workbench' && unread ? `${unread} 条未读市场新闻（行情终端查看）` : undefined"
         @click="switchTab(t.id)"
-      >{{ t.label }}<span v-if="t.id === 'workbench' && newsCount" class="badge">{{ newsCount }}</span></button>
+      >{{ t.label }}<span v-if="t.id === 'workbench' && unread" class="badge" :title="`${unread} 条未读市场新闻（行情终端查看）`">{{ unread > 9 ? '9+' : unread }}</span></button>
     </nav>
     <div class="right">
       <span class="tag">{{ grade }}</span>
@@ -63,6 +65,7 @@ export default {};
   position: absolute; top: -4px; right: -2px;
   background: var(--up); color: #fff; font-size: 10px;
   border-radius: 8px; padding: 0 5px; line-height: 14px;
+  cursor: help;
 }
 .right { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .date { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }

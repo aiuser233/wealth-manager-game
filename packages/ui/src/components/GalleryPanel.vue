@@ -12,8 +12,10 @@ const g = computed(() => (gameReady.value ? getGame() : null));
 const year = computed(() => Number(g.value?.date.slice(0, 4) ?? 2006));
 
 const ALL_K = KNOWLEDGE_ALL.length >= KNOWLEDGE.length ? KNOWLEDGE_ALL : KNOWLEDGE;
-const unlockedKnowledge = computed(() => ALL_K.filter((k) => k.unlockYear <= year.value));
-const lockedKnowledge = computed(() => ALL_K.filter((k) => k.unlockYear > year.value));
+// 知识库全量开放（学习用途）；未来年代的词条仅打标提示，不锁内容
+const yearAccessor = computed(() => Number(g.value?.date.slice(0, 4) ?? 2006));
+const unlockedKnowledge = computed(() => ALL_K);
+const lockedKnowledge = computed(() => ALL_K.filter((k) => k.unlockYear > yearAccessor.value));
 
 const selectedK = ref<string>('');
 const selectedD = ref<string>('');
@@ -146,15 +148,14 @@ function npvOf(cfs: number[], r: number): number {
     <!-- 知识库 -->
     <div v-if="tab === 'knowledge'" class="cols">
       <div class="panel list">
-        <p v-for="k in unlockedKnowledge" :key="k.id" class="k-item" :class="{ active: selectedK === k.id }" @click="selectedK = k.id">
+        <p class="dim note">全部词条开放查阅（学习用途）；与剧情/复盘卡关联的内容仍随游戏进程解锁。</p>
+        <p v-for="k in ALL_K" :key="k.id" class="k-item" :class="{ active: selectedK === k.id }" @click="selectedK = k.id">
           <span class="tag">{{ catNames[k.category] }}</span>{{ k.title }}
-        </p>
-        <p v-for="k in lockedKnowledge" :key="k.id" class="k-item locked">
-          <span class="tag">{{ catNames[k.category] }}</span>{{ k.title }} <span class="dim">（{{ k.unlockYear }} 年解锁）</span>
+          <span v-if="k.unlockYear > yearAccessor" class="dim future-tag">{{ k.unlockYear }} 年词条</span>
         </p>
       </div>
       <div v-if="activeK" class="panel detail">
-        <h3>{{ activeK.title }}</h3>
+        <h3>{{ activeK.title }} <span class="dim">（{{ activeK.unlockYear }} 年起）</span></h3>
         <h4>是什么</h4><p>{{ activeK.what }}</p>
         <h4>为什么重要</h4><p>{{ activeK.why }}</p>
         <h4>怎么用</h4><p>{{ activeK.how }}</p>
@@ -308,6 +309,7 @@ function npvOf(cfs: number[], r: number): number {
 .cal-group { margin-bottom: 8px; }
 .cal-decade { color: var(--accent); font-size: 12px; font-weight: 700; margin: 6px 0 2px; }
 .cal-item.locked { opacity: 0.5; font-size: 12px; }
+.future-tag { font-size: 11px; margin-left: 4px; opacity: 0.8; }
 
 .calc-box { background: var(--bg2); border-radius: 8px; padding: 10px 12px; }
 .calc-tabs { display: flex; gap: 4px; margin: 8px 0; }
