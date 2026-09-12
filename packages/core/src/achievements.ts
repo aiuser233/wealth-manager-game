@@ -41,6 +41,14 @@ export interface AchievementSnapshot {
   playthrough: number;
   /** 达成过的结局集合 */
   endingsSeen: string[];
+  /** B3 新增口径：转介绍客户数 */
+  referrals: number;
+  /** 召回客户数 */
+  reactivated: number;
+  /** 服务过的去重客户数 */
+  clientsServed: number;
+  /** 累计成交金额 */
+  dealAmount: number;
 }
 
 export interface AchievementState {
@@ -71,6 +79,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'survivor', name: '穿越牛熊', desc: '走完 20 年（240 个月）', icon: '🕰️', tier: 'silver' },
   { id: 'hidden_ending', name: '重返投资界', desc: '达成隐藏结局', icon: '✨', tier: 'hidden' },
   { id: 'ng_plus', name: '二周目来客', desc: '开启第二周目', icon: '🔄', tier: 'hidden' },
+  // B3 批次新增 6 枚（口碑/经营玩法）
+  { id: 'referral_5', name: '口碑相传', desc: '客户转介绍 5 位新客户', icon: '📣', tier: 'bronze' },
+  { id: 'referral_15', name: '有口皆碑', desc: '客户转介绍 15 位新客户', icon: '📢', tier: 'silver' },
+  { id: 'recall_3', name: '破镜重圆', desc: '挽回（召回）3 位客户', icon: '🧲', tier: 'silver' },
+  { id: 'serve_30', name: '群贤毕至', desc: '累计服务 30 位客户', icon: '🏛️', tier: 'bronze' },
+  { id: 'deal_100m', name: '亿元大户', desc: '累计成交金额突破 1 亿', icon: '🧧', tier: 'silver' },
+  { id: 'deal_1b', name: '功不唐捐', desc: '累计成交金额突破 10 亿', icon: '⛰️', tier: 'gold' },
 ];
 
 const fmt = (n: number) => (n >= 100000000 ? `${(n / 100000000).toFixed(1)} 亿` : `${(n / 10000).toFixed(0)} 万`);
@@ -103,5 +118,12 @@ export function checkAchievements(s: AchievementSnapshot): AchievementState[] {
     done('survivor', s.months >= 240, `存续 ${s.months}/240 月`),
     done('hidden_ending', s.endingsSeen.includes('reborn_investor')),
     done('ng_plus', s.playthrough >= 2),
+    // B3 新增 6 枚
+    done('referral_5', s.referrals >= 5, `转介绍 ${s.referrals}/5 位`),
+    done('referral_15', s.referrals >= 15, `转介绍 ${s.referrals}/15 位`),
+    done('recall_3', s.reactivated >= 3, `召回 ${s.reactivated}/3 位`),
+    done('serve_30', s.clientsServed >= 30, `服务 ${s.clientsServed}/30 位`),
+    done('deal_100m', s.dealAmount >= 100_000_000, `累计成交 ${fmt(s.dealAmount)}`),
+    done('deal_1b', s.dealAmount >= 1_000_000_000, `累计成交 ${fmt(s.dealAmount)}`),
   ];
 }

@@ -19,6 +19,8 @@ import TrainerPanel from './components/TrainerPanel.vue';
 import LecturerMode from './components/LecturerMode.vue';
 import TeamPanel from './components/TeamPanel.vue';
 import AchievementPanel from './components/AchievementPanel.vue';
+import ArchivePanel from './components/ArchivePanel.vue';
+import AnnualReportDialog from './components/AnnualReportDialog.vue';
 
 const seed = ref(42);
 const name = ref('林奇安');
@@ -31,6 +33,7 @@ const screenTitle = computed(() => {
     case 'exam': return '考试中心';
     case 'gallery': return '图鉴馆';
     case 'system': return '系统';
+    case 'archive': return '日志档案馆';
     case 'trainer': return '培训后台';
     case 'lecturer': return '讲师模式大屏';
     case 'team': return '团队管理';
@@ -49,6 +52,7 @@ const tabs = [
   { id: 'system', label: '系统' },
   { id: 'team', label: '团队' },
   { id: 'ach', label: '成就' },
+  { id: 'archive', label: '档案' },
   { id: 'trainer', label: '培训后台' },
   { id: 'lecturer', label: '讲师模式' },
   { id: 'help', label: '手册' },
@@ -72,6 +76,7 @@ function start() {
       <ExamPanel v-else-if="state.screen === 'exam'" />
       <GalleryPanel v-else-if="state.screen === 'gallery'" />
       <SystemPanel v-else-if="state.screen === 'system'" />
+      <ArchivePanel v-else-if="state.screen === 'archive'" />
       <TeamPanel v-else-if="state.screen === 'team'" />
       <AchievementPanel v-else-if="state.screen === 'ach'" />
       <TrainerPanel v-else-if="state.screen === 'trainer'" />
@@ -96,6 +101,7 @@ function start() {
     <EventDialog />
     <QuestDialog />
     <LifeNodeDialog />
+    <AnnualReportDialog />
     <TutorialOverlay />
     <PromotionPanel v-if="state.modal?.kind === 'promotion'" />
     <SystemPanel v-if="state.modal?.kind === 'system'" />

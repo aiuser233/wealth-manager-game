@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow, saveToSlot, autoSave as autoSaveNow } from '../state';
+import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow, saveToSlot, autoSave as autoSaveNow, saveSettings } from '../state';
 import { buildReport, reportHtml, downloadReport } from '../report';
 import { storage } from '../storage';
 import DossierPanel from './DossierPanel.vue';
 
-const sysTab = ref<'save' | 'dossier'>('save');
+const sysTab = ref<'save' | 'settings' | 'dossier'>('save');
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
@@ -125,8 +125,28 @@ function importSave(file: File) {
   <div v-if="g" class="panel sys full">
     <div class="tabs">
       <button :class="{ active: sysTab === 'save' }" @click="sysTab = 'save'">存档与报告</button>
+      <button :class="{ active: sysTab === 'settings' }" @click="sysTab = 'settings'">设置</button>
       <button :class="{ active: sysTab === 'dossier' }" @click="sysTab = 'dossier'">生涯档案</button>
     </div>
+    <template v-if="sysTab === 'settings'">
+      <h3>设置</h3>
+      <div class="setting-row">
+        <label class="switch-label">
+          <input type="checkbox" :checked="state.settings.autoSaveEnabled" @change="saveSettings({ autoSaveEnabled: ($event.target as HTMLInputElement).checked })" />
+          自动存档（游戏运行中按下方间隔自动保存到自动档）
+        </label>
+      </div>
+      <div class="setting-row">
+        <span>自动存档间隔：</span>
+        <button v-for="m in [5, 10, 15, 20]" :key="m" :class="{ primary: state.settings.autoSaveMinutes === m }" @click="saveSettings({ autoSaveMinutes: m })">{{ m }} 分钟</button>
+      </div>
+      <div class="setting-row">
+        <span>工作台日志显示范围：</span>
+        <button v-for="(label, m) in ['1 个月', '3 个月', '6 个月', '全部']" :key="m" :class="{ primary: state.settings.logArchiveMonths === [1, 3, 6, 0][m] }" @click="saveSettings({ logArchiveMonths: [1, 3, 6, 0][m] })">{{ label }}</button>
+        <span class="dim">更早的日志去「档案」页看</span>
+      </div>
+      <p class="dim">设置保存在本机（fm_settings），读档后自动恢复。</p>
+    </template>
     <template v-if="sysTab === 'save'">
     <h3>系统 · 存档</h3>
     <p class="dim">自动档唯一（游戏运行中每 10 分钟自动覆盖 + 结算/事件后保存）；手动档 1–3 由你自己掌控。</p>
@@ -176,6 +196,9 @@ function importSave(file: File) {
 <style scoped>
 .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
 .tabs button.active { border-color: var(--gold); color: var(--gold); }
+.setting-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0; line-height: 2; }
+.switch-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.switch-label input { width: 16px; height: 16px; }
 .sys.full { height: 100%; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 h3 { margin-bottom: 4px; }
 h4 { font-size: 13px; color: var(--text-dim); margin: 8px 0 6px; }

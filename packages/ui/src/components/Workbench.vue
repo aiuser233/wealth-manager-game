@@ -99,6 +99,18 @@ function studyCheck() {
 }
 
 
+/** B1 日志归档：工作台日志面板只显示最近 6 个月的日志，完整历史去档案馆看 */
+const visibleLog = computed(() => {
+  const months = state.settings.logArchiveMonths;
+  if (months <= 0 || !g.value) return state.log;
+  const cur = state.gameDate.slice(0, 7);
+  let y = Number(cur.slice(0, 4)), m = Number(cur.slice(5, 7));
+  m -= months;
+  while (m <= 0) { m += 12; y -= 1; }
+  const floor = `${y}-${String(m).padStart(2, '0')}`;
+  return state.log.filter((l) => l.date >= `${floor}-01`);
+});
+
 function endFrame() {
   if (!g.value) return;
   const n = advanceFrame();
@@ -224,12 +236,15 @@ function openPromotion() {
       </div>
     </section>
 
-    <!-- 右下：日志 -->
+    <!-- 右下：日志（最近 N 个月，B1 完整历史走「档案」页） -->
     <section class="panel logs">
-      <div class="head"><h3>日志</h3></div>
+      <div class="head">
+        <h3>日志</h3>
+        <button class="archive-btn" @click="state.screen = 'archive'" title="查看完整历史日志（按年月归档）">📜 档案馆</button>
+      </div>
       <div class="log-list">
-        <p v-for="(l, i) in state.log" :key="i"><span class="dim">{{ l.date }}</span> {{ l.text }}</p>
-        <p v-if="state.log.length === 0" class="dim">暂无日志。</p>
+        <p v-for="(l, i) in visibleLog" :key="i"><span class="dim">{{ l.date }}</span> {{ l.text }}</p>
+        <p v-if="visibleLog.length === 0" class="dim">暂无日志。</p>
       </div>
     </section>
   </div>
@@ -296,4 +311,6 @@ h3 { font-size: 15px; }
 
 
 .log-list { flex: 1; overflow-y: auto; line-height: 1.9; font-size: 13px; }
+.archive-btn { font-size: 12px; padding: 3px 10px; border-color: var(--accent2); color: #c9b8ff; background: transparent; }
+.archive-btn:hover { background: rgba(124, 92, 255, 0.12); }
 </style>

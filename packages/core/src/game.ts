@@ -25,6 +25,10 @@ export interface GameUIHooks {
   onNews?: (n: { date: IsoDate; title: string; body: string }) => void;
   onEvent?: (ev: { date: IsoDate; title: string; body: string }) => void;
   onRelease?: (r: { date: IsoDate; name: string; actual: number; expect: number; beat: boolean }) => void;
+  /** A3 月结钩子：本月新转介绍/流失预警客户 id（UI 层入预约队列） */
+  onMonthClients?: (p: { referrals: string[]; warnings: string[] }) => void;
+  /** D2 跨年钩子：进入新年时触发（UI 层弹年度总结报告） */
+  onYearTurn?: (year: number) => void;
 }
 
 /**
@@ -222,6 +226,8 @@ export class Game {
       // 月切换时重置 KPI
       const prev = this.cal.at(Math.max(0, this.sim.cursor - 2));
       if (prev && prev.slice(0, 7) !== snap.date.slice(0, 7)) {
+        // D2 跨年钩子（先于月结：报告的是刚结束的那一年）
+        if (prev.slice(0, 4) !== snap.date.slice(0, 4)) this.hooks.onYearTurn?.(Number(snap.date.slice(0, 4)));
         this.rollMonth(snap);
       }
     }
@@ -373,9 +379,7 @@ export class Game {
     const notes: string[] = [];
     for (const c of this.clients) {
       if (c.holdings.length === 0 || c.status !== 'active') continue;
-      const pv = this.clientPortfolioValue(c.id);
-      const cost = c.holdings.reduce((s: number, h) => s + h.amount, 0);
-      const pnlPct = cost > 0 ? (pv / cost - 1) * 100 : 0;
+      const pnlPct = this.clientPnlPct(c);
       const before = c.trust;
       if (pnlPct < -5) {
         c.trust = Math.max(0, c.trust + Math.max(-4, pnlPct / 8));
@@ -385,12 +389,62 @@ export class Game {
         if (c.trust - before > 1) notes.push(`${c.name} 对收益很满意，介绍朋友来网点（信任 +${(c.trust - before).toFixed(0)}）。`);
       }
     }
+    // A2 流失预警：浮亏大 + 信任跌破 30 的持仓客户 → 进入 risk 列表（外拓拜访/售后可挽留）
+    for (const c of this.clients) {
+      if (c.status !== 'active' || c.holdings.length === 0) continue;
+      const key = `risk_${c.id}`;
+      if (c.trust < 30 && this.clientPnlPct(c) < -10) {
+        if (!this.monthClientFlags.has(key)) {
+          this.monthClientFlags.add(key);
+          this.lastWarningIds.push(c.id);
+          this.log.push({ date: snap.date, text: `【流失预警】${c.name} 浮亏 ${this.clientPnlPct(c).toFixed(1)}%、信任仅 ${Math.round(c.trust)}——再不维护就要走了。拜访或妥善处理售后可挽回。` });
+        }
+      } else if (c.trust >= 40) {
+        this.monthClientFlags.delete(key); // 解除预警
+      }
+    }
+    // A2 流失结算：预警客户信任跌破 15 → dormant（可召回）；随机事件/岁月迁居已有独立通道
+    for (const c of this.clients) {
+      if (c.status !== 'active' || c.holdings.length === 0) continue;
+      if (c.trust < 15 && this.clientPnlPct(c) < -15 && this.rng.chance(0.5)) {
+        c.status = 'dormant';
+        this.stats.lostClients += 1;
+        this.log.push({ date: snap.date, text: `【客户流失】${c.name} 对持仓表现彻底失望，把资产转去了别家（转入休眠）。持续回访与一次像样的归因谈话，或许能请回来。` });
+      }
+    }
+    // A1 转介绍：浮盈客户 + 信任 ≥70 → 概率带来新客户（信任与满意度的复利）。
+    // 门槛：本月需有成交动作（monthDeals>0）或本月有接待服务（monthReceptions>0），纯躺平不触发。
+    for (const c of this.clients) {
+      if (c.status !== 'active' || c.holdings.length === 0) continue;
+      if (c.trust >= 70 && this.clientPnlPct(c) > 5 && this.rng.chance(0.18 + c.trust / 500) && (this.monthDeals > 0 || this.monthReceptions > 0)) {
+        this.spawnReferral(c, snap);
+        break; // 每月至多 1 位转介绍
+      }
+    }
+    // A2 召回结算：dormant 客户信任维持 45+（召回行动拉回）→ 复活，资产回流
+    for (const c of this.clients) {
+      if (c.status === 'dormant' && c.trust >= 45 && !c.id.startsWith('cli_heir_')) {
+        c.status = 'active';
+        this.stats.reactivated += 1;
+        this.log.push({ date: snap.date, text: `【客户回归】${c.name} 又走进了网点：「别家服务也就那样，还是你靠谱。」资产回流（生涯召回第 ${this.stats.reactivated} 位）。` });
+      }
+    }
     // 资金再平衡：客户月度工资/经营现金流回补可投资池（现实中的持续流入），高信任客户每月有新增资金
     for (const c of this.clients) {
       if (c.status !== 'active') continue;
       const inflow = (c.finance.annual_cashflow / 12) * (0.5 + c.trust / 200);
       c.finance.deposits += inflow;
     }
+    // 年度快照（D2 年度总结报告数据源）：12 月末记下本年横截面
+    if (m === 12) this.recordYearly(y);
+  /** 月度缓冲清零 */
+  this.monthDeals = 0;
+  this.monthReceptions = 0;
+  this.monthClientFlags.clear();
+  // A3 钩子：把转介绍/流失预警客户放进下月预约队列（UI 层实现展示）
+  this.hooks.onMonthClients?.({ referrals: this.lastReferralIds, warnings: this.lastWarningIds });
+  this.lastReferralIds = [];
+  this.lastWarningIds = [];
     // KPI 评级与绩效（用上月完成度评级）
     const score = monthlyKpiScore(prevKpi);
     const grade = kpiGradeName(score);
@@ -435,8 +489,7 @@ export class Game {
   }
 
   /** 高龄核心客户退场检视（规划 6.2 世代交替的触发端） */
-  private retireElderly(year: number, snap: MarketSnapshot) {
-    for (const c of this.clients) {
+  private retireElderly(year: number, snap: MarketSnapshot) {    for (const c of this.clients) {
       if (c.id.startsWith('cli_gen_') || c.id.startsWith('cli_heir_') || c.status !== 'active') continue;
       const age = c.age_2006 + (year - 2006);
       if (age >= 80 && this.rng.chance(0.25)) {
@@ -446,10 +499,107 @@ export class Game {
     }
   }
 
+  /** 测试钩子：直接触发一次月结生命周期（流失预警/流失/召回/转介绍），不推进日历 */
+  rollMonthForTest(_hint?: unknown) {
+    const snap = this.lastSnap ?? this.sim.stepToNext();
+    this.lastSnap = snap;
+    this.rollMonth(snap);
+  }
+
+  /** 测试钩子：直接记录年度快照 */
+  recordYearlyForTest(y: number) {
+    this.recordYearly(y);
+  }
+
   /** 近 6 月平均考核分（晋升用） */
   recentSeasonScore(): number {
     if (this.monthScores.length === 0) return 0;
     return this.monthScores.reduce((a, b) => a + b, 0) / this.monthScores.length;
+  }
+
+  /** 客户持仓浮动盈亏（%，A1/A2 共用口径：现值/成本 - 1） */
+  clientPnlPct(c: (typeof this.clients)[number]): number {
+    if (c.holdings.length === 0) return 0;
+    const pv = this.clientPortfolioValue(c.id);
+    const cost = c.holdings.reduce((s: number, h) => s + h.amount, 0);
+    return cost > 0 ? (pv / cost - 1) * 100 : 0;
+  }
+
+  /** A1 转介绍：满意的老客户带来亲友成为新客户（信任驱动获客的第二引擎） */
+  private spawnReferral(from: (typeof this.clients)[number], snap: MarketSnapshot) {
+    const tierRoll = this.rng.next();
+    // 转介绍客户与介绍人同层级或低一级（物以类聚）
+    const tier: 'mass' | 'wealth' | 'vip' | 'private' =
+      from.tier === 'private' ? (tierRoll < 0.4 ? 'private' : 'vip')
+        : from.tier === 'vip' ? (tierRoll < 0.4 ? 'vip' : 'wealth')
+          : from.tier === 'wealth' ? (tierRoll < 0.35 ? 'wealth' : 'mass')
+            : 'mass';
+    const depositsBase = tier === 'mass' ? this.rng.range(8, 60) : tier === 'wealth' ? this.rng.range(60, 300) : tier === 'vip' ? this.rng.range(300, 700) : this.rng.range(700, 2200);
+    const id = `cli_ref_${snap.date}_${Math.floor(this.rng.next() * 1e6)}`;
+    const name = this.rng.pick(GENERATED_NAMES) + (this.clients.filter((c) => c.id.startsWith('cli_gen') || c.id.startsWith('cli_ref')).length + 1);
+    this.clients.push({
+      id,
+      name,
+      age_2006: this.rng.int(26, 55),
+      occupation: this.rng.pick(['企业职员', '个体经营', '公务员', '医生', '教师', '自由职业', '工程师', '会计']),
+      tier,
+      risk: { level: (this.rng.int(1, Math.min(5, Math.max(2, from.risk.level))) as 1 | 2 | 3 | 4 | 5), tested_at: snap.date },
+      behaviors: ['referral'],
+      finance: {
+        deposits: Math.round(depositsBase * 10000),
+        wealth_mgmt: 0, funds: 0, insurance: 0, loans: 0,
+        annual_cashflow: Math.round(depositsBase * 10000 * this.rng.range(0.2, 0.5)),
+      },
+      family: `${from.name}介绍的朋友`,
+      trust: Math.min(75, Math.round(from.trust * 0.55 + 15)), // 世交信任：介绍人信任的映射
+      teach_tags: ['referral', 'trust_compound'],
+      holdings: [],
+      status: 'active',
+    });
+    this.stats.referrals += 1;
+    from.trust = Math.min(100, from.trust + 2); // 介绍成功，介绍人也有面子
+    this.lastReferralIds.push(id);
+    this.log.push({ date: snap.date, text: `【转介绍】${from.name} 把老同学${name}介绍给了你：「我这两年的收益他都知道，你给他也参谋参谋。」（生涯转介绍第 ${this.stats.referrals} 位，初始信任 ${Math.min(75, Math.round(from.trust * 0.55 + 15))}）。` });
+  }
+
+  /** D2 年度快照：12 月末记录当年横截面（年度总结报告数据源） */
+  private recordYearly(y: number) {
+    const active = this.clients.filter((c) => c.status === 'active');
+    const avgTrust = active.length ? active.reduce((s, c) => s + c.trust, 0) / active.length : 0;
+    const idx300 = this.lastSnap?.indices['idx_300'] ?? 0;
+    const prev = this.stats.yearly[String(y - 1)];
+    this.stats.yearly[String(y)] = {
+      aum: Math.round(this.player.aum),
+      grade: this.player.grade,
+      deals: this.stats.deals,
+      dealAmount: Math.round(this.stats.dealAmount),
+      clients: active.length,
+      avgTrust: Math.round(avgTrust),
+      violations: this.violations,
+      certs: this.player.certs.length,
+      score: Math.round(this.recentSeasonScore()),
+      referrals: this.stats.referrals,
+      lost: this.stats.lostClients,
+      peakIndex: Math.round(idx300),
+    };
+    void prev;
+  }
+
+  /** D2 年度总结：跨年时（1 月初）弹出上一年的数据报告 */
+  annualReportFor(year: number): { year: number; lines: string[] } | null {
+    const d = this.stats.yearly[String(year)];
+    if (!d) return null;
+    const prev = this.stats.yearly[String(year - 1)];
+    const aumDelta = prev ? d.aum - prev.aum : d.aum;
+    const lines = [
+      `${year} 年收官：`,
+      `· AUM ${fmtMoney(d.aum)}${prev ? `（较上年 ${aumDelta >= 0 ? '+' : ''}${fmtMoney(Math.abs(aumDelta))}${aumDelta < 0 ? '-' : ''}）` : ''}`,
+      `· 全年成交 ${d.deals - (prev?.deals ?? 0)} 笔 / ${fmtMoney(Math.max(0, d.dealAmount - (prev?.dealAmount ?? 0)))}`,
+      `· 服务客户 ${d.clients} 位，平均信任 ${d.avgTrust}`,
+      `· 转介绍 ${d.referrals - (prev?.referrals ?? 0)} 位 · 流失 ${d.lost - (prev?.lost ?? 0)} 位`,
+      `· 证书 ${d.certs} 张 · 违规 ${d.violations} 次 · 近季考核 ${d.score} 分`,
+    ];
+    return { year, lines };
   }
 
   /**
@@ -494,6 +644,13 @@ export class Game {
   }
   /** 已触发过继承的核心客户 id */
   private heirsSpawned = new Set<string>();
+  /** 服务过的去重客户 id（生涯统计口径） */
+  private servedClients = new Set<string>();
+  /** 本月浮盈转介绍/流失预警日志去重（防同月重复刷屏） */
+  private monthClientFlags = new Set<string>();
+  /** 本月新增的转介绍客户 id / 流失预警客户 id（月结后交给 UI 入预约队列） */
+  lastReferralIds: string[] = [];
+  lastWarningIds: string[] = [];
 
   monthScores: number[] = [];
   violations = 0;
@@ -509,6 +666,12 @@ export class Game {
   teamEvents: TeamEvent[] = [];
   /** 本年辅导投入等级 0-3（团队面板设置） */
   coachLevel = 0;
+  /** 生涯累计统计（A0：转介绍/流失/年度报告/成就的统一数据底座） */
+  stats: CareerStats = emptyCareerStats();
+  /** 每月成交笔数缓冲（月末清零，转介绍/挽留概率计算用） */
+  monthDeals = 0;
+  /** 每月接待行动次数缓冲（服务密度口径） */
+  monthReceptions = 0;
 
   /** 贵宾客户数：金融资产 ≥ 50 万 */
   vipClientCount(): number {
@@ -562,6 +725,7 @@ export class Game {
     const a = this.player.attrs;
     switch (type) {
       case 'reception':
+        this.monthReceptions += 1;
         return this.actReception();
       case 'lobby': {
         a.fame += 0.5;
@@ -569,23 +733,29 @@ export class Game {
         return { text: '你在厅堂迎接分流，认识了几位新面孔，知名度小幅提升。' };
       }
       case 'outreach': {
-        const c = this.pickClient();
+        // A2：优先拜访流失预警客户（挽留优先于一般维护）
+        const risky = this.clients.filter((c) => c.status === 'active' && c.holdings.length > 0 && c.trust < 30);
+        const c = risky.length > 0 && this.rng.chance(0.6) ? this.rng.pick(risky) : this.pickClient();
         if (!c) return { text: '今天没有可以拜访的客户。' };
         const t = Math.round(this.rng.range(2, 5) + a.comm / 40);
         c.trust = Math.min(100, c.trust + t);
         a.comm += 0.5;
         a.stress += 2;
-        return { text: `你拜访了 ${c.name}，聊得很投机，信任 +${t}。`, trust_delta: t };
+        this.monthClientFlags.delete(`risk_${c.id}`);
+        const tag = risky.includes(c) ? '（流失预警客户，这次拜访很关键）' : '';
+        return { text: `你拜访了 ${c.name}，聊得很投机，信任 +${t}。${tag}`, trust_delta: t };
       }
       case 'study': {
         const g = Math.round(this.rng.range(1, 3));
         a.pro += g * 0.5;
         a.stress += 2;
+        this.stats.studyActions += 1;
         return { text: `你学习了金融知识并刷了一套题，专业力 +${(g * 0.5).toFixed(1)}。`, pro_delta: g * 0.5 };
       }
       case 'review': {
         a.pro += 1;
         a.stress += 1;
+        this.stats.reviews += 1;
         return { text: '你复盘了近期行情走势，对市场理解更深了。', pro_delta: 1 };
       }
       case 'aftersale': {
@@ -595,6 +765,8 @@ export class Game {
         if (ok) {
           c.trust = Math.min(100, c.trust + 3);
           a.stress += 1;
+          // A2 流失预警解除：售后妥善处理 = 一次有效挽回
+          this.monthClientFlags.delete(`risk_${c.id}`);
           return { text: `你妥善处理了 ${c.name} 的售后问题，客户很满意。`, trust_delta: 3 };
         }
         a.stress += 3;
@@ -738,6 +910,13 @@ export class Game {
     this.player.aum += amount;
     c.trust = Math.min(100, c.trust + 5);
     aumGainBuffer.push(amount);
+    // 生涯统计（A0）：成交笔数/金额/单笔最大/峰值 AUM/服务客户去重
+    this.stats.deals += 1;
+    this.stats.dealAmount += amount;
+    if (amount > this.stats.biggestDeal) this.stats.biggestDeal = amount;
+    if (this.player.aum > this.stats.peakAum) this.stats.peakAum = this.player.aum;
+    if (!this.servedClients.has(c.id)) { this.servedClients.add(c.id); this.stats.clientsServed = this.servedClients.size; }
+    this.monthDeals += 1;
     if (p.category === 'deposit') this.kpi.deposit_done += amount;
     else if (p.category === 'wealth_mgmt') this.kpi.wm_done += amount;
     else if (p.category === 'fund') this.kpi.fund_done += amount;
@@ -762,6 +941,46 @@ function inEra(p: ProductDef, date: IsoDate): boolean {
 
 /** 月度新增 AUM 累计（供薪资绩效） */
 export const aumGainBuffer: number[] = [];
+
+/** 生涯累计统计（结局档案/年度报告/成就的数据底座；随存档持久化） */
+export interface CareerStats {
+  /** 累计成交笔数（executeDeal 成功口径） */
+  deals: number;
+  /** 累计成交金额 */
+  dealAmount: number;
+  /** 单笔最大成交 */
+  biggestDeal: number;
+  /** 陪客户穿越牛熊：持仓客户单年最大浮亏容忍后未赎回（年度报告用，预留） */
+  yearsSurvived: number;
+  /** 转介绍来的新客户数 */
+  referrals: number;
+  /** 流失客户数（lost） */
+  lostClients: number;
+  /** 召回客户数（dormant/lost → active） */
+  reactivated: number;
+  /** 历史最高 AUM */
+  peakAum: number;
+  /** 陪伴客户数：服务过的去重客户数 */
+  clientsServed: number;
+  /** 学习行动累计次数 */
+  studyActions: number;
+  /** 复盘行情累计次数 */
+  reviews: number;
+  /** 每年关键数据快照（年度总结报告用）：year -> snapshot */
+  yearly: Record<string, {
+    aum: number; grade: number; deals: number; dealAmount: number;
+    clients: number; avgTrust: number; violations: number; certs: number;
+    score: number; referrals: number; lost: number; peakIndex: number;
+  }>;
+}
+
+export function emptyCareerStats(): CareerStats {
+  return {
+    deals: 0, dealAmount: 0, biggestDeal: 0, yearsSurvived: 0, referrals: 0,
+    lostClients: 0, reactivated: 0, peakAum: 0, clientsServed: 0,
+    studyActions: 0, reviews: 0, yearly: {},
+  };
+}
 
 /** 随机生成客户的姓氏池 */
 const GENERATED_NAMES = ['张', '王', '李', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', '罗'];

@@ -24,20 +24,11 @@ export function recordEnding(id: string) {
 /** 采集当前生涯快照 */
 function collectSnapshot(): AchievementSnapshot {
   const g = getGame();
-  let biggestDeal = 0;
-  let totalDeals = 0;
-  let studyActions = 0;
+  // B3：成交数据改为读引擎生涯统计（stats 精确口径），日志文本解析只做旧档兜底
+  const st = g.stats;
+  let studyActions = st.studyActions;
   for (const l of state.log) {
-    if (l.text.includes('成功成交')) {
-      totalDeals += 1;
-      const m = l.text.match(/成交 ([\d,.]+(?: 万| 亿)?)/);
-      if (m) {
-        const raw = m[1].replace(/,/g, '');
-        const v = raw.includes('亿') ? parseFloat(raw) * 100000000 : raw.includes('万') ? parseFloat(raw) * 10000 : parseFloat(raw);
-        if (isFinite(v)) biggestDeal = Math.max(biggestDeal, v);
-      }
-    }
-    if (l.text.includes('学习')) studyActions += 1;
+    if (l.text.includes('学习')) studyActions += 0; // studyActions 已由 doAction 精确累计
   }
   const qe = state.questEngine;
   const questsDone = qe ? [1, 2, 3, 4, 5].reduce((a, v) => a + qe.volumeProgress(v).done, 0) : 0;
@@ -46,8 +37,8 @@ function collectSnapshot(): AchievementSnapshot {
   const startYm = 200601;
   const months = Math.max(0, (Math.floor(ym / 100) - 2006) * 12 + (ym % 100) - 1);
   return {
-    biggestDeal,
-    totalDeals,
+    biggestDeal: st.biggestDeal,
+    totalDeals: st.deals,
     maxGrade: g.player.grade,
     aum: g.player.aum,
     certs: g.player.certs.length,
@@ -59,6 +50,10 @@ function collectSnapshot(): AchievementSnapshot {
     months,
     playthrough: state.playthrough,
     endingsSeen: endingsSeen(),
+    referrals: st.referrals,
+    reactivated: st.reactivated,
+    clientsServed: st.clientsServed,
+    dealAmount: st.dealAmount,
   };
 }
 

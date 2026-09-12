@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper } from '../state';
+import { state, gameReady, getGame, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper, startWrongRedo, redoAnswerSingle, redoToggleMulti, redoCheck, redoNext, quitRedo, redoHistory } from '../state';
 import { storage } from '../storage';
 import { EXAM_DEFS } from '@fm/core';
 
@@ -22,9 +22,73 @@ const daily = computed(() => dailyQuestion());
 const dailyAnswer = ref<number | null>(null);
 const dailyFeedback = ref('');
 
+/** C1 错题重练 */
+const redoMsg = ref('');
+const rs = computed(() => state.redoSession);
+const redoQ = computed(() => rs.value?.questions[rs.value.idx]);
+const redoTotal = computed(() => rs.value?.questions.length ?? 0);
+/** C2 考试历史 + 重练历史 */
+const history = ref<ReturnType<typeof import('../lms').examHistory>>([]);
+const historyOpen = ref(false);
+const rehist = ref(redoHistory());
+
+function openHistory() {
+  rehist.value = redoHistory();
+  import('../lms').then((m) => { history.value = m.examHistory(); historyOpen.value = !historyOpen.value; });
+}
+
 function refreshWrong() {
   wrongList.value = wrongBook();
+  rehist.value = redoHistory();
 }
+
+/** 错题数响应式：押题池版本号变化/页面切换时同步（wrongList ref 初始为 0 的兜底） */
+const wrongCount = computed(() => {
+  void lastPracticePaper()?.wrongCount; // 建立对最近一套卷的依赖（交卷后错题本必更新）
+  return wrongBook().length;
+});
+
+function beginRedo() {
+  // startWrongRedo 读的是即时 storage；重练计数用响应式 wrongCount，无需预刷新
+  redoMsg.value = startWrongRedo();
+  refreshWrong();
+  setTimeout(() => (redoMsg.value = ''), 3500);
+}
+
+function redoPicked(oi: number): boolean {
+  const s = rs.value;
+  if (!s) return false;
+  const a = s.answers[s.idx];
+  return Array.isArray(a) ? a.includes(oi) : a === oi;
+}
+function redoRight(oi: number): boolean {
+  const s = rs.value;
+  if (!s || !s.checked[s.idx]) return false;
+  const qq = s.questions[s.idx];
+  return qq.type === 'multiple' ? (qq.answer as number[]).includes(oi) : qq.answer === oi;
+}
+function redoWrong(oi: number): boolean {
+  const s = rs.value;
+  if (!s || !s.checked[s.idx] || s.correct[s.idx]) return false;
+  const a = s.answers[s.idx];
+  return Array.isArray(a) ? a.includes(oi) : a === oi;
+}
+const redoFeedback = computed(() => {
+  const s = rs.value;
+  if (!s || !s.checked[s.idx]) return '';
+  const qq = s.questions[s.idx];
+  return s.correct[s.idx]
+    ? `✓ 答对了！解析：${qq.explanation}`
+    : `✗ 答错了，正确答案：${formatAnswer(qq)}。解析：${qq.explanation}`;
+});
+const redoAnswered = computed(() => {
+  const s = rs.value;
+  if (!s) return false;
+  const a = s.answers[s.idx];
+  return Array.isArray(a) ? a.length > 0 : a >= 0;
+});
+
+function redoJump(i: number) { if (rs.value && !rs.value.finished) rs.value.idx = i; }
 
 function submitDaily() {
   if (daily.value && dailyAnswer.value !== null) {
@@ -123,10 +187,58 @@ function formatAnswer(qv: { type: string; answer: number | number[] }): string {
       </div>
 
       <div class="tools">
-        <button @click="showWrong = !showWrong; refreshWrong()">错题本（{{ wrongList.length }}）</button>
+        <button @click="showWrong = !showWrong; refreshWrong()">错题本（{{ wrongCount }}）</button>
+        <button class="ghost-btn" :disabled="wrongCount === 0" @click="beginRedo" title="从错题本组卷（至多 10 题）重做，即时反馈；全对即从错题本毕业">重练错题</button>
         <button :disabled="state.apUsed >= state.apMax" @click="doCram" title="消耗 1 AP：下一次正式考试会把考前最后做的一套卷中 20% 错题押进考卷（规划书 7.5）">考前冲刺（1 AP）</button>
+        <button @click="openHistory" title="历次正式考成绩与重练记录">历史成绩</button>
         <span v-if="cramActive()" class="gold" title="押题 buff：下一次正式考试的卷子里，会带上考前最后做的一套卷中 20% 的错题">✦ 押题 buff 生效中（下次正式考试押中最近一套卷 20% 错题）</span>
         <span v-if="lastPaper" class="dim" title="冲刺押题的数据来源">押题池：{{ lastPaper.label }}（{{ lastPaper.wrongCount }} 道错题）</span>
+      </div>
+
+      <p v-if="redoMsg" class="gold">{{ redoMsg }}</p>
+
+      <!-- C1 错题重练界面（覆盖在列表之上） -->
+      <div v-if="rs && !rs.finished" class="redo-taking">
+        <div class="exam-head">
+          <b>错题重练<span class="mode-tag practice">第 {{ rs.idx + 1 }} / {{ redoTotal }} 题</span></b>
+          <button class="ghost-btn" @click="quitRedo">放弃</button>
+        </div>
+        <p class="stem">{{ redoQ!.stem }}</p>
+        <div class="opts">
+          <button
+            v-for="(opt, oi) in redoQ!.options" :key="oi"
+            class="opt"
+            :class="{
+              picked: redoPicked(oi),
+              right: redoRight(oi),
+              wrong: redoWrong(oi),
+            }"
+            @click="redoQ!.type === 'multiple' ? redoToggleMulti(rs!.idx, oi) : redoAnswerSingle(rs!.idx, oi)"
+          >{{ String.fromCharCode(65 + oi) }}. {{ opt }}</button>
+        </div>
+        <p v-if="redoFeedback" class="p-feedback" :class="rs.correct[rs.idx] ? 'ok' : 'no'">{{ redoFeedback }}</p>
+        <div class="redo-foot">
+          <button v-if="!rs.checked[rs.idx]" class="primary" :disabled="!redoAnswered" @click="redoCheck()">核对本题</button>
+          <button v-else class="primary" @click="redoNext">{{ rs.idx < redoTotal - 1 ? '下一题' : '收卷' }}</button>
+          <span class="dim">做对 {{ rs.correct.filter(Boolean).length }} / {{ redoTotal }}</span>
+        </div>
+      </div>
+      <div v-else-if="rs?.finished" class="redo-done">
+        <h4>重练完成 ✓</h4>
+        <p>成绩：{{ rs.correct.filter(Boolean).length }} / {{ redoTotal }}。<span v-if="rs.correct.filter(Boolean).length === redoTotal" class="gold">全对！这批题已从错题本毕业。</span><span v-else class="dim">做错的题留在错题本里，下次再战。</span></p>
+        <button class="ghost-btn" @click="quitRedo">关闭</button>
+      </div>
+
+      <!-- C2 历史成绩 -->
+      <div v-if="historyOpen" class="wrong-book">
+        <div class="head"><h4>历史成绩（正式考 + 错题重练）</h4></div>
+        <div v-for="(h, i) in history" :key="'h' + i" class="wrong-item">
+          <p class="stem"><span class="dim">{{ h.at }}</span> {{ h.examName }} — <b :class="h.passed ? 'down' : 'up'">{{ h.scorePct.toFixed(1) }} 分 {{ h.passed ? '通过 ✓' : '未过' }}</b></p>
+        </div>
+        <div v-for="(r, i) in rehist" :key="'r' + i" class="wrong-item">
+          <p class="stem"><span class="dim">{{ r.at }}</span> 错题重练 — {{ r.right }}/{{ r.total }} 题</p>
+        </div>
+        <p v-if="history.length === 0 && rehist.length === 0" class="dim">还没有考试与重练记录。</p>
       </div>
 
       <!-- 弱项雷达 -->
@@ -262,7 +374,12 @@ h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .daily-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
 .daily-opts .opt { padding: 6px 10px; font-size: 12px; text-align: left; }
 .daily-opts .opt.picked { border-color: var(--accent); background: rgba(79, 140, 255, 0.15); }
-.tools { margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.tools { margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* C1 错题重练 */
+.redo-taking { background: var(--bg2); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+.redo-taking .exam-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 10px; }
+.redo-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.redo-done { background: var(--bg2); border: 1px dashed var(--down); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; line-height: 1.8; }
 .radar { background: var(--bg2); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
 .radar h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .radar-row { display: grid; grid-template-columns: 150px 1fr 30px; align-items: center; gap: 8px; margin: 4px 0; }

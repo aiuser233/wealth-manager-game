@@ -145,6 +145,18 @@ export class Reception {
     const pool = clients.filter((c) => (c.status ?? 'active') === 'active');
     if (pool.length === 0) return null;
     const c = this.rng.pick(pool);
+    return this.openWith(c);
+  }
+
+  /** A3 预约到访：指定客户开局（预约队列消费时用；客户不存在/休眠返回 null） */
+  startFor(clients: Array<ClientDef & { status?: string }>, clientId: string): ReceptionSession | null {
+    const c = clients.find((x) => x.id === clientId && (x.status ?? 'active') === 'active');
+    if (!c) return null;
+    return this.openWith(c);
+  }
+
+  /** 共用：对指定客户掷需求并生成会话 */
+  private openWith(c: ClientDef & { status?: string }): ReceptionSession {
     const need = this.rng.pick(NEED_POOL);
     const fin = c.finance;
     const investable = (fin.deposits + fin.wealth_mgmt + fin.funds) * 0.4 + fin.annual_cashflow * 0.3;

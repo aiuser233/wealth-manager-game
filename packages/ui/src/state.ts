@@ -6,6 +6,7 @@ import {
   type QuestDef, type LifeLineDef, judgeEnding, ENDINGS,
   type EndingId, type EndingInput, ACTION_NAMES,
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
+  emptyCareerStats as emptyStats, type CareerStats,
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
@@ -37,7 +38,7 @@ export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 const cal = new GameCalendar('2006-01-02', '2025-12-31');
 
 export const state = reactive({
-  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'trainer' | 'lecturer' | 'team' | 'ach',
+  screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'archive' | 'trainer' | 'lecturer' | 'team' | 'ach',
   started: false,
   seed: 42,
   playerSeedText: '',
@@ -103,6 +104,9 @@ export const state = reactive({
   /** 学习刷题：当前题（来自题库） */
   studyQuestion: null as null | { q: ExamQuestion; picked: null | number | number[]; checked: boolean; correct: boolean },
 
+  /** C1 错题重练会话 */
+  redoSession: null as null | RedoSession,
+
   /** 结局闭环 v0：卷一结束的三维阶段评语 */
   volumeReview: null as null | { headline: string; lines: string[]; grades: Array<{ dim: string; grade: string; comment: string }> },
 
@@ -114,6 +118,25 @@ export const state = reactive({
   ngPlusUnlocked: false,
   /** 二周目关键事件漂移：eventId -> 实际触发日期（仅 NG+ 局使用） */
   eventShifts: null as null | Record<string, IsoDate>,
+
+  /** D1 设置中心（持久化到 fm_settings，读档恢复） */
+  settings: {
+    autoSaveEnabled: true,   // 自动存档开关（关掉后仅结算/事件时存）
+    autoSaveMinutes: 10,     // 自动存档间隔（分钟）
+    logArchiveMonths: 6,     // 工作台日志只显示最近 N 个月（0=全部）
+  } as { autoSaveEnabled: boolean; autoSaveMinutes: number; logArchiveMonths: number },
+
+  /** A3 预约队列：本月到访预约（接待行动时优先消费） */
+  appointments: [] as Array<{
+    id: string; clientId: string; clientName: string; month: string;
+    reason: string; from: 'referral' | 'warning' | 'manual' | 'life';
+  }>,
+
+  /** A3/B2 客户档案页的操作反馈消息 */
+  clientMsg: '' as string,
+
+  /** D2 年度总结报告弹窗（跨年首日弹出一次） */
+  annualReport: null as null | { year: number; lines: string[] },
 });
 
 let game: Game;
@@ -136,6 +159,25 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   game.player.name = name || '林奇安';
   game.player.gender = gender;
   game.hooks.onNews = (n) => state.news.unshift(n);
+  // A3：月结后把转介绍/流失预警客户放进预约队列
+  game.hooks.onMonthClients = ({ referrals, warnings }) => {
+    for (const id of referrals) {
+      const c = game.clients.find((x) => x.id === id);
+      if (c) enqueueAppointment({ clientId: id, clientName: c.name, reason: '初次见面：听听朋友口中的理财经理', from: 'referral' });
+    }
+    for (const id of warnings) {
+      const c = game.clients.find((x) => x.id === id);
+      if (c) enqueueAppointment({ clientId: id, clientName: c.name, reason: '持仓安抚：对近期波动有疑问', from: 'warning' });
+    }
+  };
+  // D2：跨年弹出上一年度总结报告
+  game.hooks.onYearTurn = (year) => {
+    const rep = game.annualReportFor(year - 1);
+    if (rep) {
+      state.annualReport = rep;
+      pushLog(`【年度总结】${year - 1} 年收官，年度报告已生成。`);
+    }
+  };
   game.hooks.onRelease = (r) => {
     const def = contentBundle.releases.find((x) => x.name === r.name);
     state.news.unshift({
@@ -148,6 +190,9 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   state.news = [];
   state.newsSeen = 0;
   state.log = [];
+  state.annualReport = null;
+  state.appointments = [];
+  loadSettings();
   state.todayActions = [];
   state.apUsed = 0;
   state.lastSnap = null;
@@ -179,9 +224,10 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
 
 /** 自动档槽位（唯一），手动档槽位 1-3 */
 export const AUTO_SAVE_SLOT = 0;
-export const MANUAL_SLOTS = [1, 2, 3] as const;
-/** 自动存档间隔：10 分钟 */
+export const MANUAL_SLOTS = [1, 2, 3] as const;/** 自动存档间隔：10 分钟 */
+/** 自动存档间隔（分钟）的默认值；实际间隔由 state.settings.autoSaveMinutes 控制（D1 设置中心可调） */
 const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000;
+void AUTO_SAVE_INTERVAL_MS;
 let autoSaveTimer: ReturnType<typeof setInterval> | 0 = 0;
 
 /** 写自动档并启动轮转计时（新开局/读档后都会调用） */
@@ -190,13 +236,30 @@ export function autoSave() {
   startAutoSaveTimer();
 }
 
-/** 自动存档计时器：每 10 分钟覆盖一次自动档（只在本局游戏进行中） */
+/** 自动存档计时器：按设置间隔覆盖自动档（只在本局游戏进行中；设置关闭时不轮转） */
 export function startAutoSaveTimer() {
   if (autoSaveTimer) clearInterval(autoSaveTimer);
+  if (!state.settings.autoSaveEnabled) return;
+  const ms = Math.max(1, state.settings.autoSaveMinutes) * 60 * 1000;
   autoSaveTimer = setInterval(() => {
-    if (!state.started || state.ending) return;
+    if (!state.started || state.ending || !state.settings.autoSaveEnabled) return;
     storage.set(`fm_save_${AUTO_SAVE_SLOT}`, serializeNow());
-  }, AUTO_SAVE_INTERVAL_MS);
+  }, ms);
+}
+
+/** D1 设置中心：保存设置并让计时器立即生效 */
+export function saveSettings(patch?: Partial<typeof state.settings>) {
+  if (patch) Object.assign(state.settings, patch);
+  storage.set('fm_settings', JSON.stringify(state.settings));
+  startAutoSaveTimer();
+}
+
+/** 启动/读档时恢复设置 */
+export function loadSettings() {
+  const raw = storage.get('fm_settings');
+  if (raw) {
+    try { Object.assign(state.settings, JSON.parse(raw)); } catch { /* 忽略损坏设置 */ }
+  }
 }
 
 /** 停止自动存档计时（结局后/返回主界面用） */
@@ -256,6 +319,13 @@ export function serializeNow(): string {
     receptionLog: state.reception ? state.receptionLog : [],
     receptionRevealed: state.receptionRevealed,
     receptionAmount: state.reception ? state.receptionAmount : 0,
+    /** A0 生涯统计（转介绍/流失/年度报告底座） */
+    stats: g.stats,
+    statsServed: [...(g as any).servedClients ?? []],
+    /** A3 预约队列 */
+    appointments: state.appointments,
+    /** D1 设置 */
+    settings: { ...state.settings },
     /** 考试进行态 */
     exam: state.examScreen === 'taking' && state.examPaper
       ? { paper: state.examPaper, answers: state.examAnswers, idx: state.examIdx, secondsLeft: state.examSecondsLeft }
@@ -1122,6 +1192,16 @@ export interface WrongQuestion {
   knowledge_tags?: string[];
 }
 
+/** C1 错题重练会话类型（实现见下方「错题重练模式」段） */
+export interface RedoSession {
+  questions: ExamQuestion[];
+  answers: Array<number | number[]>;
+  idx: number;
+  checked: boolean[];
+  correct: boolean[];
+  finished: boolean;
+}
+
 /** 错题本（按 questionId 去重） */
 export function wrongBook(): WrongQuestion[] {
   const raw = storage.get('fm_wrong_book');
@@ -1151,12 +1231,123 @@ export function weakSpotRadar(): Array<{ tag: string; count: number }> {
   const book = wrongBook();
   const counter: Record<string, number> = {};
   for (const w of book) {
-    for (const t of w.knowledge_tags ?? []) counter[t] = (counter[t] ?? 0) + 1;
+    for (const t of w.knowledge_tags ?? []) counter[t] = (weak_counter(t, counter), counter[t]);
   }
   return Object.entries(counter)
     .map(([tag, count]) => ({ tag, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+}
+function weak_counter(tag: string, counter: Record<string, number>) {
+  counter[tag] = (counter[tag] ?? 0) + 1;
+}
+
+// ================= C1 错题重练模式 =================
+
+/** 重练会话：错题本组卷（至多 10 题，全题型），即时反馈 + 重做统计 */
+
+/** 开一场错题重练：从错题本抽题（questionId 反查题库原题） */
+export function startWrongRedo(limit = 10): string {
+  const book = wrongBook();
+  if (book.length === 0) return '错题本是空的，先去做一套练习/模考吧。';
+  const pool = [...examBankAll, ...packQuestions()];
+  const byId = new Map(pool.map((q) => [q.id, q]));
+  const qs: ExamQuestion[] = [];
+  for (const w of book) {
+    const q = byId.get(w.questionId);
+    if (q && !qs.some((x) => x.id === q.id)) qs.push(q);
+    if (qs.length >= limit) break;
+  }
+  if (qs.length === 0) return '错题本里的题目在题库中已不存在（题包更新），已自动跳过。试试清空错题本。';
+  state.redoSession = {
+    questions: qs,
+    answers: qs.map((q) => (q.type === 'multiple' ? [] : -1)),
+    idx: 0,
+    checked: qs.map(() => false),
+    correct: qs.map(() => false),
+    finished: false,
+  };
+  pushLog(`【错题重练】组卷 ${qs.length} 题（来自错题本），开始重做。`);
+  return `已组卷 ${qs.length} 题，开始重练。`;
+}
+
+export function redoAnswerSingle(idx: number, opt: number) {
+  const s = state.redoSession;
+  if (s && !s.checked[idx]) s.answers[idx] = opt;
+}
+export function redoToggleMulti(idx: number, opt: number) {
+  const s = state.redoSession;
+  if (!s || s.checked[idx]) return;
+  const cur = s.answers[idx];
+  const arr = Array.isArray(cur) ? [...cur] : [];
+  const pos = arr.indexOf(opt);
+  if (pos >= 0) arr.splice(pos, 1); else arr.push(opt);
+  s.answers[idx] = arr;
+}
+
+/** 核对当前题（即时反馈） */
+export function redoCheck(): boolean {
+  const s = state.redoSession;
+  if (!s) return false;
+  const q = s.questions[s.idx];
+  const ans = s.answers[s.idx];
+  let correct = false;
+  if (q.type === 'multiple') {
+    const right = [...(q.answer as number[])].sort();
+    const given = Array.isArray(ans) ? [...ans].sort() : [];
+    correct = given.length === right.length && given.every((v, i) => v === right[i]);
+  } else {
+    correct = ans === q.answer;
+  }
+  s.checked[s.idx] = true;
+  s.correct[s.idx] = correct;
+  return correct;
+}
+
+export function redoNext() {
+  const s = state.redoSession;
+  if (!s) return;
+  if (s.idx < s.questions.length - 1) { s.idx += 1; }
+  else {
+    // 收卷：统计 + 全对从错题本移除（重练毕业）
+    const right = s.correct.filter(Boolean).length;
+    const all = s.correct.length;
+    g_redoStat(right, all);
+    if (right === all) {
+      // 全对：这些题从错题本毕业
+      const done = new Set(s.questions.map((q) => q.id));
+      storage.set('fm_wrong_book', JSON.stringify(wrongBook().filter((w) => !done.has(w.questionId))));
+      pushLog(`【错题重练】${all} 题全对！这些题已从错题本毕业（专业力 +${(all * 0.4).toFixed(1)}）。`);
+      const g = getGame();
+      g.player.attrs.pro += all * 0.4;
+      g.player.attrs.stress = Math.max(0, g.player.attrs.stress - 2);
+    } else {
+      pushLog(`【错题重练】${right}/${all} 题，做错的题继续留在错题本里下次再战（专业力 +${(right * 0.4).toFixed(1)}）。`);
+      const g = getGame();
+      g.player.attrs.pro += right * 0.4;
+    }
+    touchActiveDay(getGame().date);
+    s.finished = true;
+  }
+}
+
+function g_redoStat(right: number, total: number) {
+  const arr = redoHistory();
+  arr.unshift({ at: getGame().date, right, total });
+  storage.set('fm_redo_history', JSON.stringify(arr.slice(0, 50)));
+  redoHistoryVersion.value += 1; // 响应式版本号：收卷后历史面板即时刷新
+}
+
+/** 重练历史（C2 考试历史区域展示；模块级 storage 直读挂版本号保证响应式） */
+const redoHistoryVersion = ref(0);
+export function redoHistory(): Array<{ at: string; right: number; total: number }> {
+  void redoHistoryVersion.value;
+  const raw = storage.get('fm_redo_history');
+  return raw ? JSON.parse(raw) : [];
+}
+
+export function quitRedo() {
+  state.redoSession = null;
 }
 
 /** 考前冲刺：点击后激活 buff——下一次正考抽卷时，考前最后做的一套卷（练习/模考/正式）中
@@ -1207,17 +1398,73 @@ export function finishDaily(correct: boolean): string {
   return '答错了，已记入错题本。下次一定！';
 }
 
-// ================= 接待对话 =================
+/** 接待对话 ================= */
 
 let receptionEngine: Reception | null = null;
 
-/** 开始接待（消耗 AP 由调用方控制；这里只生成会话） */
+/** A3 预约到访系统：把"谁该来"变成玩家可经营的对象——
+ *  - 转介绍/人生线/流失预警客户会自动进入下月预约队列（月结时生成）
+ *  - 玩家也可以在客户档案页主动约客户到访（1 AP：电话邀约）
+ *  - 接待行动优先接待队列中的客户（接待引擎按指定客户开局）
+ */
+
+/** 电话邀约：1 AP，把指定客户约进本/下月到访队列（信任越高越答应） */
+export function inviteClient(clientId: string): string {
+  const g = getGame();
+  if (state.apUsed >= state.apMax) return '本帧行动点已用完，无法邀约。';
+  const c = g.clients.find((x) => x.id === clientId);
+  if (!c) return '查无此客户。';
+  if (c.status !== 'active') return `${c.name} 目前账户休眠，先通过持续回访恢复信任到 45 以上才会回来。`;
+  if (state.appointments.some((a) => a.clientId === clientId)) return `${c.name} 已在预约队列里。`;
+  if (state.appointments.length >= 6) return '本月预约队列已满（6 位），先接待完再约。';
+  const agree = g.rng.chance(0.35 + c.trust / 150); // 信任 30 → 55%，信任 75 → 85%
+  state.apUsed += 1;
+  state.gameDate = g.date;
+  if (!agree) {
+    pushLog(`【邀约】给${c.name}打电话约时间，对方说最近忙，过段时间再说（信任 ${Math.round(c.trust)}，越高越容易答应）。`);
+    return `${c.name} 暂时没答应，提升信任后再试试。`;
+  }
+  const reason = c.holdings.length === 0
+    ? '聊聊资产配置'
+    : g.clientPnlPct(c) < -5 ? '安抚持仓波动、做归因沟通' : '做年度持仓检视';
+  state.appointments.push({
+    id: `apt_${Date.now()}_${Math.floor(g.rng.next() * 1e4)}`,
+    clientId, clientName: c.name,
+    month: g.date.slice(0, 7),
+    reason, from: 'manual',
+  });
+  pushLog(`【邀约】${c.name} 答应${reason}，已加入本月预约队列（共 ${state.appointments.length} 位待接待）。`);
+  return `${c.name} 已约到本月到访。`;
+}
+
+/** 月结时自动生成预约：转介绍客户/流失预警客户主动到访（u 内部由 core 事件驱动此处入队） */
+export function enqueueAppointment(entry: { clientId: string; clientName: string; reason: string; from: 'referral' | 'warning' | 'life' }) {
+  if (state.appointments.length >= 6) return;
+  if (state.appointments.some((a) => a.clientId === entry.clientId)) return;
+  state.appointments.push({
+    id: `apt_${Date.now()}_${Math.floor(Math.random() * 1e4)}`,
+    month: getGame().date.slice(0, 7),
+    ...entry,
+  });
+  pushLog(`【预约】${entry.clientName} 来电预约到访：${entry.reason}。`);
+}
+
+/** 开始接待：若预约队列有客户，优先接待预约客户 */
 export function startReception(): boolean {
   const g = getGame();
   if (state.apUsed >= state.apMax) return false;
   receptionEngine ??= new Reception(g.rng);
-  const s = receptionEngine.start(g.clients);
+  // 预约队列优先：消费最早一条
+  const aptIdx = state.appointments.findIndex((a) => a.clientId && g.clients.some((c) => c.id === a.clientId && c.status === 'active'));
+  const apt = aptIdx >= 0 ? state.appointments[aptIdx] : null;
+  const s = apt
+    ? receptionEngine.startFor(g.clients, apt.clientId)
+    : receptionEngine.start(g.clients);
   if (!s) return false;
+  if (apt) {
+    state.appointments.splice(aptIdx, 1);
+    pushLog(`【预约到访】${apt.clientName} 如约而至（${apt.reason}）。`);
+  }
   state.reception = s;
   state.receptionRevealed = false;
   state.receptionAmount = Math.max(10000, Math.round(s.pool * s.need.intentRatio / 10000) * 10000);
@@ -1328,6 +1575,11 @@ export function loadGameFromSave(data: any) {
   if (typeof data.violations === 'number') g.violations = data.violations;
   if (typeof data.highStressMonths === 'number') g.highStressMonths = data.highStressMonths;
   if (typeof data.coachLevel === 'number') g.coachLevel = data.coachLevel;
+  // A0 生涯统计恢复（旧档无字段则用空结构，保证字段完整）
+  g.stats = { ...emptyStats(), ...(data.stats ?? {}) };
+  if (Array.isArray(data.statsServed)) (g as any).servedClients = new Set(data.statsServed);
+  if (typeof data.monthDeals === 'number') g.monthDeals = data.monthDeals;
+  if (typeof data.monthReceptions === 'number') g.monthReceptions = data.monthReceptions;
   // 团队系统恢复（P6：旧存档无 team 字段时按当前年份补齐花名册）
   g.team = new TeamSystem();
   if (data.team) g.team.restore(data.team);
@@ -1393,6 +1645,9 @@ export function loadGameFromSave(data: any) {
   state.eventShifts = data.eventShifts ?? null;
   state.ngPlusUnlocked = storage.get('fm_ngplus') === '1';
   state.ending = null;
+  // A3 预约队列恢复 / D1 设置恢复
+  state.appointments = Array.isArray(data.appointments) ? data.appointments : [];
+  loadSettings();
   pushLog(`【读档】已恢复到 ${g.date} 的进度。`);
   // 读档后重置自动存档计时（10 分钟轮转）
   autoSave();
