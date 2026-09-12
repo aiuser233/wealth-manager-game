@@ -156,7 +156,7 @@ export function gradePaper(paper: ExamPaper, answers: Array<number | number[]>):
   };
 }
 
-/** 6 张考卷（规划书 7.2，游戏内沿用真实证书名） */
+/** 8 张考卷（规划书 7.2 六门 + 深化批新增银保/资产配置两门专项，游戏内沿用真实证书名） */
 export const EXAM_DEFS: ExamDef[] = [
   { id: 'exam_bank_law', name: '银行从业·法律法规与综合能力', pass_mark: 0.6, question_count: [20, 30], time_limit_sec: 720, unlock_year: 2006, desc: '入行第一证：银行业基础法规、职业操守与综合业务。' },
   { id: 'exam_bank_pf', name: '银行从业·个人理财', pass_mark: 0.6, question_count: [20, 30], time_limit_sec: 720, unlock_year: 2006, desc: '个人理财业务基础：产品、适当性与理财规划流程。' },
@@ -164,6 +164,8 @@ export const EXAM_DEFS: ExamDef[] = [
   { id: 'exam_securities', name: '证券从业·金融市场基础知识', pass_mark: 0.6, question_count: [20, 30], time_limit_sec: 720, unlock_year: 2014, desc: '证券市场全景：股票债券、发行交易与风险。' },
   { id: 'exam_afp', name: 'AFP 金融理财师认证', pass_mark: 0.7, question_count: [20, 30], time_limit_sec: 900, unlock_year: 2009, desc: '综合理财规划：全生命周期的资产配置与家庭财务。' },
   { id: 'exam_cfp', name: 'CFP 国际金融理财师认证', pass_mark: 0.7, question_count: [20, 30], time_limit_sec: 900, unlock_year: 2014, desc: '高阶认证：税务、传承、退休规划与复杂案例。' },
+  { id: 'exam_insurance', name: '银行保险·寿险与银保业务', pass_mark: 0.6, question_count: [20, 30], time_limit_sec: 720, unlock_year: 2010, desc: '银保渠道实务：保障规划、销售适当性与双录规范。' },
+  { id: 'exam_fund_alloc', name: '基金从业·资产配置专项', pass_mark: 0.7, question_count: [20, 30], time_limit_sec: 900, unlock_year: 2013, desc: '进阶专项：核心卫星、再平衡纪律与风险预算。' },
 ];
 
 /** 考试窗口：每年 3/6/9/12 月的第三个周三（需提前 1 个月报名） */

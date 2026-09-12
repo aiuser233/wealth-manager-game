@@ -131,6 +131,73 @@ const NEED_POOL: ReceptionNeed[] = [
     preferCategory: 'other',
     intentRatio: 0.3,
   },
+  {
+    tag: 'biz_split',
+    surface: '厂里账上趴着几百万，放定期太死，买理财又怕误了货款周转。',
+    probes: [
+      { text: '账上的钱大概多久要付一次货款？', reveal: '旺季三个月内要付两笔，平时是随收随付。', trustDelta: 2, proDelta: 0.5 },
+      { text: '家庭资产和公司账是分开管吗？', reveal: '  大都混在一起……你这么一问，确实没分开。', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '企业闲置资金的流动性分层+家企隔离缺失是本案双风险点。',
+    preferCategory: 'wealth_mgmt',
+    intentRatio: 0.55,
+  },
+  {
+    tag: 'study_abroad',
+    surface: '女儿明年去国外读研，一年学费生活费先换 50 万，怎么换最划算？',
+    probes: [
+      { text: '学费是一次性缴还是分期？', reveal: '每学期缴，生活费按月给。', trustDelta: 2, proDelta: 0.4 },
+      { text: '孩子的保险和紧急备用金配了吗？', reveal: '保险没买，备用金没概念。', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '购汇额度内分批换汇+留购汇凭证，是合规与汇率双约束下的标准方案。',
+    preferCategory: 'deposit',
+    intentRatio: 0.6,
+  },
+  {
+    tag: 'house_wealth',
+    surface: '有套房子闲着，有人劝我抵押出来买理财，收益比房租高多了。',
+    probes: [
+      { text: '这套房将来自用还是出售？', reveal: '儿子结婚可能要用，但一时半会儿不用。', trustDelta: 2, proDelta: 0.5 },
+      { text: '如果理财亏了，月供拿什么还？', reveal: '……这个没想过。', trustDelta: 1, proDelta: 0.6 },
+    ],
+    hidden: '加杠杆配置=风险叠加；先排除"将来要用的资产"做抵押，杠杆是本案第一禁词。',
+    preferCategory: 'fund',
+    intentRatio: 0.3,
+  },
+  {
+    tag: 'wedding_fund',
+    surface: '儿子两年后结婚，准备 80 万婚房首付，现在放哪好？',
+    probes: [
+      { text: '首付时间定死了还是可能提前？', reveal: '最迟两年，但行情好可能提前。', trustDelta: 2, proDelta: 0.4 },
+      { text: '婚房之外，小两口的启动资金呢？', reveal: '他们自己有些存款。', trustDelta: 1, proDelta: 0.3 },
+    ],
+    hidden: '两年期限刚性+可能提前，这笔钱只能放高流动性保本类；收益再香也不能锁。',
+    preferCategory: 'deposit',
+    intentRatio: 0.7,
+  },
+  {
+    tag: 'pension_topup',
+    surface: '社保养老金太少，我想再攒一份"自己的养老金"，每月拿 3000 出来。',
+    probes: [
+      { text: '打算多久后开始领这笔钱？', reveal: '大概 15 年，退休后按月领。', trustDelta: 2, proDelta: 0.4 },
+      { text: '这笔钱中途急用能不能取？', reveal: '最好别动，动了就前功尽弃。', trustDelta: 2, proDelta: 0.5 },
+    ],
+    hidden: '超长期限+中途不可动：个人养老金账户+养老目标基金定投，制度锁定是需求不是限制。',
+    preferCategory: 'insurance',
+    intentRatio: 0.4,
+  },
+  {
+    tag: 'payroll_biz',
+    surface: '我们公司刚迁来，员工工资代发想换到你们这，能有什么"优惠"？',
+    probes: [
+      { text: '员工大概多少人、每月几号发薪？', reveal: '200 来人，每月 15 号。', trustDelta: 1, proDelta: 0.3 },
+      { text: '员工最在意的，你猜是补贴还是便利？', reveal: '到账快、手续费少、能贷款吧。', trustDelta: 2, proDelta: 0.4 },
+    ],
+    hidden: '对公需求带零售入口：代发落地后跟进员工服务（工资自动理财/消费贷），先服务后营销。',
+    preferCategory: 'wealth_mgmt',
+    intentRatio: 0.5,
+  },
+
 ];
 
 export class Reception {

@@ -8,7 +8,7 @@ import {
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
   emptyCareerStats as emptyStats, type CareerStats,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { refreshAchievements, recordEnding } from './achievements';
@@ -210,7 +210,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   }
   refreshCaches();
   // 注入随机事件池
-  game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
+  game.injectEvents([...randomEvents, ...randomEventsDeep] as any, new Rng(seed ^ 0x5f3759df));
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
   // 自动存档（新开局覆盖自动档，并重置自动存档计时器）
@@ -224,7 +224,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
 
 /** 自动档槽位（唯一），手动档槽位 1-3 */
 export const AUTO_SAVE_SLOT = 0;
-export const MANUAL_SLOTS = [1, 2, 3] as const;/** 自动存档间隔：10 分钟 */
+export const MANUAL_SLOTS = [1, 2, 3] as const;
 /** 自动存档间隔（分钟）的默认值；实际间隔由 state.settings.autoSaveMinutes 控制（D1 设置中心可调） */
 const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000;
 void AUTO_SAVE_INTERVAL_MS;
@@ -451,6 +451,55 @@ const LOBBY_QUESTIONS: Array<{ ask: string; options: Array<{ text: string; reply
       { text: '「行情这么好，赶紧取，晚了就没了！」', reply: '客户热血上头全取了。若接下来行情变脸，第一个来找的就是你。', good: false },
     ],
   },
+  {
+    ask: '「闺女，我这养老钱买成黄金行不行？金店都说金子保值。」',
+    options: [
+      { text: '「金子长期保值但有波动，您这是养老钱，先说清楚几年内用不用、比例控制在多少。」', reply: '大妈竖起大拇指：「你这孩子实在。」留了张名片走了。', good: true },
+      { text: '「行啊，金价一直涨，赶紧买。」', reply: '大妈把养老钱全买了金饰。下个月金价回调，第一个回来讨说法的就是她。', good: false },
+    ],
+  },
+  {
+    ask: '「小伙子，信用卡分期能免息，是不是白捡便宜？」',
+    options: [
+      { text: '「分期免息不免手续费，折算年化其实不低——我给您算笔账。」', reply: '客户听完直冒冷汗：「差点又背一笔。」对你的信任肉眼可见地涨。', good: true },
+      { text: '「对，免息就是不要钱，随便分期。」', reply: '客户真去分了期。后来对账单发现手续费，逢人就说银行套路深。', good: false },
+    ],
+  },
+  {
+    ask: '「我想给上小学的孙子存笔教育金，怎么存才不会半路取出来花掉？」',
+    options: [
+      { text: '「专款专户：开个只进不出的账户做定投或长期存款，和其他钱物理隔离。」', reply: '客户记在本子上：「隔离这词好，钱跟人一样，离得近了就容易挪。」', good: true },
+      { text: '「存我这就行，我帮您看着。」', reply: '钱没有制度约束，光靠人看着迟早挪用。客户将信将疑地走了。', good: false },
+    ],
+  },
+  {
+    ask: '「大额存单转让是什么意思？是不是有人不要利息了？」',
+    options: [
+      { text: '「是持有人急用钱，把没到期的存单转让给您，利率按原单算，有时还能占点便宜。」', reply: '客户恍然大悟，顺手问了转让区还有哪些单子。', good: true },
+      { text: '「反正就是便宜，您买就完事了。」', reply: '客户不明不白买了，回去被儿子一问三不知，回头找你麻烦。', good: false },
+    ],
+  },
+  {
+    ask: '「数字人民币到底是啥？跟手机里那个零钱有啥不一样？」',
+    options: [
+      { text: '「数字人民币是国家发行的现金，零钱是平台记账——一个是央行负债，一个是企业欠条。」', reply: '客户听完掏出手机：「那你教我开通一个。」', good: true },
+      { text: '「差不多，就是个新潮玩意儿。」', reply: '客户没听懂也没问。科普的窗口就这么关上了。', good: false },
+    ],
+  },
+  {
+    ask: '「基金分红方式选现金还是红利再投？我儿子说再投好。」',
+    options: [
+      { text: '「看用途：这笔钱近期要用就选现金，长期放着再投份额多。」', reply: '客户按用途改了设置，临走说了句「还是你想得细」。', good: true },
+      { text: '「都行，随便选一个。」', reply: '客户嘟囔：「随便？那你们这是让我随便亏？」', good: false },
+    ],
+  },
+  {
+    ask: '「保险业务员说我这保单交满十年能全退还带利息，真的假的？」',
+    options: [
+      { text: '「您把合同拿来，我们逐条看现金价值表——口头承诺不作数。」', reply: '看完合同客户倒吸凉气：「幸亏来问了。」险些又一起销售误导。', good: true },
+      { text: '「差不多是这样，您放心。」', reply: '十年后退保发现亏了一截，投诉工单写的就是你的名字。', good: false },
+    ],
+  },
 ];
 
 /** 售后处理场景库 */
@@ -467,6 +516,35 @@ const AFTERSALE_SCENES: Array<{ narration: string; options: Array<{ text: string
     options: [
       { text: '核实失败原因，当天补扣，赠送一次费率优惠，并开通余额提醒。', reply: '客户满意而去，还主动问起了基金定投的其他产品。', good: true },
       { text: '「这是系统问题，我们也没办法。」', reply: '客户摔门而去。当天下午投诉工单就到了支行。', good: false },
+    ],
+  },
+  {
+    narration: '一位客户拿着保险单冲进来：「业务员说交满十年全退还带利息，现在退怎么还要扣钱？！」',
+    options: [
+      { text: '先赔不是，再逐条对照合同条款与当时的双录录像，把现金价值表讲透，帮客户算清持有 vs 退保两种结果。', reply: '客户看完录像沉默了：「当时确实是我自己签的字……你帮我看看怎么继续最划算。」投诉变成了转机。', good: true },
+      { text: '「业务员早离职了，这事我们管不了。」', reply: '客户直接去了监管投诉热线。第二天分行合规部来电，你写了一下午情况说明。', good: false },
+    ],
+  },
+  {
+    narration: '客户银行卡被盗刷 2000 元，认定是银行责任，要求立即赔偿。',
+    options: [
+      { text: '第一时间帮客户做挂失冻结、打印流水、指导报案，讲清争议处理流程与时限，全程书面留痕。', reply: '事后查明是短信钓鱼所致，银行无责——但客户对处理过程很满意：「流程你给我跑得明明白白。」', good: true },
+      { text: '「肯定是您自己泄露密码，跟我们没关系。」', reply: '客户怒而投诉，事情最后查清银行确实无责，但客户还是流失了——对了一半，输了全部。', good: false },
+    ],
+  },
+  {
+    narration: '老客户深夜发消息：理财净值单日跳水 2%，情绪崩溃，「明天一早我就全赎回」。',
+
+    options: [
+      { text: '当晚先电话接住情绪，约次日面谈；次日带归因数据面谈：跌的原因、历史回撤、持有策略，让客户自己选。', reply: '客户最终选择持有并加做了资产配置检视。「亏钱那天有人管」——这单信任值翻倍。', good: true },
+      { text: '回复「别慌，长期都这样」，然后睡觉。', reply: '客户一夜没睡好，早上一开门就冲到网点全赎了。转身去了别家。', good: false },
+    ],
+  },
+  {
+    narration: '客户要给异地儿子汇 8 万元「买房急用」，神色慌张，不断看手机上的催促消息。',
+    options: [
+      { text: '按反诈流程三问：用途、对象、是否被催促；请他打电话向儿子当面核实。', reply: '电话打过去——儿子的号是空号。客户惊出一身冷汗：「这是骗子！谢谢你啊小伙子！」', good: true },
+      { text: '客户急着办就赶紧给办，别多嘴耽误人家的事。', reply: '汇款完成后下午客户哭着回来：钱进了诈骗账户。这笔账，柜台和你都难辞其咎。', good: false },
     ],
   },
 ];
@@ -487,6 +565,34 @@ const SOCIAL_SCENES: Array<{ narration: string; options: Array<{ text: string; r
       { text: '「多接几单就习惯了。」', reply: '实习生似懂非懂地点头。', good: false },
     ],
   },
+  {
+    narration: '行长在晨会上点名：「小林，你们组这个月存款缺口还有 300 万，下周必须补上。」会后压力扑面而来。',
+    options: [
+      { text: '盘点到期存款客户名单，排优先级逐一电话维护，用到期资金承接补缺口——不碰违规冲量。', reply: '周五前缺口补齐大半。行长在周会上说「方法对，路子正」。压力转化为节奏。', good: true },
+      { text: '找资金掮客问问「帮忙冲量」的门路，月底过了就撤。', reply: '冲量完成，但费用走账的痕迹留下了。合规检查时这是一颗随时会炸的雷。', good: false },
+    ],
+  },
+  {
+    narration: '你无意听到同事小李向客户推销一款「内部高息通道」，而它根本不在本行代销名单里。',
+    options: [
+      { text: '私下先劝小李停手，无果后按流程向合规部门报告。', reply: '报告是艰难的，但飞单资金不进银行体系、出事无法追责。合规部连夜核查，风险被掐灭在早期。', good: true },
+      { text: '同事一场，睁一只眼闭一只眼。', reply: '三个月后客户血本无归，围堵网点。参与飞单的都被处理——包括「知情不报」的你。', good: false },
+    ],
+  },
+  {
+    narration: '季度绩效面谈，主管指出你「成交率高但客户投诉为零，说明太保守，要敢卖」。',
+    options: [
+      { text: '「我的业绩来自复购与转介绍，客户敢把家里全部的钱放我这儿。保守就是我的打法。」用留存数据说话。', reply: '主管翻着你的客户留存率沉默了：「下季度把这套方法整理出来给全组讲讲。」', good: true },
+      { text: '「好的，我下季度加大推销力度。」', reply: '短期业绩上去了，投诉也跟着来了。你弄丢了自己最值钱的东西——口碑。', good: false },
+    ],
+  },
+  {
+    narration: '柜面因排队问题与客户起了争执，客户大声嚷嚷「要投诉」，大厅秩序眼看要乱。',
+    options: [
+      { text: '上前把客户请到贵宾室，倒杯水听他讲完，再回柜面协调加开窗口。', reply: '客户气消了一半：「不是钱的事，是气不顺。」最后他还办了张贵宾卡。', good: true },
+      { text: '站在旁边看柜员自己处理，别沾包。', reply: '争执升级成大厅争吵，第二天支行例会上点名批评了全员的服务协同。', good: false },
+    ],
+  },
 ];
 
 /** 外拓拜访场景库 */
@@ -505,6 +611,41 @@ const OUTREACH_SCENES: Array<{ narration: string; options: Array<{ text: string;
       { text: '「那您也去那家买呗。」', reply: '客户愣了一下，气氛尴尬。', good: false },
     ],
   },
+  {
+    narration: '社区邀你周末做一场「防范非法集资」公益讲座，来的是三十多位叔叔阿姨。',
+    options: [
+      { text: '精心准备：四个真实骗局拆解 + 一个判断口诀，全程不提任何产品。', reply: '讲座大获成功，社区要跟你签长期合作。此后每周都有居民指名找「小林老师」。', good: true },
+      { text: '走个过场，讲一半开始发本行产品折页。', reply: '居委会主任当场皱眉收走了折页。公益变营销，社区的大门关上了。', good: false },
+    ],
+  },
+  {
+    narration: '一位流失半年的老客户主动约你见面——她在别家买了产品最近连续亏损，想听听你的看法。',
+    options: [
+      { text: '不带任何推荐目的：先做全资产诊断，把她在别家产品的风险讲透，方案让她自己选。', reply: '客户感慨：「出去转了一圈才知道谁靠谱。」资产回流的同时带来了两位朋友。', good: true },
+      { text: '趁虚而入：「早听我的就不会亏，赶紧转到我这儿来。」', reply: '客户当场没说什么，之后再没回过消息。落井下石的样子，客户都记在心里。', good: false },
+    ],
+  },
+  {
+    narration: '一家 200 人的企业财务总监约谈代发工资业务，开口就问：「给我们什么费率优惠？」',
+    options: [
+      { text: '先展示服务方案：员工专属理财讲座、工资到账自动理财、个税服务——费率之外先谈价值。', reply: '总监拍板合作：「别家只会降价，你们会解决问题。」300 名员工的代发落了地。', good: true },
+      { text: '直接给出最低费率，先拿下再说。', reply: '单子拿下了，但利润薄如纸，后续服务资源也跟不上——代发半年流失过半。', good: false },
+    ],
+  },
+  {
+    narration: '沿街商铺的老板抱怨：「收款码手续费贵，隔壁银行免费送。」',
+    options: [
+      { text: '「手续费背后是对账、流水贷款额度与到账时效。我拿您半年的流水帮您算笔综合账。」', reply: '算完账老板发现流水信用贷能救急：「那你帮我办一个。」 POS 之外带走了一笔经营贷需求。', good: true },
+      { text: '「我们也免费送！」回去申请特批。', reply: '特批下来了，但同样的免费同行也送——价格战没有赢家，只亏了利润。', good: false },
+    ],
+  },
+  {
+    narration: '猎头联络你：同业机构开出翻倍薪水挖你带团队。',
+    options: [
+      { text: '认真评估：除了薪水，看平台客户结构、合规文化与自己二十年的积累是否匹配。', reply: '你想明白了自己要什么，婉拒了邀请——猎头说「你是第一个跟我聊了合规文化的候选人」。', good: true },
+      { text: '翻倍薪水！立刻答应跳槽。', reply: '新平台冲量文化浓厚，半年后你带着一身指标焦虑回望老网点——有些东西没了就是没了。', good: false },
+    ],
+  },
 ];
 
 /** 复盘行情场景库 */
@@ -512,6 +653,12 @@ const REVIEW_SCENES: Array<{ narration: string }> = [
   { narration: '你调出近一个月的指数走势，逐个板块对照新闻做归因笔记：涨因为什么、跌因为什么、哪些是情绪哪些是基本面。' },
   { narration: '你把持仓客户的组合和当前行情对照，检查风险敞口：哪几个客户该做再平衡了？顺手记下明天的回访名单。' },
   { narration: '你翻看今天的行情和新闻对照复盘，把「预期差」三字写进了笔记——超预期的数据和行情反应往往不一致。' },
+  { narration: '你统计了板块成交占比：过去一个月最热的方向，换手率与拥挤度都到了历史高分位。历史上每一次「一致看多」都伴随着拥挤交易退潮——记下来：人多的地方，风景再好也别停留。' },
+  { narration: '下周是政策日历周：重要会议与数据发布扎堆。你把三个关键时点标进备忘录——同样的数据，发布前和发布后的市场反应往往是两个物种。' },
+  { narration: '人民币汇率与出口数据的背离让你停下了复盘：汇率在稳、订单在变。宏观变量的传导有时滞，客户的现金流最先感知——这周该提醒那几个外贸老板了。' },
+  { narration: '基金二季报披露完毕，你抽查了自己重仓产品的风格：说好的价值风格，前十大重仓悄悄换成了一半科技股。风格漂移不可怕，可怕的是你不知道它漂了。' },
+  { narration: '你算了下主要指数的估值分位：十年视角，当前位置不贵。但「不贵」和「会涨」中间隔着流动性、业绩与情绪三条街——笔记写下四个字：便宜不是买点。' },
+  { narration: '复盘方法论升级：你把过去一年的复盘笔记翻出来验证——当初的归因有多少兑现了？发现一半是「正确但没用」：方向对、时间错。复盘的价值不在结论，在迭代。' },
 ];
 
 /** 行动小剧场构建：根据行动类型生成具体交互场景（接待走独立对话，不在其中） */
