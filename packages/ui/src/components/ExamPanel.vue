@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, availableExams, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper } from '../state';
+import { state, gameReady, getGame, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper } from '../state';
 import { storage } from '../storage';
 import { EXAM_DEFS } from '@fm/core';
 
@@ -151,20 +151,17 @@ function formatAnswer(qv: { type: string; answer: number | number[] }): string {
       </div>
 
       <div class="exams">
-        <div v-for="e in EXAM_DEFS" :key="e.id" class="exam-card" :class="{ locked: !availableExams().some((a) => a.id === e.id) }">
+        <div v-for="e in EXAM_DEFS" :key="e.id" class="exam-card">
           <div class="info">
             <b>{{ e.name }}</b>
             <p class="dim">{{ e.desc }}</p>
-            <p class="meta dim">及格 {{ Math.round(e.pass_mark * 100) }} 分 · {{ e.question_count[0] }}–{{ e.question_count[1] }} 题 · 限时 {{ Math.round(e.time_limit_sec / 60) }} 分钟</p>
+            <p class="meta dim">及格 {{ Math.round(e.pass_mark * 100) }} 分 · {{ e.question_count[0] }}–{{ e.question_count[1] }} 题 · 正式考限时 {{ Math.round(e.time_limit_sec / 60) }} 分钟（练习/模考不限时）</p>
           </div>
           <div class="op">
-            <template v-if="availableExams().some((a) => a.id === e.id)">
-              <span v-if="certs.includes(e.name)" class="gold">已通过 ✓</span>
-              <button v-if="!certs.includes(e.name)" class="primary" @click="startExam(e.id, 'formal')">进入考场</button>
-              <button class="ghost-btn" @click="startExam(e.id, 'mock')" title="全真计时模拟：与正式考同规则但不发证书、不耗精力，成绩作为冲刺押题来源">模考</button>
-              <button class="ghost-btn" @click="startExam(e.id, 'practice')" title="不限时练习：每题即时判对错并看解析，刷题减压，错题入错题本">练习</button>
-            </template>
-            <span v-else class="dim">{{ e.unlock_year }} 年解锁</span>
+            <span v-if="certs.includes(e.name)" class="gold">已通过 ✓</span>
+            <button v-if="!certs.includes(e.name)" class="primary" @click="startExam(e.id, 'formal')">进入考场</button>
+            <button class="ghost-btn" @click="startExam(e.id, 'mock')" title="不限时模拟：与正式考同卷同判分但不发证书、不耗精力，成绩作为冲刺押题来源">模考</button>
+            <button class="ghost-btn" @click="startExam(e.id, 'practice')" title="不限时练习：每题即时判对错并看解析，刷题减压，错题入错题本">练习</button>
           </div>
         </div>
       </div>
@@ -175,7 +172,7 @@ function formatAnswer(qv: { type: string; answer: number | number[] }): string {
       <div class="exam-head">
         <b>{{ EXAM_DEFS.find((e) => e.id === paper.examId)?.name }}<span class="mode-tag" :class="state.examMode">{{ state.examMode === 'formal' ? '正式考' : state.examMode === 'mock' ? '模考' : '练习' }}</span></b>
         <span v-if="state.examSecondsLeft >= 0" class="timer" :class="{ urgent: state.examSecondsLeft < 60 }">{{ mmss(state.examSecondsLeft) }}</span>
-        <span v-else class="dim">练习模式 · 不限时</span>
+        <span v-else class="dim">{{ state.examMode === 'mock' ? '模考 · 不限时' : '练习模式 · 不限时' }}</span>
       </div>
       <div class="q-body">
         <p class="q-stem">第 {{ state.examIdx + 1 }} / {{ total }} 题（{{ q!.type === 'single' ? '单选' : q!.type === 'multiple' ? '多选' : '判断' }}）<span class="dim" v-if="q!.type === 'multiple'">（漏选得一半分）</span></p>

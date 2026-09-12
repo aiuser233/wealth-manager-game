@@ -5,8 +5,8 @@ import KLineChart from './KLineChart.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 
-/** K 线图默认收起（点开展开），避免挤占行情表格空间 */
-const klineOpen = ref(false);
+/** K 线走势作为独立子视图（总览/K线 二选一整页切换），不再挤占行情表空间 */
+const view = ref<'overview' | 'kline'>('overview');
 
 const scopes = [
   { id: 'day', label: '当日' },
@@ -92,20 +92,26 @@ const sparkIds = ['idx_main', 'idx_300', 'idx_500', 'idx_growth'];
 
 <template>
   <div v-if="g" class="wrap">
+    <!-- 视图切换：总览（指数/行业/新闻）与 K 线走势整页二选一，互不遮挡 -->
     <div class="bar">
-      <div class="scopes">
+      <div class="view-tabs">
+        <button :class="{ active: view === 'overview' }" @click="view = 'overview'">行情总览</button>
+        <button :class="{ active: view === 'kline' }" @click="view = 'kline'">K 线走势</button>
+      </div>
+      <div class="scopes" v-if="view === 'overview'">
         <button v-for="s in scopes" :key="s.id" :class="{ active: state.quoteScope === s.id }" @click="state.quoteScope = s.id">
           {{ s.label }}
         </button>
       </div>
-      <!-- K 线折叠/展开：默认收起，点开再看走势，避免挤占行情表 -->
-      <button class="kline-toggle" @click="klineOpen = !klineOpen">{{ klineOpen ? '收起 K 线 ▲' : '展开 K 线走势 ▼' }}</button>
       <span class="dim">数据日：{{ g.lastSnap?.date ?? '--' }} · 行情为架空模拟</span>
     </div>
 
-    <!-- K 线走势图（可折叠：宽基/行业，近 60/120 日） -->
-    <KLineChart v-if="klineOpen" />
+    <!-- K 线走势（独立整页：宽基/行业选择器 + 近 60/120 日折线） -->
+    <template v-if="view === 'kline'">
+      <KLineChart />
+    </template>
 
+    <template v-else>
     <div class="cols">
       <!-- 宽基指数 -->
       <section class="panel">
@@ -164,6 +170,7 @@ const sparkIds = ['idx_main', 'idx_300', 'idx_500', 'idx_growth'];
         <p v-if="state.news.length === 0" class="dim">暂无新闻。</p>
       </div>
     </section>
+    </template>
   </div>
 </template>
 
@@ -188,7 +195,10 @@ export default {
 
 <style scoped>
 .wrap { height: 100%; display: flex; flex-direction: column; gap: 10px; }
-.bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.view-tabs { display: flex; gap: 6px; }
+.view-tabs button { font-size: 13px; padding: 5px 14px; font-weight: 600; }
+.view-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .kline-toggle { white-space: nowrap; font-size: 12px; padding: 3px 10px; }
 .scopes { display: flex; gap: 6px; }
 .scopes button.active { background: var(--accent); border-color: var(--accent); color: #fff; }

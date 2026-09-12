@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { state, gameReady, getGame, doAction, advanceFrame, pushLog, switchFrame, useMemoryHint, frameLabel, startReception } from '../state';
+import { state, gameReady, getGame, doAction, advanceFrame, pushLog, switchFrame, useMemoryHint, frameLabel, startReception, resolveActionScene, closeActionScene, pickStudyAnswer, checkStudyAnswer } from '../state';
 import { ACTION_NAMES, ACTION_DESC, fmtMoney, type ActionType, type TimeFrame } from '@fm/core';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
@@ -66,6 +66,39 @@ function onReception() {
   }
 }
 
+/** 行动小剧场：学习刷题的答案显示 */
+function studyOptText(i: number): string {
+  const q = state.studyQuestion?.q;
+  return q ? `${String.fromCharCode(65 + i)}. ${q.options[i]}` : '';
+}
+function studyPicked(i: number): boolean {
+  const sq = state.studyQuestion;
+  if (!sq) return false;
+  if (sq.q.type === 'multiple') return (sq.picked as number[]).includes(i);
+  return sq.picked === i;
+}
+function studyToggle(i: number) {
+  const sq = state.studyQuestion;
+  if (!sq || sq.checked) return;
+  if (sq.q.type === 'multiple') {
+    const arr = sq.picked as number[];
+    pickStudyAnswer(arr.includes(i) ? arr.filter((x) => x !== i) : [...arr, i]);
+  } else {
+    pickStudyAnswer(i);
+  }
+}
+const studyFeedback = computed(() => {
+  const sq = state.studyQuestion;
+  if (!sq?.checked) return '';
+  return sq.correct
+    ? `✓ 答对了！解析：${sq.q.explanation}`
+    : `✗ 答错了，正确答案：${sq.q.type === 'multiple' ? (sq.q.answer as number[]).map((x) => String.fromCharCode(65 + x)).join('、') : String.fromCharCode(65 + (sq.q.answer as number))}。解析：${sq.q.explanation}`;
+});
+function studyCheck() {
+  checkStudyAnswer();
+}
+
+
 function endFrame() {
   if (!g.value) return;
   const n = advanceFrame();
@@ -118,6 +151,40 @@ function openPromotion() {
         <p v-if="state.todayActions.length === 0" class="dim">本帧还没有行动。选择上方的行动开始。</p>
         <p v-for="(t, i) in state.todayActions" :key="i" :class="{ latest: i === state.todayActions.length - 1 }">{{ t.text }}</p>
       </div>
+
+      <!-- 行动小剧场：具体交互场景（除接待外的一次性行动都会弹） -->
+      <div v-if="state.actionScene" class="scene">
+        <p class="scene-narr">{{ state.actionScene.narration }}</p>
+        <!-- 学习刷题：真实题目作答 -->
+        <template v-if="state.actionScene.kind === 'study' && state.studyQuestion">
+          <div class="study-q">
+            <p class="q-stem">{{ state.studyQuestion.q.stem }}<span v-if="state.studyQuestion.q.type === 'multiple'" class="dim">（多选）</span></p>
+            <div class="q-opts">
+              <button
+                v-for="(opt, oi) in state.studyQuestion.q.options" :key="oi"
+                class="q-opt" :class="{ picked: studyPicked(oi), right: state.studyQuestion!.checked && studyPicked(oi) && state.studyQuestion!.correct, wrong: state.studyQuestion!.checked && studyPicked(oi) && !state.studyQuestion!.correct }"
+                :disabled="state.studyQuestion.checked"
+                @click="studyToggle(oi)"
+              >{{ studyOptText(oi) }}</button>
+            </div>
+            <p v-if="studyFeedback" class="q-fb" :class="{ ok: state.studyQuestion.correct }">{{ studyFeedback }}</p>
+            <button v-if="!state.studyQuestion.checked" class="primary" :disabled="state.studyQuestion.q.type === 'multiple' ? (state.studyQuestion.picked as number[]).length === 0 : state.studyQuestion.picked === null" @click="studyCheck">核对答案</button>
+            <button v-else class="ghost" @click="closeActionScene">继续工作</button>
+          </div>
+        </template>
+        <!-- 其他行动：选择应对方式 -->
+        <template v-else-if="state.actionScene.options && state.actionScene.picked === undefined">
+          <p class="scene-ask">你会怎么做？</p>
+          <div class="scene-opts">
+            <button v-for="(o, oi) in state.actionScene.options" :key="oi" @click="resolveActionScene(oi)">{{ o.text }}</button>
+          </div>
+        </template>
+        <template v-else-if="state.actionScene.picked !== undefined && state.actionScene.options">
+          <p class="scene-reply">{{ state.actionScene.options[state.actionScene.picked].reply }}</p>
+          <button class="ghost" @click="closeActionScene">继续工作</button>
+        </template>
+      </div>
+
       <div class="foot">
         <button class="ghost" @click="onMemory" title="调用前世记忆（方向性提示，越用越失准）">重启记忆</button>
         <button class="promo-btn" :disabled="!g" @click="openPromotion" title="查看晋升条件，满足时可提交评审">晋升评审</button>
@@ -192,6 +259,20 @@ h3 { font-size: 15px; }
 .frame-ctrl button { padding: 3px 10px; font-size: 12px; }
 .frame-ctrl button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .memory { background: rgba(124, 92, 255, 0.12); border: 1px solid var(--accent2); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+.scene { background: rgba(79, 140, 255, 0.08); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.scene-narr { line-height: 1.7; margin-bottom: 8px; }
+.scene-ask { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+.scene-opts { display: flex; flex-direction: column; gap: 6px; }
+.scene-opts button { text-align: left; padding: 8px 12px; line-height: 1.5; }
+.scene-reply { color: var(--gold); line-height: 1.7; margin-bottom: 8px; }
+.study-q .q-stem { font-weight: 600; line-height: 1.7; margin-bottom: 6px; }
+.q-opts { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+.q-opt { text-align: left; padding: 7px 10px; line-height: 1.5; }
+.q-opt.picked { border-color: var(--accent); }
+.q-opt.right { border-color: var(--down); color: var(--down); }
+.q-opt.wrong { border-color: var(--up); color: var(--up); }
+.q-fb { line-height: 1.7; margin-bottom: 8px; }
+.q-fb.ok { color: var(--down); }
 .mem-hint { color: #c9b8ff; line-height: 1.6; font-size: 13px; }
 .ghost { border-color: var(--accent2); color: #c9b8ff; background: transparent; }
 .ghost:hover:not(:disabled) { background: rgba(124, 92, 255, 0.12); }

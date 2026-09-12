@@ -45,14 +45,51 @@ function pick(e: GameEventDef) {
   votes.value = { a: 0, b: 0 };
 }
 
+/** shocks 因子键 → 中文指标名（问题 6：课堂投影不用英文简称） */
+const FACTOR_NAMES: Record<string, string> = {
+  equity: 'A 股整体',
+  us_equity: '美股（纳指）',
+  style_big: '大盘/价值风格',
+  style_small: '小盘/成长风格',
+  rate10y: '10 年期国债收益率',
+  lpr_5y: '5 年期 LPR（贷款市场报价利率）',
+  credit: '信用利差',
+  housing: '房价指数',
+  fx_cny: '人民币汇率',
+  liquidity: '国内流动性',
+  sentiment_dom: '市场情绪',
+  fed_rate: '美联储政策利率',
+  us10y: '美债 10 年期收益率',
+  usd_idx: '美元指数',
+  vix: '恐慌指数（VIX）',
+  oil: '国际油价',
+  gold: '黄金价格',
+  risk_g: '全球风险情绪',
+};
+
 const impactText = (e: GameEventDef): string => {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(e.shocks ?? {})) {
     const dirn = v > 0 ? '+' : '';
-    parts.push(`${k} ${dirn}${(v * 100).toFixed(1)}%`);
+    // 利率/汇率/利差类因子 shock 是绝对水平变化（bp 量级），用"bp"表述；价格型用百分比
+    const rateLike = ['rate10y', 'lpr_5y', 'credit', 'fed_rate', 'us10y', 'fx_cny'].includes(k);
+    parts.push(`${FACTOR_NAMES[k] ?? k} ${dirn}${rateLike ? (v * 10000).toFixed(0) + 'bp' : (v * 100).toFixed(1) + '%'}`);
   }
-  if (e.sentiment) parts.push(`情绪 ${e.sentiment > 0 ? '+' : ''}${e.sentiment}`);
+  if (e.sentiment) parts.push(`市场情绪 ${e.sentiment > 0 ? '+' : ''}${e.sentiment} 档`);
   return parts.join(' · ') || '—';
+};
+
+/** 事件背景详解：新闻原文 + 类型说明 + 教学视角的补充描述 */
+const eventDetail = (e: GameEventDef): string => {
+  const typeDesc: Record<string, string> = {
+    black_swan: '【黑天鹅】突发且冲击剧烈的事件，考验危机应对：第一时间安抚、讲清风险而非承诺收益、全程留痕。',
+    policy: '【政策事件】监管或货币政策的主动调整，影响通常持续数个交易日到数月，重点理解政策意图与传导路径。',
+    macro: '【宏观数据/宏观环境】经济基本面的变化（通胀、增长、汇率），理解数据与市场的"预期差"是关键。',
+    director: '【导演事件】按历史行情改编的关键阶段，帮助建立"时代背景—资产表现—客户行为"的叙事线。',
+  };
+  const dur = e.duration_days ?? 1;
+  const durDesc = dur <= 1 ? '冲击集中在当天（单日脉冲）' : `冲击在 ${dur} 个交易日内分摊（阶段性行情）`;
+  return `${typeDesc[e.type] ?? ''}\n${durDesc}。课堂讨论建议：先看新闻原文，再对照下方"市场冲击"逐项拆解，最后带入客户视角做抉择投票。`;
 };
 
 const knowledgeNames = computed(() =>
@@ -151,6 +188,7 @@ const sessionSummary = computed(() => {
             <span v-if="selected.type === 'black_swan'" class="swan-chip">黑天鹅</span>
           </h3>
           <blockquote class="news">{{ selected.news || '（无新闻稿）' }}</blockquote>
+          <p class="detail">{{ eventDetail(selected) }}</p>
           <p class="dim">市场冲击：{{ impactText(selected) }} ｜ 持续 {{ selected.duration_days ?? 1 }} 个交易日</p>
           <p v-if="knowledgeNames.length" class="dim">关联教学点：{{ knowledgeNames.join('、') }}</p>
 
@@ -197,6 +235,7 @@ const sessionSummary = computed(() => {
 .date-chip { background: var(--gold, #b5893c); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .swan-chip { background: #c0665a; color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
 .news { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--gold, #b5893c); background: var(--panel2, #f8f4ea); line-height: 1.8; }
+.detail { white-space: pre-line; margin: 10px 0; padding: 10px 14px; border: 1px dashed var(--line, #ccc); border-radius: 8px; line-height: 1.9; font-size: 14px; }
 .disc { margin: 14px 0; padding: 10px; border: 1px dashed var(--line, #ccc); border-radius: 8px; }
 .disc .q { font-weight: 600; margin-bottom: 8px; }
 .vote-row { display: flex; gap: 8px; }

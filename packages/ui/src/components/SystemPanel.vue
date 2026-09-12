@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow } from '../state';
+import { state, gameReady, getGame, wrongBook, weakSpotRadar, serializeNow, saveToSlot, autoSave as autoSaveNow } from '../state';
 import { buildReport, reportHtml, downloadReport } from '../report';
 import { storage } from '../storage';
 import DossierPanel from './DossierPanel.vue';
@@ -26,20 +26,22 @@ function exportReport() {
   setTimeout(() => (message.value = ''), 3500);
 }
 
-/** 存档位：3 自动 + 8 手动 */
+/** 存档位：1 自动（每 10 分钟轮转）+ 3 手动 */
 interface SaveMeta { slot: number; auto: boolean; date: string; player: string; aum: string; savedAt: string; }
 const saves = ref<SaveMeta[]>([]);
 const message = ref('');
+/** 手动存档目标槽位（1-3） */
+const manualSlot = ref(1);
 
 function refreshSaves() {
   const list: SaveMeta[] = [];
-  for (let i = 0; i < 11; i++) {
+  for (let i = 0; i < 4; i++) {
     const raw = storage.get(`fm_save_${i}`);
     if (!raw) continue;
     try {
       const data = JSON.parse(raw);
       list.push({
-        slot: i, auto: i < 3,
+        slot: i, auto: i === 0,
         date: data?.date ?? '?',
         player: data?.player?.name ?? '?',
         aum: fmtAum(data?.player?.aum ?? 0),
@@ -63,9 +65,12 @@ function serializeGame(): string {
 }
 
 function saveTo(slot: number, auto: boolean) {
-  const raw = serializeGame();
-  storage.set(`fm_save_${slot}`, raw);
-  message.value = auto ? `自动存档完成（槽位 ${slot + 1}）` : `已保存到槽位 ${slot + 1}`;
+  if (auto) {
+    autoSaveNow();
+    message.value = '自动存档完成';
+  } else if (saveToSlot(slot)) {
+    message.value = `已保存到手动档 ${slot}`;
+  }
   refreshSaves();
   setTimeout(() => (message.value = ''), 2500);
 }
@@ -124,12 +129,16 @@ function importSave(file: File) {
     </div>
     <template v-if="sysTab === 'save'">
     <h3>系统 · 存档</h3>
+    <p class="dim">自动档唯一（游戏运行中每 10 分钟自动覆盖 + 结算/事件后保存）；手动档 1–3 由你自己掌控。</p>
     <p v-if="message" class="msg">{{ message }}</p>
 
     <div class="row">
-      <button class="primary" @click="saveTo(3, false)">存到槽位 4（手动）</button>
-      <button class="primary" @click="saveTo(4, false)">存到槽位 5（手动）</button>
-      <button class="primary" @click="saveTo(5, false)">存到槽位 6（手动）</button>
+      <span class="dim">手动存档到：</span>
+      <button :class="{ primary: manualSlot === 1 }" @click="manualSlot = 1">槽位 1</button>
+      <button :class="{ primary: manualSlot === 2 }" @click="manualSlot = 2">槽位 2</button>
+      <button :class="{ primary: manualSlot === 3 }" @click="manualSlot = 3">槽位 3</button>
+      <button class="primary" @click="saveTo(manualSlot, false)">保存到手动档 {{ manualSlot }}</button>
+      <button @click="saveTo(0, true)">立即自动存档</button>
       <button @click="exportSave">导出到文件</button>
       <label class="file-label">
         导入文件
@@ -145,12 +154,12 @@ function importSave(file: File) {
     <div class="save-list">
       <div v-for="s in saves" :key="s.slot" class="save-item" :class="{ auto: s.auto }">
         <div class="info">
-          <b>{{ s.auto ? `自动档 ${s.slot + 1}` : `手动档 ${s.slot + 1}` }}</b>
+          <b>{{ s.auto ? '自动档（每 10 分钟）' : `手动档 ${s.slot}` }}</b>
           <span class="dim">{{ s.player }} · {{ s.date }} · AUM {{ s.aum }} · {{ s.savedAt.slice(0, 16).replace('T', ' ') }}</span>
         </div>
         <button @click="loadFrom(s.slot)">读取</button>
       </div>
-      <p v-if="saves.length === 0" class="dim">暂无存档。结算或翻月时会自动存档。</p>
+      <p v-if="saves.length === 0" class="dim">暂无存档。开局后每 10 分钟自动存档，或手动保存到 1–3 槽位。</p>
     </div>
 
     <div class="about">

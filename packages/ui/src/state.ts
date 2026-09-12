@@ -4,7 +4,7 @@ import {
   type MarketSnapshot, type IsoDate, type ActionResult, type ActionType,
   type TimeFrame, type ExamPaper, type ExamResult, type ReceptionSession, type ExamQuestion,
   type QuestDef, type LifeLineDef, judgeEnding, ENDINGS,
-  type EndingId, type EndingInput,
+  type EndingId, type EndingInput, ACTION_NAMES,
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
 } from '@fm/core';
 import { contentBundle, eraDrift, eraLevel, randomEvents, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
@@ -16,6 +16,20 @@ import { TeamSystem } from '@fm/core';
 
 export interface NewsItem { date: IsoDate; title: string; body: string }
 export interface LogItem { date: IsoDate; text: string }
+
+/** 行动小剧场：除接待外的行动都给出一段具体交互（客户提问/同事搭话/场景描述） */
+export interface ActionScene {
+  kind: 'lobby' | 'outreach' | 'study' | 'review' | 'aftersale' | 'social';
+  /** 场景描述（谁、在哪、发生什么） */
+  narration: string;
+  /** 本行动结果（数值变化文案，结算后展示） */
+  result: string;
+  /** 学习刷题模式的题目（kind==='study' 时存在） */
+  question?: ExamQuestion;
+  /** 可选的玩家回应选项（轮值答疑/售后处理），每项带反馈文案 */
+  options?: Array<{ text: string; reply: string; good: boolean }>;
+  picked?: number;
+}
 
 /** 行情终端的"距上次查看"口径 */
 export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
@@ -83,6 +97,12 @@ export const state = reactive({
   /** 人生线待确认 */
   lifeDialog: null as null | LifeLineDef,
 
+  /** 行动小剧场（厅堂轮值/学习刷题/外拓拜访/复盘行情/售后处理/同事互动的具体交互） */
+  actionScene: null as null | ActionScene,
+
+  /** 学习刷题：当前题（来自题库） */
+  studyQuestion: null as null | { q: ExamQuestion; picked: null | number | number[]; checked: boolean; correct: boolean },
+
   /** 结局闭环 v0：卷一结束的三维阶段评语 */
   volumeReview: null as null | { headline: string; lines: string[]; grades: Array<{ dim: string; grade: string; comment: string }> },
 
@@ -148,11 +168,51 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   game.injectEvents(randomEvents as any, new Rng(seed ^ 0x5f3759df));
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
-  // 自动存档（新开局覆盖 1 号自动档）
-  storage.set('fm_save_0', serializeNow());
+  // 自动存档（新开局覆盖自动档，并重置自动存档计时器）
+  autoSave();
   // 新手引导（跳过条件：本浏览器已完成过）
   startTutorial();
   pushLog(`${game.player.name} 重生回到 2006 年 1 月，成为汇诚银行城东支行的见习理财经理。今天是你入职的第一天。`);
+}
+
+// ================= 存档系统（问题 5：1 个自动档每 10 分钟轮转 + 3 个手动档） =================
+
+/** 自动档槽位（唯一），手动档槽位 1-3 */
+export const AUTO_SAVE_SLOT = 0;
+export const MANUAL_SLOTS = [1, 2, 3] as const;
+/** 自动存档间隔：10 分钟 */
+const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000;
+let autoSaveTimer: ReturnType<typeof setInterval> | 0 = 0;
+
+/** 写自动档并启动轮转计时（新开局/读档后都会调用） */
+export function autoSave() {
+  storage.set(`fm_save_${AUTO_SAVE_SLOT}`, serializeNow());
+  startAutoSaveTimer();
+}
+
+/** 自动存档计时器：每 10 分钟覆盖一次自动档（只在本局游戏进行中） */
+export function startAutoSaveTimer() {
+  if (autoSaveTimer) clearInterval(autoSaveTimer);
+  autoSaveTimer = setInterval(() => {
+    if (!state.started || state.ending) return;
+    storage.set(`fm_save_${AUTO_SAVE_SLOT}`, serializeNow());
+  }, AUTO_SAVE_INTERVAL_MS);
+}
+
+/** 停止自动存档计时（结局后/返回主界面用） */
+export function stopAutoSaveTimer() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+    autoSaveTimer = 0;
+  }
+}
+
+/** 手动存档到指定槽位（1/2/3），带覆盖确认的 UI 逻辑放组件层 */
+export function saveToSlot(slot: number): boolean {
+  if (!MANUAL_SLOTS.includes(slot as 1 | 2 | 3)) return false;
+  storage.set(`fm_save_${slot}`, serializeNow());
+  pushLog(`【存档】进度已手动保存到槽位 ${slot}。`);
+  return true;
 }
 
 /** 当前游戏状态序列化（v2：含接待/考试/剧情 pending/K线历史，手动存档与自动档共用） */
@@ -285,7 +345,211 @@ export function doAction(type: ActionType, name: string): ActionResult {
   if (r.aum_delta) deltas.push(`AUM +${fmtMoneyCN(r.aum_delta)}`);
   if (r.income_delta) deltas.push(`现金 +${fmtMoneyCN(r.income_delta)}`);
   pushLog(`【${name}】${r.text}${deltas.length ? `（${deltas.join('，')}）` : ''}`);
+  buildActionScene(type, r);
   return r;
+}
+
+// ================= 行动小剧场（问题 2：除接待外的行动都有具体交互） =================
+
+/** 厅堂轮值客户提问库（教学场景：附录答案按专业度给反馈） */
+const LOBBY_QUESTIONS: Array<{ ask: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
+  {
+    ask: '「小伙子，我这笔钱明年要用，是不是买那个收益最高的基金就行？」',
+    options: [
+      { text: '「明年要用的钱不能买高波动的基金，我给您看看一年期定存和现金管理类。」', reply: '客户连连点头：「还是你们专业。」顺手填了张联系方式。', good: true },
+      { text: '「对，收益最高的那只最近涨得很好。」', reply: '客户将信将疑地走了。旁边的老员工摇头：这单埋了颗雷。', good: false },
+    ],
+  },
+  {
+    ask: '「听说你们理财经理都有任务，是不是卖得越贵越好？」',
+    options: [
+      { text: '「任务有，但按规矩来：先看您的风险承受能力，再谈产品。双录都是全程的。」', reply: '客户笑了：「行，冲这句我开个卡。」', good: true },
+      { text: '「想那么多干嘛，先买点试试水。」', reply: '客户皱了皱眉，去别的网点转了一圈。', good: false },
+    ],
+  },
+  {
+    ask: '「我孙子说现在流行在手机上买基金，我不会弄，你们管教吗？」',
+    options: [
+      { text: '「管教！我一步步教您，手机银行还能设置大字模式。」', reply: '十分钟后大爷完成了人生第一笔手机申购，逢人就夸。', good: true },
+      { text: '「手机上自己摸索一下就行，很简单的。」', reply: '大爷撇撇嘴：「那我回家找孙子去。」', good: false },
+    ],
+  },
+  {
+    ask: '「股市最近天天涨，我朋友都赚翻了，我能不能把定存全取出来买股票？」',
+    options: [
+      { text: '「全仓搏一把风险很大，这笔钱您可以分一部分参与，但备用金建议留着。」', reply: '客户想了想：「那就先转三分之一。」——理性配置意识 +1。', good: true },
+      { text: '「行情这么好，赶紧取，晚了就没了！」', reply: '客户热血上头全取了。若接下来行情变脸，第一个来找的就是你。', good: false },
+    ],
+  },
+];
+
+/** 售后处理场景库 */
+const AFTERSALE_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
+  {
+    narration: '客户王阿姨怒气冲冲进来：「我买的理财怎么亏了？你们说好的稳健呢！」',
+    options: [
+      { text: '先道歉安抚，调出产品说明书逐条解释风险等级，再给出后续方案。', reply: '王阿姨情绪平复：「你这么一讲我就明白了，下次买之前你多给我讲讲。」', good: true },
+      { text: '「市场普跌谁都这样，您再等等。」', reply: '王阿姨更火了，扬言要投诉。行长在办公室里看了你一眼。', good: false },
+    ],
+  },
+  {
+    narration: '客户投诉上个月扣款失败错过定投，情绪激动。',
+    options: [
+      { text: '核实失败原因，当天补扣，赠送一次费率优惠，并开通余额提醒。', reply: '客户满意而去，还主动问起了基金定投的其他产品。', good: true },
+      { text: '「这是系统问题，我们也没办法。」', reply: '客户摔门而去。当天下午投诉工单就到了支行。', good: false },
+    ],
+  },
+];
+
+/** 同事互动场景库 */
+const SOCIAL_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
+  {
+    narration: '午休时，隔壁柜台的师兄抱怨：「这个月任务又压下来了，愁。」',
+    options: [
+      { text: '「一起分析下手里的存量客户，看看哪些可以约来聊聊权益配置。」', reply: '两人对着客户名单聊了一下午，都理出了思路。团队氛围 +1。', good: true },
+      { text: '「唉，都是打工的。」继续刷手机。', reply: '气氛更显低沉。', good: false },
+    ],
+  },
+  {
+    narration: '新来的实习生问你：「前辈，第一次见客户紧张怎么办？」',
+    options: [
+      { text: '「记住三件事：听比说重要、数据要留底、不懂的别装懂。」', reply: '实习生眼睛亮了。你发现教别人也是巩固自己（专业力小涨）。', good: true },
+      { text: '「多接几单就习惯了。」', reply: '实习生似懂非懂地点头。', good: false },
+    ],
+  },
+];
+
+/** 外拓拜访场景库 */
+const OUTREACH_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
+  {
+    narration: '你带着产品资料拜访一位企业主客户，他开门见山：「你们银行不就是想让我买理财吗？」',
+    options: [
+      { text: '「先不谈产品。您厂里账上闲钱怎么摆的、对公结算顺不顺，我先帮您把把脉。」', reply: '聊到财务痛点，客户主动问了企业网银和代发工资。信任明显提升。', good: true },
+      { text: '「我们最近有个产品收益不错……」递上宣传单。', reply: '客户礼貌收下，随口应付了两句。', good: false },
+    ],
+  },
+  {
+    narration: '你回访一位许久没联系的退休教师客户，她提起邻居在别的银行买到了「高息存款」。',
+    options: [
+      { text: '「阿姨，正规存款都有存款保险，超过 50 万也要看银行资质。我帮您查查那是什么产品。」', reply: '查完发现是代销理财，客户后怕：「还是你实在。」', good: true },
+      { text: '「那您也去那家买呗。」', reply: '客户愣了一下，气氛尴尬。', good: false },
+    ],
+  },
+];
+
+/** 复盘行情场景库 */
+const REVIEW_SCENES: Array<{ narration: string }> = [
+  { narration: '你调出近一个月的指数走势，逐个板块对照新闻做归因笔记：涨因为什么、跌因为什么、哪些是情绪哪些是基本面。' },
+  { narration: '你把持仓客户的组合和当前行情对照，检查风险敞口：哪几个客户该做再平衡了？顺手记下明天的回访名单。' },
+  { narration: '你翻看今天的行情和新闻对照复盘，把「预期差」三字写进了笔记——超预期的数据和行情反应往往不一致。' },
+];
+
+/** 行动小剧场构建：根据行动类型生成具体交互场景（接待走独立对话，不在其中） */
+function buildActionScene(type: ActionType, r: ActionResult) {
+  const g = getGame();
+  if (type === 'reception') return;
+  if (type === 'rest') { state.actionScene = null; return; }
+  if (type === 'lobby') {
+    const q = g.rng.pick(LOBBY_QUESTIONS);
+    state.actionScene = {
+      kind: 'lobby',
+      narration: `厅堂轮值中，一位前来办业务的大爷把你拦下：${q.ask}`,
+      result: r.text,
+      options: q.options,
+    };
+  } else if (type === 'aftersale') {
+    const s = g.rng.pick(AFTERSALE_SCENES);
+    state.actionScene = { kind: 'aftersale', narration: s.narration, result: r.text, options: s.options };
+  } else if (type === 'social') {
+    const s = g.rng.pick(SOCIAL_SCENES);
+    state.actionScene = { kind: 'social', narration: s.narration, result: r.text, options: s.options };
+  } else if (type === 'outreach') {
+    const s = g.rng.pick(OUTREACH_SCENES);
+    state.actionScene = { kind: 'outreach', narration: s.narration, result: r.text, options: s.options };
+  } else if (type === 'review') {
+    const s = g.rng.pick(REVIEW_SCENES);
+    state.actionScene = { kind: 'review', narration: s.narration, result: r.text };
+  } else if (type === 'study') {
+    // 学习刷题：从题库随机抽一题（练习玩法），答对/答错结算行动收益
+    const pool = [...examBankAll, ...packQuestions()];
+    const q = pool.length > 0 ? pool[Math.floor(g.rng.next() * pool.length) % pool.length] : null;
+    if (q) {
+      state.studyQuestion = { q, picked: q.type === 'multiple' ? [] : null, checked: false, correct: false };
+      state.actionScene = { kind: 'study', narration: '你翻开题库刷一套题（答对专业力加成更多）：', result: r.text, question: q };
+    } else {
+      state.actionScene = { kind: 'study', narration: '你学习了金融知识并做了一套题。', result: r.text };
+    }
+  }
+}
+
+/** 行动小剧场：做出选择（good 与否微调本行动结果，追加进日志） */
+export function resolveActionScene(idx: number) {
+  const s = state.actionScene;
+  if (!s?.options) { state.actionScene = null; return; }
+  const opt = s.options[Math.min(idx, s.options.length - 1)];
+  s.picked = idx;
+  const g = getGame();
+  const a = g.player.attrs;
+  if (opt.good) {
+    // 应对得当：信任/专业力/沟通小幅奖励，压力小幅缓解
+    if (s.kind === 'aftersale') { a.stress = Math.max(0, a.stress - 2); pushLog(`【售后处理】应对得当：${opt.reply}（压力 -2）`); }
+    else if (s.kind === 'lobby') { a.comm += 0.3; pushLog(`【厅堂轮值】答疑获好评：${opt.reply}（沟通力 +0.3）`); }
+    else if (s.kind === 'outreach') { pushLog(`【外拓拜访】切入痛点：${opt.reply}`); }
+    else if (s.kind === 'social') { a.comm += 0.2; pushLog(`【同事互动】${opt.reply}（沟通力 +0.2）`); }
+    else pushLog(`【${ACTION_NAMES[s.kind]}】${opt.reply}`);
+  } else {
+    // 应对不当：小幅惩罚，压力上升
+    a.stress += 2;
+    pushLog(`【${ACTION_NAMES[s.kind]}】应对欠妥：${opt.reply}（压力 +2）`);
+  }
+  state.apUsed = g.apUsed;
+  state.gameDate = g.date;
+  state.lastResult = opt.reply;
+  state.todayActions.push({ name: ACTION_NAMES[s.kind], text: opt.reply });
+}
+
+/** 学习刷题：勾选/选择选项 */
+export function pickStudyAnswer(v: number | number[]) {
+  if (state.studyQuestion && !state.studyQuestion.checked) state.studyQuestion.picked = v;
+}
+
+/** 学习刷题：核对当前题（答对专业力加成提升，答错记入错题本） */
+export function checkStudyAnswer(): string {
+  const sq = state.studyQuestion;
+  if (!sq || sq.checked) return '';
+  const q = sq.q;
+  let correct = false;
+  if (q.type === 'multiple') {
+    const picks = [...(sq.picked as number[])].sort().join(',');
+    correct = picks === (q.answer as number[]).slice().sort().join(',');
+  } else {
+    correct = sq.picked === q.answer;
+  }
+  sq.checked = true;
+  sq.correct = correct;
+  const g = getGame();
+  const a = g.player.attrs;
+  let msg: string;
+  if (correct) {
+    a.pro += 1.2;
+    a.stress = Math.max(0, a.stress - 1);
+    pushLog(`【学习刷题】答对「${q.stem.slice(0, 20)}…」专业力 +1.2。`);
+    msg = '答对了！专业力 +1.2（比闷头看书高效多了）。';
+  } else {
+    a.pro += 0.4;
+    pushWrongQuestions({ examId: q.subject, questions: [q], scores: [0], totalScore: 0 } as unknown as ExamPaper, [0]);
+    pushLog(`【学习刷题】答错「${q.stem.slice(0, 20)}…」，已记入错题本（专业力 +0.4）。`);
+    msg = '答错了……已记入错题本（专业力 +0.4）。看看解析补上这个知识点。';
+  }
+  state.apUsed = g.apUsed;
+  state.gameDate = g.date;
+  return msg;
+}
+
+/** 关闭行动小剧场 */
+export function closeActionScene() {
+  state.actionScene = null;
+  state.studyQuestion = null;
 }
 
 /** 切换时间帧 */
@@ -630,8 +894,8 @@ export function resolveEventChoice(choiceIdx?: number) {
     pushLog(`【事件】「${res.title}」${tag} ${res.outcomeText || '处理完毕'}${effTexts.length ? `（${effTexts.join('，')}）` : ''}`);
   }
   state.modal = null;
-  // 月初自动存档钩子：事件结算后落一个自动档
-  storage.set('fm_save_1', serializeNow());
+  // 月结/事件后自动存档一次
+  autoSave();
 }
 
 export function pushLog(text: string) {
@@ -654,10 +918,13 @@ export function unreadNews(): number {
 
 /** 考试模式：formal 正式考（发证书/耗精力/入档）· mock 模考（计时全流程，不发证书）· practice 练习（不限时，即时对错） */
 export type ExamMode = 'formal' | 'mock' | 'practice';
-/** 当前可报名的科目（按年份解锁） */
+/**
+ * 当前可报名的科目。
+ * 问题 4（试运行二批）：所有考试放开——不再按年代解锁，玩家随时可以报名任何证书；
+ * 正式考仍受"开考月份（3/6/9/12）"窗口与报名费约束，练习/模考完全自由。
+ */
 export function availableExams() {
-  const y = Number(game.date.slice(0, 4));
-  return EXAM_DEFS.filter((e) => y >= e.unlock_year);
+  return EXAM_DEFS;
 }
 
 /** 已获得的证书 */
@@ -737,10 +1004,10 @@ export function startExam(examId: string, mode: ExamMode = 'formal'): boolean {
   state.examIdx = 0;
   state.examResult = null;
   state.examScreen = 'taking';
-  // 练习模式不限时；模考/正式按科目限时
-  state.examSecondsLeft = mode === 'practice' ? -1 : exam.time_limit_sec;
+  // 练习/模考不限时（问题 4：只有正式考保留计时）；正式按科目限时
+  state.examSecondsLeft = mode === 'formal' ? exam.time_limit_sec : -1;
   if (state.examTimer) clearInterval(state.examTimer);
-  if (mode !== 'practice') {
+  if (mode === 'formal') {
     state.examTimer = setInterval(() => {
       state.examSecondsLeft -= 1;
       if (state.examSecondsLeft <= 0) submitExam();
@@ -1127,6 +1394,8 @@ export function loadGameFromSave(data: any) {
   state.ngPlusUnlocked = storage.get('fm_ngplus') === '1';
   state.ending = null;
   pushLog(`【读档】已恢复到 ${g.date} 的进度。`);
+  // 读档后重置自动存档计时（10 分钟轮转）
+  autoSave();
 }
 
 /** 模块内 game 引用替换 */
