@@ -241,6 +241,39 @@ const NEED_POOL: ReceptionNeed[] = [
     preferCategory: 'insurance',
     intentRatio: 0.4,
   },
+  {
+    tag: 'edu_time_lock',
+    surface: '孩子还有八年上大学，听说教育金要专款专用，怎么个专法？',
+    probes: [
+      { text: '家里打算每年为这笔钱固定留多少？这笔钱能接受波动吗？', reveal: '一年存两三万吧，最好别亏。', trustDelta: 2, proDelta: 0.5 },
+      { text: '除了学费，有没有想过大学四年的生活费和可能的留学备选？', reveal: '生活费倒是没细算……留学看情况。', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '教育金的关键是时点刚性：越临近用款越要保守化，确定性工具优先，增值靠早期的权益定投。',
+    preferCategory: 'insurance',
+    intentRatio: 0.4,
+  },
+  {
+    tag: 'income_shock',
+    surface: '公司裁员名单上有我，下个月开始没有工资了，房贷和孩子的补习班怎么办？',
+    probes: [
+      { text: '现在账上能动用的钱够几个月的基本开销？', reveal: '加上活期和货基，大概四个月。', trustDelta: 2, proDelta: 0.5 },
+      { text: '哪些支出可以立刻停、哪些绝对不能断？', reveal: '补习班可以停……房贷断不得，保险是不是也不能断？', trustDelta: 2, proDelta: 0.5 },
+    ],
+    hidden: '收入中断月的核心是开关顺序：先停投资定投、动用应急垫、协商房贷延期，保障型保费最后停。',
+    preferCategory: 'deposit',
+    intentRatio: 0.3,
+  },
+  {
+    tag: 'biz_debt_split',
+    surface: '厂子最近周转紧张，我个人的房子和存款会不会被供应商追债追进去？',
+    probes: [
+      { text: '公司是有限责任还是个体户/合伙？厂里的债务有没有拿家里资产做过担保？', reveal: '有限责任公司……但去年给一笔贷款用房子签了担保。', trustDelta: 2, proDelta: 0.6 },
+      { text: '对公账户和家庭账户现在分得开吗？', reveal: '有时候货款直接打到我个人卡上。', trustDelta: 1, proDelta: 0.5 },
+    ],
+    hidden: '家企隔离的边界在担保与账户混同处失效：先盘担保敞口，再彻底分账，最后谈保护性安排的合法边界。',
+    preferCategory: 'wealth_mgmt',
+    intentRatio: 0.3,
+  },
 ];
 
 export class Reception {

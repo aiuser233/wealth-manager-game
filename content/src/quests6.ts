@@ -114,4 +114,83 @@ export const EASTER_QUESTS: QuestDef[] = [
     ],
     teach: 'volume_end',
   },
+  {
+    id: 'q6_e9_shen_abroad', requires: 'q6_e8_endgame_lights', volume: 6, title: '彩蛋九：沈亦舟的两本账', date: '2025-09-05', client: 'cli_d_haigui',
+    dialogues: [
+      { speaker: '沈亦舟', mood: 'smile', text: '林总，我在海外投行做过五年，回来才明白：境外的模型套不住境内的人情。这是我家庭的两本账——一本给银行看，一本给我自己看。您看看第二本。' },
+      { speaker: '林奇安', text: '（海归见得多的是模型，少见的是有人愿意给你看"第二本账"。）' },
+    ],
+    choices: [
+      { text: '以第二本账为纲做方案：现金流、家族目标、风险底线在模型之前', outcome: '你把他的第二本账拆成一张目标时间轴，模型只做验证。他说："这是回国五年，第一次有人先看人再看数。"', grade: 'best', effects: { trust: 9, pro: 3, aum: 600000 }, unlockKnowledge: ['cross_border', 'family_lifecycle'] },
+      { text: '直接跑模型出标准报告', outcome: '报告很专业，但他已经见过了太多专业。客客气气，然后去了同业那家"更懂他"的机构。', grade: 'normal', effects: { stress: 1 } },
+      { text: '"第二本账太感性了，投资要理性"', outcome: '你否掉的不是一本账，是他十二年的海外生活。他带走的还有两个同样海归的朋友。', grade: 'bad', effects: { trust: -6, aum: -300000 } },
+    ],
+    teach: 'cross_border',
+  },
+  {
+    id: 'q6_e10_luo_trade', requires: 'q6_e9_shen_abroad', volume: 6, title: '彩蛋十：罗世海的汇率之夜', date: '2025-09-26', client: 'cli_d_trade',
+    dialogues: [
+      { speaker: '罗世海', mood: 'normal', text: '林行长，汇率又动了。我这一船货的利润，全在汇率的波动里泡着。2018 年那会儿你让我锁汇，我嫌贵——这一课我不想再补一次。' },
+      { speaker: '林奇安', text: '（2018 年的贸易战教会他的事，2025 年他自己先开口了。）' },
+    ],
+    choices: [
+      { text: '按订单周期做滚动锁汇+留 20% 风险敞口，把成本算给他看', outcome: '他第一次接受了"锁汇成本是保险费"这个说法。船到港那天，汇率果然动了两百个点，他的利润锁得纹丝不动。', grade: 'best', effects: { trust: 9, pro: 3, aum: 400000 }, unlockKnowledge: ['fx_risk', 'interest_parity'] },
+      { text: '「这次汇率看着稳，先不锁」', outcome: '他听你的没锁。这次没亏，但下次呢？你把他的风控交给了运气。', grade: 'normal', effects: { stress: 2 } },
+      { text: '推他做杠杆外汇交易"多赚一点"', outcome: '外贸的钱进了外汇杠杆盘。货还没到港，保证金先爆了。这个单子会跟你很多年。', grade: 'bad', effects: { trust: -9, aum: -500000 } },
+    ],
+    teach: 'fx_risk',
+  },
+  {
+    id: 'q6_e11_wen_teachers', requires: 'q6_e10_luo_trade', volume: 6, title: '彩蛋十一：闻立群的双职工算术', date: '2025-10-18', client: 'cli_d_teachers',
+    dialogues: [
+      { speaker: '闻立群', mood: 'smile', text: '林经理，我们两口子都在县中学教书，二十年工龄。别人觉得我们稳定，可稳定也就那样——退休金算得清清楚楚，孩子的留学梦算得清清楚楚地缺钱。' },
+      { speaker: '林奇安', text: '（"稳定"的另一面是"上限清晰"。县城双职工家庭，最缺的不是纪律，是给纪律配上时间。）' },
+    ],
+    choices: [
+      { text: '把"清晰的上限"变成配置优势：保底年金+教育定投+寒暑假副业现金流', outcome: '你给他做了张"二十年后的一天"时间表：退休金+年金+定投账户，三条线在 2045 年汇合。他把它贴在了办公桌前。', grade: 'best', effects: { trust: 10, pro: 2, aum: 250000 }, unlockKnowledge: ['retirement_plan', 'education_fund'] },
+      { text: '推高收益产品"搏出上限"', outcome: '县城教师的养老钱进了高波动产品，2026 年一次回撤，他在课堂上都心不在焉。', grade: 'bad', effects: { trust: -7, stress: 3 } },
+      { text: '「稳定就稳定吧，知足常乐」', outcome: '这话没错，但他来问，就是还想给孩子争一争。你把他的梦想归了零。', grade: 'normal', effects: { trust: -3 } },
+    ],
+    teach: 'education_fund',
+  },
+  {
+    id: 'q6_e12_wei_exporter', requires: 'q6_e11_wen_teachers', volume: 6, title: '彩蛋十二：魏东林的传承工厂', date: '2025-11-08', client: 'cli_d_exporter',
+    dialogues: [
+      { speaker: '魏东林', mood: 'normal', text: '林行长，厂子我想交给儿子，可他不接；想卖给同行，舍不得牌子。三十年攒下的不只是一间厂，是三百个工人的饭碗。这道题，财务报表上没有答案。' },
+      { speaker: '林奇安', text: '（制造业传承是这一代企业主的集体考题。你要给的不是产品，是路径。）' },
+    ],
+    choices: [
+      { text: '三条路径并列评估：子女合伙过渡/管理层持股/品牌授权，先做家企资产隔离', outcome: '半年后他选了"儿子做品牌、老部下做工厂"的折中路线，信托把分红规则写死。他说："厂子找到了活法，我也睡得着了。"', grade: 'best', effects: { trust: 10, pro: 4, aum: 800000 }, unlockKnowledge: ['succession', 'risk_isolation'] },
+      { text: '「现在行情好，卖了落袋」', outcome: '厂卖了，工人散了，牌子贱了。他后来路过旧厂房，站在门口抽了一下午烟。', grade: 'bad', effects: { trust: -6, aum: -300000 } },
+      { text: '推一份保险完事', outcome: '保险没错，但三百个工人的饭碗不能靠一份保单。他觉得你没听懂他的问题。', grade: 'normal', effects: { sales: 1 } },
+    ],
+    teach: 'succession',
+  },
+  {
+    id: 'q6_e13_qiu_rehire', requires: 'q6_e12_wei_exporter', volume: 6, title: '彩蛋十三：邱工的第二人生', date: '2025-11-29', client: 'cli_d_rehire',
+    dialogues: [
+      { speaker: '邱工', mood: 'smile', text: '小林，退休返聘三年，图纸上还能看得出问题，但体检单也一年比一年厚。我想把技术股的钱取出来，给孙女攒留学钱，再给自己安排个"体面老去"的方案。' },
+      { speaker: '林奇安', text: '（工程师的语言是精确的。你要用同样精确的语言，回答"体面老去"这四个字值多少钱。）' },
+    ],
+    choices: [
+      { text: '分账户落地：教育金独立+照护现金流+医疗备用金，三笔钱三本账', outcome: '你用三个账户回答了四个字。邱工在方案上做了工程师式的批注，最后一行写着："此方案冗余度合格。"', grade: 'best', effects: { trust: 9, pro: 3, aum: 500000 }, unlockKnowledge: ['ltc', 'education_fund'] },
+      { text: '「都放一起省事」', outcome: '教育金和养老金混在一个账户里，第二年孙女留学要用钱时正好赶上回撤。', grade: 'normal', effects: { stress: 2 } },
+      { text: '劝他"把钱全取出来消费，及时行乐"', outcome: '工程师最反感不严谨。这句话让他重新考虑要不要把老伴的账户也转过来。', grade: 'bad', effects: { trust: -5 } },
+    ],
+    teach: 'ltc',
+  },
+  {
+    id: 'q6_e14_wen_lights2', requires: 'q6_e13_qiu_rehire', volume: 6, title: '彩蛋终章·其二：灯火不熄', date: '2025-12-28',
+    dialogues: [
+      { speaker: '系统', text: '12 月 28 日，年庆的最后一天。刘晴和肖何的出师答辩刚刚结束，手册第一页印着两句话："把专业的答案翻译成人话""多走、多问、不吹"。' },
+      { speaker: '陈曼', text: '（病休在家的老陈曼发来一条消息：档案页我看了，卷六比卷五好。好就好在——卷五写的是你，卷六写的是他们。）' },
+      { speaker: '刘晴', mood: 'smile', text: '林行长，明年新客户的档案，让我来建第一份吧。' },
+      { speaker: '系统', text: '（彩蛋卷·其二 收束。35 位客户的档案还很长，故事的后半段，交给别人写了。二十年一局，灯火不熄。）' },
+    ],
+    choices: [
+      { text: '把手册的第一页翻过去，让新人写下第二页', outcome: '你没有说话，只是把那本贴着"多走多问不吹"的手册推到桌子另一边。传承不是交接仪式，是把桌子让出来。', grade: 'best', effects: { rep: 12, pro: 3 } },
+      { text: '「再干二十年，我还年轻」', outcome: '玩笑话，全场笑了。但档案页的最后多了一行小字：本局无憾，下局再会。', grade: 'good', effects: { rep: 6, comm: 3, unlockKnowledge: ['succession'] } },
+    ],
+    teach: 'succession',
+  },
 ];

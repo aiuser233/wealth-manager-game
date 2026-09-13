@@ -116,4 +116,22 @@ export const clients: ClientDef[] = [
     family: '未婚',
     trust: 40, teach_tags: ['take_profit', 'behavior_finance', 'herding'],
   },
+  {
+    id: 'cli_liuq', name: '刘晴', age_2006: -4, // 负值约定：1984 年生（2006 年已在柜面工作，2016 年转岗理财）
+    occupation: '柜员→理财经理（2024 年加入你的团队）', tier: 'mass',
+    risk: { level: 3, tested_at: '2016-06-01' },
+    behaviors: ['risk_averse', 'loyal'],
+    finance: { deposits: 280000, wealth_mgmt: 60000, funds: 40000, insurance: 30000, loans: 200000, annual_cashflow: 150000 },
+    family: '已婚，孩子上小学',
+    trust: 50, teach_tags: ['senior_service', 'deposit_insurance', 'cash_mgmt'],
+  },
+  {
+    id: 'cli_xiaoh', name: '肖何', age_2006: -4, // 负值约定：1996 年生（2018 年入职，2025 年在你的团队）
+    occupation: '管培生→理财经理（考证狂人，2025 年入队）', tier: 'mass',
+    risk: { level: 4, tested_at: '2018-07-01' },
+    behaviors: ['tech_native', 'risk_averse'],
+    finance: { deposits: 90000, wealth_mgmt: 0, funds: 50000, insurance: 10000, loans: 0, annual_cashflow: 160000 },
+    family: '未婚，与同学合租',
+    trust: 45, teach_tags: ['fund_selection', 'dual_recording', 'communication'],
+  },
 ];

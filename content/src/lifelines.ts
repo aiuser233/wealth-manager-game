@@ -601,5 +601,123 @@ export const JIANGYU_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 + 姜屿 8 = 77 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE];
+export const LIUQ_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_liuq', year: 2013, month: 5,
+    title: '柜面里的定投启蒙',
+    text: '刘晴，2006 年时是刚入行的柜员，点钞比赛全行第二。2013 年她隔着玻璃看你给客户讲定投，下班后问了一句："我自己能这么存吗？"你给她排了发薪日自动转入。柜员与理财经理之间隔着一块玻璃，也隔着一整套知识——她开始自学。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['dca', 'cash_mgmt'] },
+  },
+  {
+    client: 'cli_liuq', year: 2016, month: 9,
+    title: '转岗考试：玻璃的另一边',
+    text: '她考下了从业资格，申请转岗理财经理。面试时行长问她："柜员干得好好的，为什么出来？"她说："我想从数钱的，变成帮人规划钱的。"你坐在评委席上没说话，但她引用的那套"四笔钱"框架，是三年前你在晨会上讲的。',
+    trustReq: 10,
+    effects: { trust: 4, unlockKnowledge: ['income_structure', 'deposit_migration'] },
+  },
+  {
+    client: 'cli_liuq', year: 2019, month: 8,
+    title: '净值化的第一次驻足',
+    text: '转岗第三年，她负责的老年客户在理财破净传闻里集体动摇。她跑来问你："我按流程讲了基准不等于承诺，可他们不听，怎么办？"你反问："你讲了亏损之后的生活怎么办吗？"她愣住了——流程管合规，人管人心。',
+    trustReq: 20,
+    effects: { trust: 4, unlockKnowledge: ['nav_product', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_liuq', year: 2022, month: 11,
+    title: '破净潮里的老兵',
+    text: '2022 年底的债市急跌，她一个一个给 R2 客户打电话，嗓子哑了三天。有人骂她，也有人第二天带着热包子来网点。她后来在复盘会上说："那天我明白了，客户骂的不是净值，是没人接住他们。"',
+    trustReq: 30,
+    effects: { trust: 5, unlockKnowledge: ['nav_drawdown_read', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_liuq', year: 2024, month: 3,
+    title: '加入你的团队',
+    text: '你升任私行团队负责人后第一批招人，点名要她。她说："刘晴有个毛病，见不得客户在别人那儿吃亏。"你笑着说，这毛病全团队都得有。柜面转岗的稳健派，终于和你成了并肩的人。',
+    trustReq: 40,
+    effects: { trust: 5, unlockKnowledge: ['team_coaching', 'suitability'] },
+  },
+  {
+    client: 'cli_liuq', year: 2024, month: 11,
+    title: '她带的第一批老年客户',
+    text: '她主动接下全组最难的老年客群：手机银行教学、防诈讲座、上门服务。有人嫌这活慢，她一句话顶回去："老年客户的信任是十年前的存款攒的，我们现在不做，十年后谁管他们？"这批客户后来成了全组 AUM 最稳的底盘。',
+    trustReq: 50,
+    effects: { trust: 6, unlockKnowledge: ['elder_care', 'senior_service'] },
+  },
+  {
+    client: 'cli_liuq', year: 2025, month: 6,
+    title: '稳健的价值被看见',
+    text: '季度复盘，她负责的客群投诉率为零、复购率全组第一。行长在会上问秘诀，她只说了三个词："多走、多问、不吹。"你把这三个字写进了团队手册第一章。',
+    trustReq: 60,
+    effects: { trust: 6, unlockKnowledge: ['team_coaching', 'communication'] },
+  },
+  {
+    client: 'cli_liuq', year: 2025, month: 12,
+    title: '出师：从玻璃内到玻璃外',
+    text: '年末，她通过出师答辩。答辩最后她说："十三年前我隔着玻璃看人做理财，今天我想造更多扇窗。"你想起 2013 年她隔着柜台问你的那句话。带出一个徒弟，是这份职业最好的复利。',
+    trustReq: 70,
+    effects: { trust: 8, unlockKnowledge: ['team_coaching', 'succession'] },
+  },
+];
+
+export const XIAOH_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_xiaoh', year: 2018, month: 7,
+    title: '管培生的第一张错题本',
+    text: '肖何，2018 年以管培生身份入职，是当年唯一一个把《理财经理手册》逐页做成思维导图的新人。你随口说"双录的话术有十二个版本"，第二天他真的整理出十二个版本贴在工位上。书呆子气是好东西——前提是用对地方。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['dual_recording', 'fund_basics'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2020, month: 2,
+    title: '线上转型：考霸的盲区',
+    text: '疫情远程办公，他把自己刷题打磨的题库搬上线上，全行引用。但他自己第一次视频面谈客户却搞砸了——客户说"你讲得都对，但我感觉你在背书"。他来问你，你只说了一句："考试有标准答案，客户没有。"',
+    trustReq: 10,
+    effects: { trust: 4, unlockKnowledge: ['digital_banking', 'communication'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2022, month: 9,
+    title: 'CFP 冲刺与客户的婚礼请柬',
+    text: '他一边冲 CFP，一边服务着入行以来的第一个深度客户——那对 2019 年他做人生第一份配置方案的小夫妻。请柬送来那天，他忽然懂了：证书证明你懂，请柬证明客户信。两样他都想留着。',
+    trustReq: 20,
+    effects: { trust: 4, unlockKnowledge: ['asset_allocation', 'family_lifecycle'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2023, month: 5,
+    title: '谈单紧张症的破解',
+    text: '大单面前他仍然会紧张。你的方法很"笨"：让他把每一次面谈录音复盘，标注"哪一句是我真正听懂了客户"。三个月后他的转述率从 30% 提到 80%。"原来倾听是可以量化的。"他说这话的时候眼睛是亮的。',
+    trustReq: 30,
+    effects: { trust: 5, unlockKnowledge: ['communication', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2025, month: 4,
+    title: '加入你的团队',
+    text: '2025 年你团队扩编，他递来的自荐信只有一页，最后一行写着："我会考试，但我更想学会您说的「把答案翻译成人话」。"你把这句话读了两遍，签了字。',
+    trustReq: 40,
+    effects: { trust: 5, unlockKnowledge: ['team_coaching', 'advisory'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2025, month: 8,
+    title: '错题本 2.0：全团队的',
+    text: '他把个人错题本升级成团队共享的案例库：每笔失败的推荐、每次投诉的复盘、每个红线案例。有人嫌费时间，你说："我们的工资里有一部分，就是为这些错误付的学费，别白交。"',
+    trustReq: 50,
+    effects: { trust: 5, unlockKnowledge: ['employee_conduct', 'team_coaching'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2025, month: 10,
+    title: '第一次拦住师傅',
+    text: '一个高佣金产品冲业绩的关键期，他拿着数据来找你："这个产品的费后收益跑不赢债基，但任务压力在推它——我们真卖吗？"你看着这个曾经见客户就紧张的年轻人，此刻他在拦你。你签了"不推"。',
+    trustReq: 60,
+    effects: { trust: 6, unlockKnowledge: ['red_lines', 'employee_conduct'] },
+  },
+  {
+    client: 'cli_xiaoh', year: 2025, month: 12,
+    title: '出师：把答案翻译成人话',
+    text: '年末出师答辩，评委问他对理财经理这个职业的定义，他说："把专业的答案翻译成人话，把客户的人话翻译成方案。"全场安静了两秒。你带头鼓掌——这句话，值得写进下一版《理财经理手册》的第一页。',
+    trustReq: 70,
+    effects: { trust: 8, unlockKnowledge: ['communication', 'succession'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 + 姜屿 8 + 刘晴 8 + 肖何 8 = 93 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE, ...LIUQ_LIFELINE, ...XIAOH_LIFELINE];

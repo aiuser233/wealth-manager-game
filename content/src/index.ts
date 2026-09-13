@@ -34,6 +34,14 @@ import { examBank24 } from './exams24';
 import { examBank25 } from './exams25';
 import { examBank26 } from './exams26';
 import { examBank27 } from './exams27';
+import { examBank28 } from './exams28';
+import { examBank29 } from './exams29';
+import { examBank30 } from './exams30';
+import { examBank31 } from './exams31';
+import { examBank32 } from './exams32';
+import { examBank33 } from './exams33';
+import { examBank34 } from './exams34';
+import { examBank35 } from './exams35';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { knowledgeBatch2 } from './knowledge2';
 import { knowledgeBatch3 } from './knowledge3';
@@ -42,9 +50,10 @@ import { knowledgeBatch5 } from './knowledge5';
 import { knowledgeBatch6 } from './knowledge6';
 import { knowledgeBatch7 } from './knowledge7';
 import { knowledgeBatch8 } from './knowledge8';
+import { knowledgeBatch9, debriefCardsDeep3 } from './knowledge9';
 import { debriefCardsDeep } from './knowledge6';
 import { debriefCardsDeep2 } from './knowledge8';
-import { randomEvents, randomEventsDeep, randomEventsDeep2 } from './random-events';
+import { randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3 } from './random-events';
 import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
 import { VOLUME2_QUESTS } from './quests2';
 import { VOLUME3_QUESTS } from './quests3';
@@ -54,12 +63,12 @@ import { EASTER_QUESTS } from './quests6';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
 /** 全量题库（廿七批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27];
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35];
 
 /** 知识库全量（八批合计） */
-const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2];
+const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3];
 
-export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6, ...knowledgeBatch7, ...knowledgeBatch8];
+export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6, ...knowledgeBatch7, ...knowledgeBatch8, ...knowledgeBatch9];
 
 /** 剧情任务全量（卷一~卷五 + 卷六彩蛋卷） */
 export const QUESTS_ALL = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS];
@@ -78,5 +87,5 @@ export const contentBundle: ContentBundle = {
   clients: clientsAll,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, deepClients, deepClients2, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, randomEvents, randomEventsDeep, randomEventsDeep2, VOLUME1_QUESTS, VOLUME1_LIFELINES, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, WANG_LIFELINE, LI_LIFELINE };
+export { factors, industries, releases, directorEvents, products, clients, deepClients, deepClients2, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, VOLUME1_QUESTS, VOLUME1_LIFELINES, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, WANG_LIFELINE, LI_LIFELINE };
 export { debriefAll as DEBRIEF_CARDS };

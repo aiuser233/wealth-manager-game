@@ -8,7 +8,7 @@ import {
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
   emptyCareerStats as emptyStats, type CareerStats,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, randomEventsDeep2, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { refreshAchievements, recordEnding } from './achievements';
@@ -210,7 +210,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   }
   refreshCaches();
   // 注入随机事件池
-  game.injectEvents([...randomEvents, ...randomEventsDeep, ...randomEventsDeep2] as any, new Rng(seed ^ 0x5f3759df));
+  game.injectEvents([...randomEvents, ...randomEventsDeep, ...randomEventsDeep2, ...randomEventsDeep3] as any, new Rng(seed ^ 0x5f3759df));
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
   // 自动存档（新开局覆盖自动档，并重置自动存档计时器）
