@@ -8,7 +8,7 @@ import {
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
   emptyCareerStats as emptyStats, type CareerStats,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, randomEventsDeep2, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { refreshAchievements, recordEnding } from './achievements';
@@ -210,7 +210,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   }
   refreshCaches();
   // 注入随机事件池
-  game.injectEvents([...randomEvents, ...randomEventsDeep] as any, new Rng(seed ^ 0x5f3759df));
+  game.injectEvents([...randomEvents, ...randomEventsDeep, ...randomEventsDeep2] as any, new Rng(seed ^ 0x5f3759df));
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
   // 自动存档（新开局覆盖自动档，并重置自动存档计时器）
@@ -500,7 +500,27 @@ const LOBBY_QUESTIONS: Array<{ ask: string; options: Array<{ text: string; reply
       { text: '「差不多是这样，您放心。」', reply: '十年后退保发现亏了一截，投诉工单写的就是你的名字。', good: false },
     ],
   },
-];
+  {
+    ask: '「闺女，我听说房贷利率降了，我那套房月供能少多少？」',
+    options: [
+      { text: '「看您合同的重定价日和 LPR 加点，我帮您翻出合同算笔账。」', reply: '客户回家翻出合同，第二天专门来感谢：「总算弄明白了。」', good: true },
+      { text: '「降了降了，反正会少。」', reply: '客户回头问儿子，儿子一查发现根本没到重定价日。', good: false },
+    ],
+  },
+  {
+    ask: '「小伙子，医保个人账户里的钱能取出来吗？我听人说可以。」',
+    options: [
+      { text: '「个人账户的钱定向用于医疗消费，取现是违规的——不过您可以用它给家人缴居民医保。」', reply: '客户竖起大拇指：「还是你懂政策。」', good: true },
+      { text: '「应该能吧，你找中介问问。」', reply: '客户找的"中介"卷走两千元手续费。', good: false },
+    ],
+  },
+  {
+    ask: '「我想把公司分红存下来给孙子，听说家族信托要一千万？我没那么多。」',
+    options: [
+      { text: '「家庭服务信托 100 万起就能做，分配条款按您的意思来。」', reply: '客户眼睛亮了：「那给我讲讲。」', good: true },
+      { text: '「那你这点钱做不了，存定期吧。」', reply: '客户悻悻而去，转头在别家做了个来路不明的"理财"。', good: false },
+    ],
+  }]
 
 /** 售后处理场景库 */
 const AFTERSALE_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
@@ -547,7 +567,20 @@ const AFTERSALE_SCENES: Array<{ narration: string; options: Array<{ text: string
       { text: '客户急着办就赶紧给办，别多嘴耽误人家的事。', reply: '汇款完成后下午客户哭着回来：钱进了诈骗账户。这笔账，柜台和你都难辞其咎。', good: false },
     ],
   },
-];
+  {
+    narration: '客户拿着一份"养老床位预订合同"来咨询：交 20 万会员费每月返 800 元，"比理财划算"。',
+    options: [
+      { text: '帮她查企业登记与涉非线索，讲解"返本销售+高额回报"的非法集资特征，劝其尽快解约退款。', reply: '两个月后该机构被查，客户因退得早全身而退，送来一面锦旗。', good: true },
+      { text: '「这项目听着不错，我也帮您算算收益。」', reply: '客户交了钱。一年后机构暴雷，投诉记录里你的"专业背书"被反复提及。', good: false },
+    ],
+  },
+  {
+    narration: '客户投诉基金转换时"少赎多买"：她以为转换免费，实际承担了申购补差。',
+    options: [
+      { text: '核实交易记录，逐笔解释转换规则与费用，协助她调整持有方式并书面致歉。', reply: '客户接受解释："规则没讲透，你们要认这个账。"投诉办结，信任回升。', good: true },
+      { text: '「合同里都写了，您没看吗？」', reply: '投诉升级到监管热线，工单转回时已不是解释规则就能了结的事。', good: false },
+    ],
+  }]
 
 /** 同事互动场景库 */
 const SOCIAL_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
@@ -593,7 +626,20 @@ const SOCIAL_SCENES: Array<{ narration: string; options: Array<{ text: string; r
       { text: '站在旁边看柜员自己处理，别沾包。', reply: '争执升级成大厅争吵，第二天支行例会上点名批评了全员的服务协同。', good: false },
     ],
   },
-];
+  {
+    narration: '晨会前，同事们在议论新来的主管"要砍存量客户分配规则"。',
+    options: [
+      { text: '「规则变了我们就把服务做细——客户跟着专业走，不跟着嗓门走。」', reply: '人心安定下来。月底新规则落地，你组留存最好。', good: true },
+      { text: '跟着一起抱怨主管。', reply: '传话传两圈就变味了，你的名字上了主管的"情绪名单"。', good: false },
+    ],
+  },
+  {
+    narration: '隔壁网点借调你帮三天忙，柜员问：「你们那边业绩压力怎么扛的？」',
+    options: [
+      { text: '「把客户分层，一天只打十个有效电话，剩下的交给转介绍。」', reply: '三天后她按这个方法打出两个预约，专程来道谢。', good: true },
+      { text: '「硬扛，谁让咱是打工的。」', reply: '负能量随你传回了隔壁网点。', good: false },
+    ],
+  }]
 
 /** 外拓拜访场景库 */
 const OUTREACH_SCENES: Array<{ narration: string; options: Array<{ text: string; reply: string; good: boolean }> }> = [
@@ -646,7 +692,20 @@ const OUTREACH_SCENES: Array<{ narration: string; options: Array<{ text: string;
       { text: '翻倍薪水！立刻答应跳槽。', reply: '新平台冲量文化浓厚，半年后你带着一身指标焦虑回望老网点——有些东西没了就是没了。', good: false },
     ],
   },
-];
+  {
+    narration: '社区重阳节活动，居委会请你去给老人们讲讲"守住钱袋子"。',
+    options: [
+      { text: '带三个真实案例：养老公寓会员卡、以房养老骗局、"高息存款"话术，讲完留咨询台。', reply: '现场一位大爷悄悄说："我就是被那个会员卡坑过的。"此后社区成了你的固定宣教点。', good: true },
+      { text: '念完宣传折页就走。', reply: '老人们听了一半散了场。', good: false },
+    ],
+  },
+  {
+    narration: '产业园扫楼，保安拦着不让进："又是一家卖理财的。"',
+    options: [
+      { text: '「我们不卖产品。免费给园区企业做一场"新办企业财务避坑"讲座，您帮我们约场地。」', reply: '讲座场场爆满，园区管委会主动介绍新入驻企业给你。', good: true },
+      { text: '塞给保安两包烟求放行。', reply: '烟收了，材料进了垃圾桶。', good: false },
+    ],
+  }]
 
 /** 复盘行情场景库 */
 const REVIEW_SCENES: Array<{ narration: string }> = [
@@ -659,7 +718,23 @@ const REVIEW_SCENES: Array<{ narration: string }> = [
   { narration: '基金二季报披露完毕，你抽查了自己重仓产品的风格：说好的价值风格，前十大重仓悄悄换成了一半科技股。风格漂移不可怕，可怕的是你不知道它漂了。' },
   { narration: '你算了下主要指数的估值分位：十年视角，当前位置不贵。但「不贵」和「会涨」中间隔着流动性、业绩与情绪三条街——笔记写下四个字：便宜不是买点。' },
   { narration: '复盘方法论升级：你把过去一年的复盘笔记翻出来验证——当初的归因有多少兑现了？发现一半是「正确但没用」：方向对、时间错。复盘的价值不在结论，在迭代。' },
-];
+  { narration: '你注意到一个新迹象：连不炒股的客户都在问"要不要上车"。情绪指标从来不在研报里，在厅堂里。' },
+  { narration: '你把近三年的月度 KPI 完成度画成柱状图：开门红月份的完成率与次年一季度的客诉率呈正相关——冲量是有后账的。' },
+  { narration: '你复盘了"降息预期"交易：债基收益率曲线倒挂的前一周，聪明钱早已动过——利率行情，抢跑是常态，跟单要三思。' },
+  { narration: '黄金、原油、谷物同步上行的日子，你把"通胀交易"四个字写在了笔记本扉页。' },
+  { narration: '你对照了两轮牛市的基金发行数据：峰值销量都出现在指数滞涨月，"越涨越好卖，越好卖越危险"的规律从未缺席。' },
+  { narration: '一位客户在熊末加仓成功。复盘时你发现：他不是勇敢，是提前两年规划了这笔钱——纪律才是勇气的真身。' },
+  { narration: '北向资金连续三日流出而指数未跌，你记下：定价权的边际变化，往往先于市场共识。' },
+  { narration: '你统计了客户咨询高峰：大跌日问"卖不卖"、大涨日问"买不买"、只有年报季有人问"我到底赚没赚"。' },
+  { narration: '把本周的新闻按"政策/流动性/情绪"三层归档后，你发现市场每天在演三幕剧，而多数人只盯着第三幕。' },
+  { narration: '你给组合做了压力测试：假如 2015 重演，几个客户的回撤会触及生活底线？答案让你连夜列了回访名单。' },
+  { narration: '风格数据回来了：小盘跑赢大盘的月度差值创下近三年新高。均值回归也许迟到，但风格从不缺席。' },
+  { narration: '你复盘了本季度的成交：急单占比高的月份，售后处理量也在上升——销售端的快，是服务端的慢。' },
+  { narration: '理财破净数量与赎回压力的相关性，你画了散点图：2022 年 11 月那个右上角的点，值得写进教科书。' },
+  { narration: '你开始用"一句话复述"检验归因质量：说清一个行情只用一句话，才叫理解；要用一段话，多半是编的。' },
+  { narration: '利率下行期，长久期固收产品成了香饽饽。你记下反向风险：一旦利率反转，久期是双刃剑。' },
+  { narration: '季度末复盘：AUM 的增长里，多少来自市场贝塔，多少来自真实新客？后者才是你带得走的业绩。' },
+]
 
 /** 行动小剧场构建：根据行动类型生成具体交互场景（接待走独立对话，不在其中） */
 function buildActionScene(type: ActionType, r: ActionResult) {
@@ -864,7 +939,7 @@ export function advanceFrame(daysOverride?: number): number {
 export function computeEventShifts(seed: number): Record<string, IsoDate> {
   const shifts: Record<string, IsoDate> = {};
   const rng = new Rng(seed ^ 0x2b1b_c0de);
-  const all = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS];
+  const all = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS];
   for (const q of all) {
     const roll = Math.round((rng.next() * 2 - 1) * 66); // -66 ~ +66 天
     if (roll === 0) continue;
@@ -881,7 +956,7 @@ export function computeEventShifts(seed: number): Record<string, IsoDate> {
 export function initQuestEngine(seed: number) {
   // 卷一~卷三全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
   state.questEngine = new QuestEngine(
-    [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS] as unknown as QuestDef[],
+    [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS] as unknown as QuestDef[],
     LIFELINES_ALL as unknown as LifeLineDef[],
   );
 }
@@ -918,6 +993,11 @@ export function chooseQuest(choiceIdx: number) {
     state.volumeReview = computeVolumeReview(5);
     // P6 六结局：卷五终章后判定完整结局
     computeFinalEnding();
+  } else if (d?.quest.id === 'q6_e7_heritage_craft' && state.questEngine) {
+    // 彩蛋卷：e7 完成即全部实质章节达成（e8 终章为收束），e8 弹出前预生成卷六阶段评语
+    state.volumeReview = computeVolumeReview(6);
+  } else if (d?.quest.id === 'q6_e8_endgame_lights' && state.questEngine) {
+    state.volumeReview = computeVolumeReview(6);
   }
 }
 
@@ -927,8 +1007,8 @@ export function computeFinalEnding() {
   const qe = state.questEngine;
   if (!qe) return;
   const prog = (n: number) => qe.volumeProgress(n);
-  const questsDone = [1, 2, 3, 4, 5].reduce((a, v) => a + prog(v).done, 0);
-  const questsTotal = [1, 2, 3, 4, 5].reduce((a, v) => a + prog(v).total, 0);
+  const questsDone = [1, 2, 3, 4, 5, 6].reduce((a, v) => a + prog(v).done, 0);
+  const questsTotal = [1, 2, 3, 4, 5, 6].reduce((a, v) => a + prog(v).total, 0);
   const avgTrust = g.clients.length
     ? g.clients.reduce((a, c) => a + c.trust, 0) / g.clients.length
     : 0;
@@ -1005,6 +1085,15 @@ function finishQuest(choiceIdx: number) {
   if (e.stress) g.player.attrs.stress = Math.max(0, g.player.attrs.stress + e.stress);
   if (e.aum) g.player.aum = Math.max(0, g.player.aum + e.aum);
   pushLog(`【剧情】${d.quest.title} —— ${res.outcome}`);
+  // 卷六彩蛋终章：结局画面之后到达 → 收起剧情弹窗，不盖结局
+  if (d.quest.id === 'q6_e8_endgame_lights' && state.ending) {
+    d.phase = 'result';
+    d.resultText = res.outcome;
+    d.resultGrade = res.grade;
+    state.questDialog = null;
+    pushLog('【彩蛋卷】「万家灯火」收束——八张回访单钉进档案最后一页。');
+    return;
+  }
   // P4 学习记录：抉择态度数据入档（best/good/normal/bad 天然分级）
   recordChoice({ questTitle: d.quest.title, grade: res.grade, at: game.date });
   touchActiveDay(game.date);

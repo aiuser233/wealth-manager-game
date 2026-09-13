@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 生涯档案页（P6+ 增强）：把 careerLog（60 章抉择史）、四维终评、成就、结局
+ * 生涯档案页（P6+ 增强）：把 careerLog（68 章抉择史）、四维终评、成就、结局
  * 汇成一页"成绩单"——培训场景的自然复盘工具，也支持导出。
  */
 import { computed } from 'vue';
@@ -17,7 +17,7 @@ const careerLog = computed(() => state.questEngine?.serialize().careerLog ?? [])
 const chapters = computed(() => {
   const byVol = new Map<number, Array<{ date: string; title: string; grade: string }>>();
   for (const c of careerLog.value) {
-    const vol = Number(c.date.slice(0, 4)) <= 2009 ? 1 : Number(c.date.slice(0, 4)) <= 2015 ? 2 : Number(c.date.slice(0, 4)) <= 2020 ? 3 : Number(c.date.slice(0, 4)) <= 2023 ? 4 : 5;
+    const vol = Number(c.date.slice(0, 4)) <= 2009 ? 1 : Number(c.date.slice(0, 4)) <= 2015 ? 2 : Number(c.date.slice(0, 4)) <= 2020 ? 3 : Number(c.date.slice(0, 4)) <= 2023 ? 4 : c.title.startsWith('彩蛋') ? 6 : 5;
     const arr = byVol.get(vol) ?? [];
     arr.push(c);
     byVol.set(vol, arr);
@@ -40,12 +40,14 @@ const dims = computed(() => {
   if (!g.value) return [];
   const qe = state.questEngine;
   const prog = (n: number) => qe?.volumeProgress(n) ?? { done: 0, total: 12 };
-  const questsDone = [1, 2, 3, 4, 5].reduce((a, v) => a + prog(v).done, 0);
+  const vols = [1, 2, 3, 4, 5, 6];
+  const questsDone = vols.reduce((a, v) => a + prog(v).done, 0);
+  const questsTotal = vols.reduce((a, v) => a + prog(v).total, 0);
   const avgTrust = g.value.clients.length ? g.value.clients.reduce((a, c) => a + c.trust, 0) / g.value.clients.length : 0;
   return [
     { name: '职级', value: ['见习', '普通', '贵宾', '私行', '主管'][Math.min(4, g.value.player.grade)] },
     { name: 'AUM', value: fmtAum(g.value.player.aum) },
-    { name: '主线', value: `${questsDone}/60 章` },
+    { name: '主线', value: `${questsDone}/${questsTotal} 章` },
     { name: '人生线', value: `${qe?.lifelinesDone() ?? 0} 节点` },
     { name: '信任均值', value: avgTrust.toFixed(0) },
     { name: '违规', value: `${g.value.violations} 次` },

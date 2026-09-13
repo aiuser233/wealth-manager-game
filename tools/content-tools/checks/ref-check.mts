@@ -12,9 +12,10 @@ const kIds = new Set(KNOWLEDGE_ALL.map((k) => k.id));
 const kTags = new Set(KNOWLEDGE_ALL.flatMap((k) => k.tags));
 const cIds = new Set(contentBundle.clients.map((c) => c.id));
 
-/** unlockKnowledge 引用既可为词条 id 也可为词条 tag（按 tag 解析时取首个匹配词条） */
+/** unlockKnowledge 引用既可为词条 id 也可为词条 tag（按 tag 解析时取首个匹配词条；允许省略 k_ 前缀） */
 function resolveKnowledge(ref: string): string | null {
   if (kIds.has(ref)) return ref;
+  if (kIds.has('k_' + ref)) return 'k_' + ref;
   if (kTags.has(ref)) return KNOWLEDGE_ALL.find((k) => k.tags.includes(ref))!.id;
   return null;
 }

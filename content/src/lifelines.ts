@@ -542,5 +542,64 @@ export const TANGWEI_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 = 69 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE];
+export const JIANGYU_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_d_exfunds', year: 2013, month: 3,
+    title: '从卖方到买方：新基金经理的第一只产品',
+    text: '姜屿，2006 年时还是券商研究所的资深研究员，2013 年 40 岁跳槽到公募做基金经理。发产品前他来网点办个人账户，聊起风格："我做了十年研究，这次管真金白银。"你问他回撤预案，他愣了一下："公募不就是做相对收益吗？"——你记下了这句话，七年后它会应验。',
+    trustReq: 0,
+    effects: { trust: 3, unlockKnowledge: ['fund_evaluation', 'fund_basics'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2015, month: 7,
+    title: '股灾中的流动性螺旋',
+    text: '他的成长基金连吃跌停，持仓小票根本卖不出去——先跌停的先跑，跑不掉的全套住。他深夜来网点取自己账户里的钱应急，苦笑："我在给别人管流动性，自己的流动性先没了。"你陪他把赎回顺序理了一遍。他记住了：危机关头，资产和负债要分开看。',
+    trustReq: 10,
+    effects: { trust: 4, unlockKnowledge: ['forced_liquidation', 'systemic_risk'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2017, month: 6,
+    title: '风格切换里的排名焦虑',
+    text: '2016-2017 年小票持续失血，大盘蓝筹走强。他重仓小盘成长，排名掉进后三分之一，公司开始给他做"归因辅导"。他来网点转转账，顺口问你："你说散户都买「茅指数」了，我们这种做小票的还有活路吗？"你把风格箱讲给他听——他也反过来讲给你听，两个"同行"第一次平等对话。',
+    trustReq: 20,
+    effects: { trust: 4, unlockKnowledge: ['rotation', 'k_style_box'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2019, month: 8,
+    title: '抱团的形成：他也是参与者',
+    text: '核心资产行情起来了，他的新基金清仓式买入消费白马。"不是我不知道贵，是考核就要这个。"他坦白抱团的机制：季度排名逼着大家买一样的票，越买越涨、越涨越买。你问他拥挤了怎么办，他说："音乐停之前谁都不想先下场。"',
+    trustReq: 30,
+    effects: { trust: 4, unlockKnowledge: ['herding', 'crowded_trade'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2021, month: 3,
+    title: '抱团瓦解：基金净值与骂声一起落',
+    text: '春节后他的基金一个月回撤 28%，赎回潮来了——基民在最该扛的时候集体割肉，他在最该减仓的时候被排名绑住。他给你看持有人结构："散户平均持有 41 天，我做的所有研究，他们 41 天就走完了。"你第一次听基金经理说：这个行业的痛点是期限错配。',
+    trustReq: 40,
+    effects: { trust: 5, unlockKnowledge: ['crowded_trade', 'nav_drawdown_read'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2021, month: 11,
+    title: '离开：公奔私还是离开行业',
+    text: '他递了辞职信，没去私募。"管了八年别人的钱，我想先搞明白钱到底是什么。"他注销了部分仓位，把大头换成债基和存款，只留一只定投。网点柜台再见他，已经不是基金经理，是一个来办定期转存的普通中年人。他说这叫"向下兼容"。',
+    trustReq: 50,
+    effects: { trust: 5, unlockKnowledge: ['cashflow', 'cash_mgmt'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2023, month: 6,
+    title: '回来：以投资者身份做配置',
+    text: '他在一家企业做投资顾问培训讲师，回来请你给他讲讲银行视角的适当性管理。"我以前觉得适当性是枷锁，现在明白它是桥。"你把双录、风险测评、销售适当性流程完整讲了一遍，他逐条记进讲义——从前端_mgr到后端投资者，他终于走完了全流程。',
+    trustReq: 60,
+    effects: { trust: 5, unlockKnowledge: ['suitability', 'advisory'] },
+  },
+  {
+    client: 'cli_d_exfunds', year: 2025, month: 9,
+    title: '和解：长钱长投的最后一课',
+    text: '他的定投第七年，年化 6.8%，"比公募的多数权益基金都稳"。他把这段经历写成小册子《我管了八年基金才学会给自己理财》，送你一本，扉页写着 2013 年你问他的那句："回撤预案是什么？"二十年局，一个基金经理的完整弧光：从管别人的钱，到管好自己的钱。',
+    trustReq: 70,
+    effects: { trust: 8, unlockKnowledge: ['dca', 'patient_capital'] },
+  },
+];
+
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 + 姜屿 8 = 77 节点） */
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE];

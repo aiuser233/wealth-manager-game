@@ -46,7 +46,7 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
 
   // 行动池按策略加权
   const actionPool: Record<Strategy, string[]> = {
-    pro: ['reception', 'reception', 'study', 'study', 'review', 'outreach', 'aftersale', 'rest'],
+    pro: ['reception', 'reception', 'study', 'study', 'review', 'outreach', 'aftersale', 'rest', 'social', 'rest'],
     sales: ['reception', 'reception', 'reception', 'outreach', 'outreach', 'lobby', 'aftersale', 'rest'],
     balanced: ['reception', 'reception', 'study', 'outreach', 'review', 'lobby', 'aftersale', 'social', 'rest'],
   };

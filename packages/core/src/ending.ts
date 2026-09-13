@@ -131,6 +131,9 @@ export const ENDINGS: Record<EndingId, EndingDef> = {
   },
 };
 
+/** 专业线门槛：主线完成率比例（固定比例，避免卷数扩充后绝对门槛漂移） */
+export const QUEST_PRO_RATIO = 0.8;
+
 /** 主判定：按优先级返回结局 id 与判定依据链 */
 export function judgeEnding(inp: EndingInput): { id: EndingId; reasons: string[] } {
   const reasons: string[] = [];
@@ -148,14 +151,17 @@ export function judgeEnding(inp: EndingInput): { id: EndingId; reasons: string[]
   }
 
   // 3) 隐藏结局：二周目 + 全主线 + 零违规 + 高信任
-  const questsAll = inp.questsTotal > 0 && inp.questsDone >= inp.questsTotal;
+  const TOTAL_QUESTS = 68, EASTER_COUNT = 8;
+  const legacy = inp.questsTotal <= TOTAL_QUESTS - EASTER_COUNT;
+  const required = legacy ? inp.questsTotal : TOTAL_QUESTS;
+  const questsAll = inp.questsTotal > 0 && inp.questsDone >= required;
   if (inp.newGamePlus && questsAll && inp.violations === 0 && inp.avgTrust >= 55 && inp.stress < 70) {
     reasons.push('二周目 + 全主线 + 零违规 + 信任 ≥55 → 重返投资界');
     return { id: 'reborn_investor', reasons };
   }
 
   // 4) 专业线：独立顾问/家办——高信任 + 深耕（不图管理职级）
-  if (inp.avgTrust >= 55 && inp.violations === 0 && inp.questsDone >= Math.ceil(inp.questsTotal * 0.8)) {
+  if (inp.avgTrust >= 55 && inp.violations === 0 && inp.questsDone / inp.questsTotal >= QUEST_PRO_RATIO) {
     reasons.push(`信任均值 ${inp.avgTrust.toFixed(0)} + 零违规 + 主线 ${inp.questsDone}/${inp.questsTotal} → 专业线`);
     return { id: 'independent', reasons };
   }

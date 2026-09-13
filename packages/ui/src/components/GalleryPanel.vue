@@ -28,7 +28,7 @@ const triggeredDebriefs = computed(() => {
   return DEBRIEF_CARDS.filter((d) => !d.eventRef || fired.has(d.eventRef) || d.year < year.value);
 });
 
-/** 复盘室日历视图：全部 18 卡按年代排时间线，未解锁卡灰态并显示解锁条件 */
+/** 复盘室日历视图：全部 30 卡按年代排时间线，未解锁卡灰态并显示解锁条件 */
 const calendarDebriefs = computed(() => {
   const fired = new Set(getGame()?.sim.firedEvents.map((f) => f.ev.id) ?? []);
   return DEBRIEF_CARDS.map((d) => {

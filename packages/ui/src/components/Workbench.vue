@@ -29,9 +29,13 @@ const questProgress = computed(() => {
   return qe.volumeProgress(1);
 });
 
-/** 按玩家当前进度推算所在卷（卷一 2006-2009 / 卷二 2010-2015 / 卷三 2016-2020 / 卷四 2021-2023 / 卷五 2024-2025） */
+/** 按玩家当前进度推算所在卷（卷一 2006-2009 / 卷二 2010-2015 / 卷三 2016-2020 / 卷四 2021-2023 / 卷五 2024-2025 / 卷六 2025 彩蛋卷：终章完成后） */
 const currentVolume = computed(() => {
-  const y = Number(g.value?.date?.slice(0, 4) ?? 2006);
+  const game = gameReady.value ? getGame() : null;
+  const y = Number(game?.date?.slice(0, 4) ?? 2006);
+  const qe = state.questEngine;
+  // 卷六只在日期到达彩蛋窗口（2025-03 起）且卷五终章完成后接管
+  if (qe && (game?.date ?? '') >= '2025-03-05' && qe.completed.has('q5_12_vol5_end')) return 6;
   if (y <= 2009) return 1;
   if (y <= 2015) return 2;
   if (y <= 2020) return 3;
@@ -232,7 +236,7 @@ function openPromotion() {
         <span class="kpi-num dim">{{ item.target > 0 ? fmtMoney(item.done) + ' / ' + fmtMoney(item.target) : '本年代无此类' }}</span>
       </div>
       <div v-if="questProgressCur" class="quest-prog">
-        <span class="dim">卷{{ ['一', '二', '三', '四', '五'][currentVolume - 1] }}主线：{{ questProgressCur.done }} / {{ questProgressCur.total }} 章</span>
+        <span class="dim">{{ currentVolume === 6 ? '卷六·彩蛋' : `卷${['一', '二', '三', '四', '五'][currentVolume - 1]}主线` }}：{{ questProgressCur.done }} / {{ questProgressCur.total }} 章</span>
       </div>
     </section>
 
