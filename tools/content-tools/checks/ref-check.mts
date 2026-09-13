@@ -35,6 +35,19 @@ for (const q of QUESTS_ALL) {
     }
   }
 }
+// 题库-词条缝合红线（R4）：每题 knowledge_tags 至少一个命中词条 tag/id，否则即"孤儿题"——红灯
+let orphans = 0;
+const tagPool = new Set(KNOWLEDGE_ALL.flatMap((k) => k.tags));
+const idPool = new Set(KNOWLEDGE_ALL.map((k) => k.id));
+for (const q of examBankAll) {
+  const ts = q.knowledge_tags ?? [];
+  if (ts.length === 0 || !ts.some((t) => tagPool.has(t) || idPool.has(t))) {
+    if (orphans < 8) console.log(`[E] 孤儿题（tags 未命中词条体系）: ${q.id} [${ts.join(',')}]`);
+    orphans++;
+  }
+}
+if (orphans > 0) { console.log(`✗ 题库缝合失败：${orphans} 道孤儿题`); bad += orphans; }
+
 // 任务 id 全局唯一（跨卷）
 const qidSeen = new Set<string>();
 for (const q of QUESTS_ALL) { if (qidSeen.has(q.id)) { console.log(`[E] 任务 id 重复: ${q.id}`); bad++; } qidSeen.add(q.id); }
