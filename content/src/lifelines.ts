@@ -719,5 +719,70 @@ export const XIAOH_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 + 姜屿 8 + 刘晴 8 + 肖何 8 = 93 节点） */
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE, ...LIUQ_LIFELINE, ...XIAOH_LIFELINE];
+/** 人生线全量（王秀兰 9 + 李建国 9 + 周宏图 9 + 吴建国 8 + 何志敏 9 + 周远航 8 + 陈曼 9 + 唐薇 8 + 姜屿 8 + 刘晴 8 + 肖何 8 + 周薇 8 = 101 节点） */
+
+/**
+ * 第十二条人生线：周薇（分行合规部督查）——合规视角的"对 face"线。
+ * 8 节点：2013 巡检→2016 双录→2019 约谈→2022 举报保护→2025 和解。
+ * unlockKnowledge 全走既有 tag/id，不新增野 tag。
+ */
+export const ZHOUWEI_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_zhouwei', year: 2013, month: 5,
+    title: '第一次巡检：对 face 的开头',
+    text: '分行合规部督查周薇第一次到你的网点例行巡检，翻凭证翻到第三本时抬眼问你："这笔理财的销售适当性材料，客户签字页为什么不齐？"你按流程补齐并解释了归档瑕疵，她没扣分，但记了备注。临走时她说："备注不是刁难，是下次还有得聊。"',
+    trustReq: 0,
+    effects: { trust: 2, unlockKnowledge: ['suitability', 'dual_recording'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2014, month: 10,
+    title: '凭证之外的暗流',
+    text: '她在巡检中发现某同事的飞单线索——凭证没问题，问题在客户回访的录音里。她私下提醒你："你那位同事的路子，离红线还有一步。你提醒他，我看不到；你举报他，我必须查。"你选择了先提醒。同事收手了，但周薇记住了你处理问题的方式。',
+    trustReq: 10,
+    effects: { trust: 3, unlockKnowledge: ['red_lines', 'employee_conduct'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2016, month: 3,
+    title: '双录上线：被检查的人成了讲课的人',
+    text: '双录系统上线，网点叫苦不迭。周薇来培训，点名让"归档做得最全的网点"分享经验——是你。你把十二个常见退回场景做成一页纸，她当场决定在分行推广。"合规不是拦住销售，是让销售经得起回放。"这句话后来出现在她的培训 PPT 第一页。',
+    trustReq: 20,
+    effects: { trust: 3, unlockKnowledge: ['dual_recording', 'communication'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2019, month: 6,
+    title: '销售合规约谈：替团队挡下的一次',
+    text: '你团队一位新人把 R4 产品卖给了测评 R2 的客户，系统拦截后客户投诉到分行。约谈室里周薇问的不是"谁让他卖的"，而是"什么流程让新人觉得可以绕开测评"。复盘结论：话术培训替代了流程培训。整改方案她让你牵头写——挡下的是处分，留下的是流程。',
+    trustReq: 30,
+    effects: { trust: 4, unlockKnowledge: ['suitability', 'k_sales_zone'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2021, month: 9,
+    title: '体检报告与职业账本',
+    text: '年度体检她查出了甲状腺结节，复查的那周她照常跑完了三个网点的巡检。你送她的体检报告备注里夹了一句话："合规检查您查别人，自己的风险敞口也该年检一次。"她笑了很久——那是你们认识八年，她第一次在你面前笑得不像督查。',
+    trustReq: 40,
+    effects: { trust: 3, unlockKnowledge: ['insurance_basics', 'k_serious_illness_plan'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2022, month: 8,
+    title: '内部举报保护：一次艰难的站队',
+    text: '一位客户经理实名举报支行走账问题，被举报人扬言"让他在分行待不下去"。举报人深夜给你打电话，你把周薇 2014 年的话原样转给他："你举报他，她必须查。"案件查实，举报人依保护制度调岗留任。周薇后来对你说："制度长牙，是因为有人敢咬。"',
+    trustReq: 50,
+    effects: { trust: 4, unlockKnowledge: ['employee_conduct', 'red_lines'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2023, month: 11,
+    title: '数据穿透时代：老督查的新考卷',
+    text: '监管科技上线，行为数据穿透让"事后翻凭证"变成"实时看异常"。她五十岁开始学数据看板，问你有没有懂系统的年轻同事可以请教。你把肖何借给了她两周。她学完说："以前查的是纸，现在查的是行为——但最后查的还是人。',
+    trustReq: 60,
+    effects: { trust: 3, unlockKnowledge: ['digital_banking', 'data_compliance'] },
+  },
+  {
+    client: 'cli_zhouwei', year: 2025, month: 6,
+    title: '退休前和解：对 face 的最终形态',
+    text: '退休前最后一次巡检，她把 2013 年那页备注的复印件还给了你："当年记的是问题，现在看是路线图。"十二年里她查过你十一次，拦过你一次（那次你确实越线半步），也保过你一次。督查与被督查者之间，原来也能长出这种东西——不是朋友，是互相确认过底线的人。',
+    trustReq: 70,
+    effects: { trust: 6, unlockKnowledge: ['k_zhouwei_compliance_era', 'succession'] },
+  },
+];
+
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE, ...LIUQ_LIFELINE, ...XIAOH_LIFELINE, ...ZHOUWEI_LIFELINE];

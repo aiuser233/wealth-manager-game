@@ -6,6 +6,7 @@ export const VOLUME_META: Record<number, string> = {
   4: '卷四 · 私行纵深',
   5: '卷五 · 传承与终局',
   6: '卷六 · 人间彩蛋',
+  7: '卷七 · 二周目来客',
 };
 
 export function volumeLabel(volume: number): string {

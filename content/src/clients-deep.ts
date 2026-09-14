@@ -171,3 +171,17 @@ export const deepClients2: ClientDef[] = [
     trust: 28, teach_tags: ['cash_mgmt', 'agri_finance', 'insurance_basics'],
   },
 ];
+
+/**
+ * 第四轮深化批新增客户：周薇（分行合规部督查，"对 face"合规视角人生线主角）。
+ */
+export const deepClients3: ClientDef[] = [
+  {
+    id: 'cli_zhouwei', name: '周薇', age_2006: 35, occupation: '分行合规部督查', tier: 'vip',
+    risk: { level: 1, tested_at: '2006-03-15' },
+    behaviors: ['compliance_oriented', 'diligent_learner'],
+    finance: { deposits: 900000, wealth_mgmt: 200000, funds: 100000, insurance: 300000, loans: 0, annual_cashflow: 300000 },
+    family: '已婚，丈夫是中学教师；无孩，养一只猫',
+    trust: 20, teach_tags: ['red_lines', 'dual_recording', 'employee_conduct'],
+  },
+];

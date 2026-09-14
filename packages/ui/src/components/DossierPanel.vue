@@ -40,7 +40,7 @@ const dims = computed(() => {
   if (!g.value) return [];
   const qe = state.questEngine;
   const prog = (n: number) => qe?.volumeProgress(n) ?? { done: 0, total: 12 };
-  const vols = [1, 2, 3, 4, 5, 6];
+  const vols = [1, 2, 3, 4, 5, 6, 7];
   const questsDone = vols.reduce((a, v) => a + prog(v).done, 0);
   const questsTotal = vols.reduce((a, v) => a + prog(v).total, 0);
   const avgTrust = g.value.clients.length ? g.value.clients.reduce((a, c) => a + c.trust, 0) / g.value.clients.length : 0;

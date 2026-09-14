@@ -274,6 +274,39 @@ const NEED_POOL: ReceptionNeed[] = [
     preferCategory: 'wealth_mgmt',
     intentRatio: 0.3,
   },
+  {
+    tag: 'kids_lucky_money',
+    surface: '过完年孩子的压岁钱攒了小两万，想着别乱花掉，怎么安排？',
+    probes: [
+      { text: '这笔钱打算给孩子用到什么时候——中学、大学，还是更长远？', reveal: '没想那么远，至少大学之前不动吧。', trustDelta: 2, proDelta: 0.5 },
+      { text: '想让孩子自己参与管理吗？', reveal: '他上小学了，倒是该学学了。', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '压岁钱三笔法：储蓄打底+教育金定投+留一小笔让孩子做真实决策，财商教育比利率重要。',
+    preferCategory: 'deposit',
+    intentRatio: 0.5,
+  },
+  {
+    tag: 'shebao_transfer',
+    surface: '我要去外地工作了，社保和公积金怎么转？听说有中介能代缴？',
+    probes: [
+      { text: '新城市的社保断了多久了？有没有正规单位接收？', reveal: '下个月新公司入职，中间就空一个月。', trustDelta: 2, proDelta: 0.5 },
+      { text: '"代缴挂靠"的渠道了解过风险吗？', reveal: '朋友推荐的，说一年几百块……', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '社保转移走官方渠道免费且时限明确；"代缴挂靠"涉嫌骗保，补缴焦虑要用正确渠道化解而不是中介。',
+    preferCategory: 'deposit',
+    intentRatio: 0.1,
+  },
+  {
+    tag: 'digital_legacy',
+    surface: '我身体还行，就是想问一句：手机里的理财账户、那些虚拟的东西，人不在了家里人怎么拿？',
+    probes: [
+      { text: '您名下有哪些数字资产——互联网理财、虚拟币、游戏账号？', reveal: '理财好几个 App，还有点虚拟币，游戏账号小孩还想要。', trustDelta: 2, proDelta: 0.5 },
+      { text: '家里人知道这些账户的存在吗？', reveal: '老伴连密码都不知道。', trustDelta: 2, proDelta: 0.4 },
+    ],
+    hidden: '数字遗产的权属受平台协议与法律空白双重限制：先做数字资产清单+备忘录，法律工具兜底，虚拟币处置要讲清合规风险。',
+    preferCategory: 'wealth_mgmt',
+    intentRatio: 0.2,
+  },
 ];
 
 export class Reception {

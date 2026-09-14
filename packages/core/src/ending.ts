@@ -151,7 +151,7 @@ export function judgeEnding(inp: EndingInput): { id: EndingId; reasons: string[]
   }
 
   // 3) 隐藏结局：二周目 + 全主线 + 零违规 + 高信任
-  const TOTAL_QUESTS = 74, EASTER_COUNT = 14;
+  const TOTAL_QUESTS = 82, EASTER_COUNT = 22;
   const legacy = inp.questsTotal <= TOTAL_QUESTS - EASTER_COUNT;
   const required = legacy ? inp.questsTotal : TOTAL_QUESTS;
   const questsAll = inp.questsTotal > 0 && inp.questsDone >= required;

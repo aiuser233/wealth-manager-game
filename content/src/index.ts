@@ -5,7 +5,7 @@ import { releases } from './releases';
 import { directorEvents } from './events';
 import { products } from './products';
 import { clients } from './clients';
-import { deepClients, deepClients2 } from './clients-deep';
+import { deepClients, deepClients2, deepClients3 } from './clients-deep';
 import { eraDrift, eraLevel } from './macro';
 import { examBank } from './exams';
 import { examBank2 } from './exams2';
@@ -59,32 +59,34 @@ import { knowledgeBatch6 } from './knowledge6';
 import { knowledgeBatch7 } from './knowledge7';
 import { knowledgeBatch8 } from './knowledge8';
 import { knowledgeBatch9, debriefCardsDeep3 } from './knowledge9';
+import { knowledgeBatch10, debriefCardsDeep4 } from './knowledge10';
 import { debriefCardsDeep } from './knowledge6';
 import { debriefCardsDeep2 } from './knowledge8';
-import { randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3 } from './random-events';
+import { randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, randomEventsDeep4 } from './random-events';
 import { VOLUME1_QUESTS, VOLUME1_LIFELINES } from './quests';
 import { VOLUME2_QUESTS } from './quests2';
 import { VOLUME3_QUESTS } from './quests3';
 import { VOLUME4_QUESTS } from './quests4';
 import { VOLUME5_QUESTS } from './quests5';
 import { EASTER_QUESTS } from './quests6';
+import { NG_PLUS_QUESTS } from './quests7';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
 /** 全量题库（廿七批合计） */
 export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43];
 
 /** 知识库全量（八批合计） */
-const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3];
+const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3, ...debriefCardsDeep4];
 
-export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6, ...knowledgeBatch7, ...knowledgeBatch8, ...knowledgeBatch9];
+export const KNOWLEDGE_ALL = [...KNOWLEDGE, ...knowledgeBatch2, ...knowledgeBatch3, ...knowledgeBatch4, ...knowledgeBatch5, ...knowledgeBatch6, ...knowledgeBatch7, ...knowledgeBatch8, ...knowledgeBatch9, ...knowledgeBatch10];
 
 /** 剧情任务全量（卷一~卷五 + 卷六彩蛋卷） */
-export const QUESTS_ALL = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS];
+export const QUESTS_ALL = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS, ...NG_PLUS_QUESTS];
 
 /** 人生线全量（完整版 18 节点：王秀兰 9 + 李建国 9） */
 export const LIFELINES_ALL = LIFELINES_FULL;
 
-const clientsAll = [...clients, ...deepClients, ...deepClients2];
+const clientsAll = [...clients, ...deepClients, ...deepClients2, ...deepClients3];
 
 export const contentBundle: ContentBundle = {
   factors,
@@ -95,5 +97,5 @@ export const contentBundle: ContentBundle = {
   clients: clientsAll,
 };
 
-export { factors, industries, releases, directorEvents, products, clients, deepClients, deepClients2, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, VOLUME1_QUESTS, VOLUME1_LIFELINES, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, WANG_LIFELINE, LI_LIFELINE };
+export { factors, industries, releases, directorEvents, products, clients, deepClients, deepClients2, eraDrift, eraLevel, examBank, examBank2, KNOWLEDGE, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, randomEventsDeep4, VOLUME1_QUESTS, VOLUME1_LIFELINES, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, NG_PLUS_QUESTS, WANG_LIFELINE, LI_LIFELINE };
 export { debriefAll as DEBRIEF_CARDS };

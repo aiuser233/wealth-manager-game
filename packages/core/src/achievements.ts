@@ -27,6 +27,8 @@ export interface AchievementSnapshot {
   certs: number;
   /** 主线完成数 */
   questsDone: number;
+  /** 主线总数（一周目 60/74 口径、NG+ 局 82） */
+  questsTotal?: number;
   /** 人生线触发节点数 */
   lifelinesDone: number;
   /** 违规次数 */
@@ -80,6 +82,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'survivor', name: '穿越牛熊', desc: '走完 20 年（240 个月）', icon: '🕰️', tier: 'silver' },
   { id: 'hidden_ending', name: '重返投资界', desc: '达成隐藏结局', icon: '✨', tier: 'hidden' },
   { id: 'ng_plus', name: '二周目来客', desc: '开启第二周目', icon: '🔄', tier: 'hidden' },
+  // R4 卷七新增 2 枚
+  { id: 'ngplus_clear', name: '二周目通关·来客', desc: '完成卷七「二周目来客」全部 8 章', icon: '🪞', tier: 'gold' },
+  { id: 'seal_master', name: '题词缝合者', desc: '隐藏成就：全库题库与知识图谱零孤儿（缝合率 100%）', icon: '🧵', tier: 'hidden' },
   // B3 批次新增 6 枚（口碑/经营玩法）
   { id: 'referral_5', name: '口碑相传', desc: '客户转介绍 5 位新客户', icon: '📣', tier: 'bronze' },
   { id: 'referral_15', name: '有口皆碑', desc: '客户转介绍 15 位新客户', icon: '📢', tier: 'silver' },
@@ -113,7 +118,9 @@ export function checkAchievements(s: AchievementSnapshot): AchievementState[] {
     done('cert_8', s.certs >= 8, `证书 ${s.certs}/8`),
     done('study_100', s.studyActions >= 100, `学习 ${s.studyActions}/100 次`),
     done('quest_half', s.questsDone >= 37, `主线 ${s.questsDone}/37 章`),
-    done('quest_all', s.questsDone >= 74, `主线 ${s.questsDone}/74 章`),
+    done('quest_all', s.questsDone >= (s.questsTotal ?? 74), `主线 ${s.questsDone}/${s.questsTotal ?? 74} 章`),
+    done('ngplus_clear', (s.questsTotal ?? 0) >= 82 && s.questsDone >= 82, `卷七来客 ${Math.min(s.questsDone, 82)}/82 章`),
+    done('seal_master', true), // 全库缝合率 100% 由 content:check 机器闸保证（R4 后恒成立）
     done('life_10', s.lifelinesDone >= 10, `人生线 ${s.lifelinesDone}/10`),
     done('life_25', s.lifelinesDone >= 25, `人生线 ${s.lifelinesDone}/25`),
     done('clean_record', s.violations === 0 && s.months >= 240, s.months < 240 ? `存续 ${s.months}/240 月` : `违规 ${s.violations} 次`),
