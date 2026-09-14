@@ -42,6 +42,14 @@ import { examBank32 } from './exams32';
 import { examBank33 } from './exams33';
 import { examBank34 } from './exams34';
 import { examBank35 } from './exams35';
+import { examBank36 } from './exams36';
+import { examBank37 } from './exams37';
+import { examBank38 } from './exams38';
+import { examBank39 } from './exams39';
+import { examBank40 } from './exams40';
+import { examBank41 } from './exams41';
+import { examBank42 } from './exams42';
+import { examBank43 } from './exams43';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { knowledgeBatch2 } from './knowledge2';
 import { knowledgeBatch3 } from './knowledge3';
@@ -63,7 +71,7 @@ import { EASTER_QUESTS } from './quests6';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
 /** 全量题库（廿七批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35];
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43];
 
 /** 知识库全量（八批合计） */
 const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3];
