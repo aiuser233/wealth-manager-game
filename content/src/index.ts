@@ -50,6 +50,14 @@ import { examBank40 } from './exams40';
 import { examBank41 } from './exams41';
 import { examBank42 } from './exams42';
 import { examBank43 } from './exams43';
+import { examBank44 } from './exams44';
+import { examBank45 } from './exams45';
+import { examBank46 } from './exams46';
+import { examBank47 } from './exams47';
+import { examBank48 } from './exams48';
+import { examBank49 } from './exams49';
+import { examBank50 } from './exams50';
+import { examBank51 } from './exams51';
 import { KNOWLEDGE, DEBRIEF_CARDS } from './knowledge';
 import { knowledgeBatch2 } from './knowledge2';
 import { knowledgeBatch3 } from './knowledge3';
@@ -73,7 +81,7 @@ import { NG_PLUS_QUESTS } from './quests7';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE } from './lifelines';
 
 /** 全量题库（廿七批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43];
+export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43, ...examBank44, ...examBank45, ...examBank46, ...examBank47, ...examBank48, ...examBank49, ...examBank50, ...examBank51];
 
 /** 知识库全量（八批合计） */
 const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3, ...debriefCardsDeep4];
