@@ -57,11 +57,11 @@ export const NG_PLUS_QUESTS: QuestDef[] = [
       { speaker: '林奇安', text: '（前公募的人自带残响。上一世他在 2021 年的抱团里摔了这一跤；这一世，他自己先看见了悬崖。你要做的不是拉住他，是确认他真的看见了。）' },
     ],
     choices: [
-      { text: '陪他把策略的杠杆链条逐层拆开，标出每一层的"谁在承受最后损失"', outcome: '拆到第四层他停了："我承受不了最后一层。"他自己降了杠杆，把仓位砍到能睡着的水平。三个月后策略回撤 15%，他在朋友圈发了那句"感谢有人陪我数链条"。', grade: 'best', effects: { trust: 9, pro: 4 }, unlockKnowledge: ['leverage_risk', 'k_forced_liquidation'] },
+      { text: '陪他把策略的杠杆链条逐层拆开，标出每一层的"谁在承受最后损失"', outcome: '拆到第四层他停了："我承受不了最后一层。"他自己降了杠杆，把仓位砍到能睡着的水平。三个月后策略回撤 15%，他在朋友圈发了那句"感谢有人陪我数链条"。', grade: 'best', effects: { trust: 9, pro: 4 }, unlockKnowledge: ['leverage_risk', 'k_liquidation'] },
       { text: '"你的模型比我专业，你自己定"', outcome: '他把你的沉默当成背书。回撤来的时候，他没来找你——专业的人最记恨的不是建议，是缺席。', grade: 'normal', effects: { stress: 1 } },
       { text: '"漂亮曲线都是假的，别做了"', outcome: '一刀切的对。但他反手问你"哪条曲线是真的"，你答不上——只破不立的专业建议，在新钱面前一文不值。', grade: 'bad', effects: { trust: -5, pro: -1 } },
     ],
-    teach: 'k_forced_liquidation',
+    teach: 'k_liquidation',
   },
   {
     id: 'q7_5_echo_2018', requires: 'q7_4_echo_2015', volume: 7, title: '来客五：记忆残响·保本的最后一课', date: '2026-08-20', client: 'cli_d_p2p',

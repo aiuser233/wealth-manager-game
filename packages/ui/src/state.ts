@@ -35,7 +35,7 @@ export interface ActionScene {
 /** 行情终端的"距上次查看"口径 */
 export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 
-const cal = new GameCalendar('2006-01-02', '2025-12-31');
+const cal = new GameCalendar('2006-01-02', '2027-06-30');
 
 export const state = reactive({
   screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'archive' | 'trainer' | 'lecturer' | 'team' | 'ach',

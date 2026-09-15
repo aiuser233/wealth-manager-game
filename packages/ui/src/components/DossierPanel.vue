@@ -17,7 +17,7 @@ const careerLog = computed(() => state.questEngine?.serialize().careerLog ?? [])
 const chapters = computed(() => {
   const byVol = new Map<number, Array<{ date: string; title: string; grade: string }>>();
   for (const c of careerLog.value) {
-    const vol = Number(c.date.slice(0, 4)) <= 2009 ? 1 : Number(c.date.slice(0, 4)) <= 2015 ? 2 : Number(c.date.slice(0, 4)) <= 2020 ? 3 : Number(c.date.slice(0, 4)) <= 2023 ? 4 : c.title.startsWith('彩蛋') ? 6 : 5;
+    const vol = c.title.startsWith('记忆残响') || c.title.startsWith('来客') ? 7 : Number(c.date.slice(0, 4)) <= 2009 ? 1 : Number(c.date.slice(0, 4)) <= 2015 ? 2 : Number(c.date.slice(0, 4)) <= 2020 ? 3 : Number(c.date.slice(0, 4)) <= 2023 ? 4 : c.title.startsWith('彩蛋') ? 6 : 5;
     const arr = byVol.get(vol) ?? [];
     arr.push(c);
     byVol.set(vol, arr);
