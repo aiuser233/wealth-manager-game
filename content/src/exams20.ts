@@ -18,9 +18,9 @@ const j = (id: string, subject: string, chapter: string, tags: string[], stem: s
 
 export const examBank20: ExamQuestion[] = [
   s('bf001', 'exam_bank_pf', '损失厌恶', ['behavior_finance', 'loss_aversion'], '客户亏损 10% 的痛苦约是盈利 10% 快乐的两倍，这叫（）。', ['损失厌恶', '锚定', '从众', '过度自信'], 0, '卡尼曼与特沃斯基的前景理论。', 2),
-  s('bf002', 'exam_bank_pf', '处置效应', ['disposition_effect', 'behavior_finance'], '投资者急于卖出盈利基金却死扛亏损基金，称为（）。', ['处置效应', '定投', '再平衡', '分散'], 0, '卖盈扛亏是统计上最普遍的行为偏差。', 3),
+  s('bf002', 'exam_bank_pf', '处置效应', ['disposition_effect', 'behavior_finance', 'k_mental_account'], '投资者急于卖出盈利基金却死扛亏损基金，称为（）。', ['处置效应', '定投', '再平衡', '分散'], 0, '卖盈扛亏是统计上最普遍的行为偏差。', 3),
   m('bf003', 'exam_bank_pf', '锚定', ['anchoring', 'behavior_finance'], '关于「锚定」，下列说法正确的有（）。', ['成本价锚定', '趋势跟随', '资产配置', '风险预算'], [0], '用"空仓重购测试"矫正。（唯一正确项为 0，其余为典型错误说法。）', 4),
-  j('bf004', 'exam_bank_pf', '从众', ['herd', 'behavior_finance'], '判断：关于从众——羊群效应。', 0, '发行量是反向指标的原因。', 2),
+  j('bf004', 'exam_bank_pf', '从众', ['herd', 'behavior_finance', 'k_recency_bias'], '判断：关于从众——羊群效应。', 0, '发行量是反向指标的原因。', 2),
   s('bf005', 'exam_bank_pf', '过度自信', ['overconfidence', 'behavior_finance'], '牛市里频繁交易的散户往往收益落后，主要因为（）。', ['过度自信导致的频繁交易与择时错误', '本金太少', '运气差', '费率太高'], 0, '过度自信+交易磨损是收益杀手。', 1),
   s('bf006', 'exam_bank_pf', '心理账户', ['mental_accounting', 'behavior_finance'], '客户把工资、奖金、彩票收入放进不同"心理账户"区别对待，属于（）。', ['心理账户效应', '理性配置', '预算管理', '目标导向'], 0, '钱是同质的，框架让决策失真。', 2),
   s('bf007', 'exam_bank_pf', '近因效应', ['recency_bias', 'behavior_finance'], '客户因近期大涨就认为会一直涨，属于（）。', ['近因偏差', '长期主义', '均值回归', '逆向思维'], 0, '追涨的心理学根源。', 3),

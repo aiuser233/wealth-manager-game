@@ -17,7 +17,7 @@ const j = (id: string, subject: string, chapter: string, tags: string[], stem: s
 }
 
 export const examBank22: ExamQuestion[] = [
-  s('dz001', 'exam_bank_law', '房贷 LPR', ['lpr', 'housing'], '2019 年 LPR 改革后，个人房贷利率的定价基准是（）。', ['LPR 加点（各期限 LPR+固定加点）', '央行基准利率', '银行内部定价', 'Shibor'], 0, 'LPR 机制：报价行按 MLF 加点报价，每月 20 日公布。', 1),
+  s('dz001', 'exam_bank_law', '房贷 LPR', ['lpr', 'housing', 'k_lpr_view'], '2019 年 LPR 改革后，个人房贷利率的定价基准是（）。', ['LPR 加点（各期限 LPR+固定加点）', '央行基准利率', '银行内部定价', 'Shibor'], 0, 'LPR 机制：报价行按 MLF 加点报价，每月 20 日公布。', 1),
   s('dz002', 'exam_bank_law', '房贷 LPR', ['lpr', 'housing'], '2019 年 LPR 改革后，个人房贷利率的定价基准是（）。', ['LPR 加点（各期限 LPR+固定加点）', '央行基准利率', '银行内部定价', 'Shibor'], 0, 'LPR 机制：报价行按 MLF 加点报价，每月 20 日公布。', 1),
   m('dz003', 'exam_bank_law', '房贷 LPR', ['lpr', 'housing'], '关于「房贷 LPR」，下列说法正确的有（）。', ['LPR 加点（各期限 LPR+固定加点）', '央行基准利率', '银行内部定价', 'Shibor'], [0], 'LPR 机制：报价行按 MLF 加点报价，每月 20 日公布。（唯一正确项为 0，其余为典型错误说法。）', 3),
   j('dz004', 'exam_bank_law', '房贷 LPR', ['lpr', 'housing'], '判断：关于房贷 LPR——LPR 加点（各期限 LPR+固定加点）。', 0, 'LPR 机制：报价行按 MLF 加点报价，每月 20 日公布。', 1),

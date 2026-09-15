@@ -35,7 +35,7 @@ export const examBank27: ExamQuestion[] = [
   j('jz016', 'exam_bank_law', '拒绝适当', ['suitability', 'red_lines'], '判断：关于拒绝适当——风险不匹配不得销售；客户书面坚持可走特别警示流程留痕。', 0, '适当性红线，客户"同意"也不能跨。', 1),
   s('jz017', 'exam_bank_law', '承诺话术', ['red_lines', 'consumer_protection'], '以下哪句属于违规销售话术（）。', ['「这个产品保本保息 5%」', '「业绩比较基准 3.2%，不构成承诺」', '「过往业绩不代表未来」', '「R2 中低风险，历史上极端情况出现过短期回撤」'], 0, '「保本保息」表述=违规。', 1),
   j('jz020', 'exam_bank_law', '承诺话术', ['red_lines', 'consumer_protection'], '判断：关于承诺话术——「这个产品保本保息 5%」。', 0, '「保本保息」表述=违规。', 1),
-  s('jz021', 'exam_bank_law', '投诉处理', ['crisis_communication', 'consumer_protection'], '客户投诉的黄金第一步是（）。', ['倾听与共情，让客户把话说完', '辩解', '找领导', '出示合同'], 0, '先处理心情，再处理事情。', 1),
+  s('jz021', 'exam_bank_law', '投诉处理', ['crisis_communication', 'consumer_protection', 'k_complaint_escalate'], '客户投诉的黄金第一步是（）。', ['倾听与共情，让客户把话说完', '辩解', '找领导', '出示合同'], 0, '先处理心情，再处理事情。', 1),
   s('jz022', 'exam_bank_law', '投诉处理', ['crisis_communication', 'consumer_protection'], '客户投诉的黄金第一步是（）。', ['倾听与共情，让客户把话说完', '辩解', '找领导', '出示合同'], 0, '先处理心情，再处理事情。', 1),
   m('jz023', 'exam_bank_law', '投诉处理', ['crisis_communication', 'consumer_protection'], '关于「投诉处理」，下列说法正确的有（）。', ['倾听与共情，让客户把话说完', '辩解', '找领导', '出示合同'], [0], '先处理心情，再处理事情。（唯一正确项为 0，其余为典型错误说法。）', 3),
   j('jz024', 'exam_bank_law', '投诉处理', ['crisis_communication', 'consumer_protection'], '判断：关于投诉处理——倾听与共情，让客户把话说完。', 0, '先处理心情，再处理事情。', 1),

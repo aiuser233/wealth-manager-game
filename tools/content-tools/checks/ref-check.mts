@@ -48,6 +48,20 @@ for (const q of examBankAll) {
 }
 if (orphans > 0) { console.log(`✗ 题库缝合失败：${orphans} 道孤儿题`); bad += orphans; }
 
+// 词条反向覆盖（R5 双向缝合）：每个词条应至少被一题引用——题目 tags 含词条 id，
+// 或含解析到本词条的 tag（按 KNOWLEDGE_ALL 顺序取首个匹配，与 resolveKnowledge 同口径）。
+// 全量统计入报表；>红线即黄线警告 / 红灯（词条写了没人考 = 图鉴馆与题库两张皮的另一半）。
+const firstOwner = new Map<string, string>();
+for (const k of KNOWLEDGE_ALL) for (const t of k.tags) if (!firstOwner.has(t)) firstOwner.set(t, k.id);
+const usedTags = new Set<string>();
+for (const q of examBankAll) for (const t of q.knowledge_tags ?? []) usedTags.add(t);
+const unquizzed = KNOWLEDGE_ALL.filter((k) =>
+  !usedTags.has(k.id) && !k.tags.some((t) => firstOwner.get(t) === k.id && usedTags.has(t)));
+const R5_YELLOW = 60, R5_RED = 90;
+if (unquizzed.length > R5_RED) { console.log(`✗ 词条反向覆盖红灯：${unquizzed.length} 个词条零题目引用（红线 ${R5_RED}）`); bad += unquizzed.length; }
+else if (unquizzed.length > R5_YELLOW) console.log(`[W] 词条反向覆盖黄线：${unquizzed.length} 个词条零题目引用（黄线 ${R5_YELLOW}）`);
+else console.log(`✓ 词条反向覆盖：零引用词条 ${unquizzed.length}/${KNOWLEDGE_ALL.length}（黄线 ${R5_YELLOW} 内）`);
+
 // 任务 id 全局唯一（跨卷）
 const qidSeen = new Set<string>();
 for (const q of QUESTS_ALL) { if (qidSeen.has(q.id)) { console.log(`[E] 任务 id 重复: ${q.id}`); bad++; } qidSeen.add(q.id); }
