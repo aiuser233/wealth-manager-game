@@ -31,8 +31,11 @@ function collectSnapshot(): AchievementSnapshot {
     if (l.text.includes('学习')) studyActions += 0; // studyActions 已由 doAction 精确累计
   }
   const qe = state.questEngine;
-  const questsDone = qe ? [1, 2, 3, 4, 5, 6, 7].reduce((a, v) => a + qe.volumeProgress(v).done, 0) : 0;
-  const questsTotal = qe ? [1, 2, 3, 4, 5, 6, 7].reduce((a, v) => a + qe.volumeProgress(v).total, 0) : 0;
+  const questVolumes = [1, 2, 3, 4, 5, 6, 7, 8];
+  const questsDone = qe ? questVolumes.reduce((a, v) => a + qe.volumeProgress(v).done, 0) : 0;
+  const questsTotal = qe ? questVolumes.reduce((a, v) => a + qe.volumeProgress(v).total, 0) : 0;
+  const volume7Done = qe ? qe.volumeProgress(7).done : 0;
+  const volume8Done = qe ? qe.volumeProgress(8).done : 0;
   const examsPassed = examHistory().filter((e) => e.passed).length;
   const ym = Number(getGame().date.replace(/-/g, '').slice(0, 6));
   const startYm = 200601;
@@ -45,6 +48,8 @@ function collectSnapshot(): AchievementSnapshot {
     certs: g.player.certs.length,
     questsDone,
     questsTotal,
+    volume7Done,
+    volume8Done,
     lifelinesDone: qe?.lifelinesDone() ?? 0,
     violations: g.violations,
     studyActions,

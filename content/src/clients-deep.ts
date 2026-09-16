@@ -185,3 +185,19 @@ export const deepClients3: ClientDef[] = [
     trust: 20, teach_tags: ['red_lines', 'dual_recording', 'employee_conduct'],
   },
 ];
+
+/**
+ * 第五轮深化批新增客户：程季青（主角第一任理财经理师父，"薪火"母题全游戏最强情感线的人）。
+ * 2006 年主角入行时带教；此后以"长辈/客户"身份贯穿 2006→2027 二十年，与卷八「薪火」剧情互为表里。
+ */
+export const deepClients4: ClientDef[] = [
+  {
+    id: 'cli_chengjq', name: '程季青', age_2006: 52, occupation: '资深理财经理（带教师父）', tier: 'wealth',
+    risk: { level: 3, tested_at: '2006-01-05' },
+    behaviors: ['mentor_style', 'risk_averse'],
+    finance: { deposits: 480000, wealth_mgmt: 200000, funds: 120000, insurance: 150000, loans: 0, annual_cashflow: 96000 },
+    family: '独子远在外地；与老伴同住，二十年夜班多、陪伴少',
+    trust: 30, teach_tags: ['team_coaching', 'succession', 'communication'],
+    questline: 'ql_chengjq',
+  },
+];

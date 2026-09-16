@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * 生涯档案页（P6+ 增强）：把 careerLog（68 章抉择史）、四维终评、成就、结局
+ * 生涯档案页（P6+ 增强）：把 careerLog（当前周目 82 章抉择史）、四维终评、成就、结局
  * 汇成一页"成绩单"——培训场景的自然复盘工具，也支持导出。
  */
 import { computed } from 'vue';
 import { state, getGame, gameReady } from '../state';
 import { achievementStates } from '../achievements';
-import { VOLUME_META } from '../volume-meta';
+import { VOLUME_META, careerEntryVolume } from '../volume-meta';
 import Avatar from './Avatar.vue';
 import EndingBadge from './EndingBadge.vue';
 
@@ -17,7 +17,7 @@ const careerLog = computed(() => state.questEngine?.serialize().careerLog ?? [])
 const chapters = computed(() => {
   const byVol = new Map<number, Array<{ date: string; title: string; grade: string }>>();
   for (const c of careerLog.value) {
-    const vol = c.title.startsWith('记忆残响') || c.title.startsWith('来客') ? 7 : Number(c.date.slice(0, 4)) <= 2009 ? 1 : Number(c.date.slice(0, 4)) <= 2015 ? 2 : Number(c.date.slice(0, 4)) <= 2020 ? 3 : Number(c.date.slice(0, 4)) <= 2023 ? 4 : c.title.startsWith('彩蛋') ? 6 : 5;
+    const vol = careerEntryVolume(c);
     const arr = byVol.get(vol) ?? [];
     arr.push(c);
     byVol.set(vol, arr);
@@ -40,7 +40,8 @@ const dims = computed(() => {
   if (!g.value) return [];
   const qe = state.questEngine;
   const prog = (n: number) => qe?.volumeProgress(n) ?? { done: 0, total: 12 };
-  const vols = [1, 2, 3, 4, 5, 6, 7];
+  // 卷七（NG+）与卷八（一周目）互斥注册；当前周目总数为 82，全库为 90。
+  const vols = [1, 2, 3, 4, 5, 6, 7, 8];
   const questsDone = vols.reduce((a, v) => a + prog(v).done, 0);
   const questsTotal = vols.reduce((a, v) => a + prog(v).total, 0);
   const avgTrust = g.value.clients.length ? g.value.clients.reduce((a, c) => a + c.trust, 0) / g.value.clients.length : 0;

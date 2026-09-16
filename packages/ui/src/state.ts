@@ -8,7 +8,7 @@ import {
   buildPaper, gradePaper, questionScore, EXAM_DEFS,
   emptyCareerStats as emptyStats, type CareerStats,
 } from '@fm/core';
-import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, randomEventsDeep4, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, NG_PLUS_QUESTS, LIFELINES_ALL } from '@fm/content';
+import { contentBundle, eraDrift, eraLevel, randomEvents, randomEventsDeep, randomEventsDeep2, randomEventsDeep3, randomEventsDeep4, randomEventsDeep5, examBankAll, VOLUME1_QUESTS, VOLUME2_QUESTS, VOLUME3_QUESTS, VOLUME4_QUESTS, VOLUME5_QUESTS, EASTER_QUESTS, NG_PLUS_QUESTS, VOLUME8_QUESTS, LIFELINES_ALL } from '@fm/content';
 import { storage } from './storage';
 import { recordExamAttempt, recordChoice, touchActiveDay } from './lms';
 import { refreshAchievements, recordEnding } from './achievements';
@@ -210,7 +210,7 @@ export function newGame(seed: number, name: string, gender: 'm' | 'f') {
   }
   refreshCaches();
   // 注入随机事件池
-  game.injectEvents([...randomEvents, ...randomEventsDeep, ...randomEventsDeep2, ...randomEventsDeep3, ...randomEventsDeep4] as any, new Rng(seed ^ 0x5f3759df));
+  game.injectEvents([...randomEvents, ...randomEventsDeep, ...randomEventsDeep2, ...randomEventsDeep3, ...randomEventsDeep4, ...randomEventsDeep5] as any, new Rng(seed ^ 0x5f3759df));
   // 初始化主线剧情引擎（卷一）
   initQuestEngine(seed);
   // 自动存档（新开局覆盖自动档，并重置自动存档计时器）
@@ -954,11 +954,12 @@ export function computeEventShifts(seed: number): Record<string, IsoDate> {
 }
 
 export function initQuestEngine(seed: number) {
-  // 卷一~卷三全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
-  // R4 卷七（二周目来客）：仅 NG+ 局（playthrough≥2）注册；一周目局保持 74 章口径（旧档兼容）
+  // 卷一~卷六全量任务：QuestEngine 按 date 顺序触发，volume 字段仅用于进度/评语统计
+  // R4 卷七（二周目来客）：仅 NG+ 局（playthrough≥2）注册；R5 卷八（薪火）：仅一周目局（playthrough=1）注册——两卷互斥，按周目分流
+  const base = [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS];
   const quests = state.playthrough >= 2
-    ? [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS, ...NG_PLUS_QUESTS]
-    : [...VOLUME1_QUESTS, ...VOLUME2_QUESTS, ...VOLUME3_QUESTS, ...VOLUME4_QUESTS, ...VOLUME5_QUESTS, ...EASTER_QUESTS];
+    ? [...base, ...NG_PLUS_QUESTS]
+    : [...base, ...VOLUME8_QUESTS];
   state.questEngine = new QuestEngine(
     quests as unknown as QuestDef[],
     LIFELINES_ALL as unknown as LifeLineDef[],
@@ -1011,8 +1012,9 @@ export function computeFinalEnding() {
   const qe = state.questEngine;
   if (!qe) return;
   const prog = (n: number) => qe.volumeProgress(n);
-  const questsDone = [1, 2, 3, 4, 5, 6, 7].reduce((a, v) => a + prog(v).done, 0);
-  const questsTotal = [1, 2, 3, 4, 5, 6, 7].reduce((a, v) => a + prog(v).total, 0);
+  // R5：卷七（二周目）与卷八（一周目）互斥，按周目注册其一；单局主线恒为 82，全量内容 90
+  const questsDone = [1, 2, 3, 4, 5, 6, 7, 8].reduce((a, v) => a + prog(v).done, 0);
+  const questsTotal = [1, 2, 3, 4, 5, 6, 7, 8].reduce((a, v) => a + prog(v).total, 0);
   const avgTrust = g.clients.length
     ? g.clients.reduce((a, c) => a + c.trust, 0) / g.clients.length
     : 0;

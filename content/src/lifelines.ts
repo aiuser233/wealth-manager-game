@@ -785,4 +785,68 @@ export const ZHOUWEI_LIFELINE: LifeLineDef[] = [
   },
 ];
 
-export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE, ...LIUQ_LIFELINE, ...XIAOH_LIFELINE, ...ZHOUWEI_LIFELINE];
+/**
+ * 第十三条人生线：程季青（主角第一任理财经理师父）——"薪火"母题的全游戏最强情感线。
+ * 8 节点：2006 带教→2008 危机并肩→2013 钱荒夜谈→2016 双录布道→2019 退休返聘→2022 师徒账本→2025 病床托付→2027 薪火命名。
+ * trustReq 梯度 0→70；unlockKnowledge 走 knowledge11 薪火卷配套 tag + 既有 tag。
+ */
+export const CHENGJIQING_LIFELINE: LifeLineDef[] = [
+  {
+    client: 'cli_chengjq', year: 2006, month: 2,
+    title: '入职带教：师父的第一课',
+    text: '程季青，52 岁，你职业生涯第一任师父。他把你领到柜台上，第一句话不是教你产品，是教你看人："钱是果，人是因。你把客户当数字，客户就当你是机器。"当年 2006 年，他手上带的客户，多数成了你这二十年的压舱石。',
+    trustReq: 0,
+    effects: { trust: 4, unlockKnowledge: ['k_team_coaching', 'communication'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2008, month: 11,
+    title: '金融危机里并肩',
+    text: '雷曼倒了，客户排着队来赎回。程季青把自己二十年积累的"先接情绪再讲逻辑"的话术，一句句教给你，陪你挨到凌晨。那几个月他第一次对你说了句重话："行情会骗人，信任不会。"——这句话成了你后来所有破净夜的话术底色。',
+    trustReq: 10,
+    effects: { trust: 5, unlockKnowledge: ['k_2008_crisis_talk', 'crisis_communication'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2013, month: 9,
+    title: '钱荒夜谈',
+    text: '2013 年 6 月钱荒，隔夜利率飙到 13%。深夜网点关门后，程季青拉着你在办公室复盘：为什么流动性会在一夜之间"蒸发"。他说："你记住，钱荒不是钱不够，是大家都同时想拿钱。"这是你第一次真正理解"流动性"是名词，也是生死线。',
+    trustReq: 20,
+    effects: { trust: 5, unlockKnowledge: ['liquidity_risk', 'cash_mgmt'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2016, month: 5,
+    title: '双录上线夜谈：师父退到幕后',
+    text: '双录系统上线，58 岁的程季青开始被边缘化——老话术、老流程不再吃香。他主动把岗位让出来，去做新人带教。临走前送你一套他手写的"销售合规十二问"，扉页写着："技术会更新，底线不会。"此后你每次卡壳，都会翻回这套纸页。',
+    trustReq: 30,
+    effects: { trust: 6, unlockKnowledge: ['k_torch_succession', 'dual_recording'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2019, month: 10,
+    title: '退休返聘：师父的最后一课',
+    text: '61 岁的程季青退休，被返聘做半年"合规观察员"。他最后一次正式授课，没讲产品，讲"你带过的每一个学生"。下课后他把那本泛黄的带教笔记留给你，说："笔记里记的不是答案，是我踩过的坑。你走一遍，会比少走一年。"',
+    trustReq: 40,
+    effects: { trust: 6, unlockKnowledge: ['k_career_legacy', 'employee_conduct'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2022, month: 11,
+    title: '师徒账本',
+    text: '2022 年 11 月破净夜，你接住了当年他陪你接住过的那些客户。事后你翻出他的带教笔记，发现他早已在最后一页写好了你的名字："小林，破净夜别慌，客户的慌就是产品的慌。"他像预见到了这一天。师徒之间最重的复利，是把一次危机的解法存进下一代的肌肉记忆。',
+    trustReq: 50,
+    effects: { trust: 6, unlockKnowledge: ['k_nav_break_2022', 'k_second_curve'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2025, month: 8,
+    title: '病床托付',
+    text: '程季青查出重疾，你陪他跑完最后一程的账户梳理。他把所有客户档案的电子版交到你手上："这几百个家庭，你比我更知道他们现在需要什么。"他没说"照顾我"，他说了"照顾他们"。理财经理的传承，从来不是交接一个客户名单，是交接一份责任。',
+    trustReq: 60,
+    effects: { trust: 7, unlockKnowledge: ['k_handover_moment', 'succession'] },
+  },
+  {
+    client: 'cli_chengjq', year: 2027, month: 3,
+    title: '薪火命名',
+    text: '程季青去世后，网点把每年的"带教日"命名为薪火日。你作为主授，在台上第一次不是学生，是师父。台下坐着你在 2024-2025 带过的刘晴、肖何——他们提问的样子，像极了二十年前的你。薪火相传不是一句口号，是每一代理财经理把自己活成下一代的"师父"。',
+    trustReq: 70,
+    effects: { trust: 10, unlockKnowledge: ['k_torch_succession', 'succession'] },
+  },
+];
+
+export const LIFELINES_FULL: LifeLineDef[] = [...WANG_LIFELINE, ...LI_LIFELINE, ...ZHOU_LIFELINE, ...WU_LIFELINE, ...HE_LIFELINE, ...ZHOuyh_LIFELINE, ...CHENMAN_LIFELINE, ...TANGWEI_LIFELINE, ...JIANGYU_LIFELINE, ...LIUQ_LIFELINE, ...XIAOH_LIFELINE, ...ZHOUWEI_LIFELINE, ...CHENGJIQING_LIFELINE];

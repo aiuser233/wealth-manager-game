@@ -27,8 +27,12 @@ export interface AchievementSnapshot {
   certs: number;
   /** 主线完成数 */
   questsDone: number;
-  /** 主线总数（一周目 60/74 口径、NG+ 局 82） */
+  /** 主线总数（一周目 82 含卷八薪火 / NG+ 局 82 含卷七来客；全量内容 90） */
   questsTotal?: number;
+  /** 卷八·薪火（一周目）完成章数 */
+  volume8Done?: number;
+  /** 卷七·二周目来客完成章数 */
+  volume7Done?: number;
   /** 人生线触发节点数 */
   lifelinesDone: number;
   /** 违规次数 */
@@ -75,7 +79,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'cert_8', name: '八面玲珑', desc: '持有全部 8 张证书', icon: '👨‍🎓', tier: 'gold' },
   { id: 'study_100', name: '学习是底色', desc: '累计学习行动 100 次', icon: '✍️', tier: 'bronze' },
   { id: 'quest_half', name: '剧情过半', desc: '完成 37 章主线', icon: '📖', tier: 'bronze' },
-  { id: 'quest_all', name: '二十年全档案', desc: '完成全部 74 章主线（含彩蛋卷）', icon: '🏆', tier: 'gold' },
+  { id: 'quest_all', name: '二十年全档案', desc: '完成当前周目全部 82 章主线', icon: '🏆', tier: 'gold' },
   { id: 'life_10', name: '人生的同行者', desc: '触发 10 个客户人生线节点', icon: '🌅', tier: 'bronze' },
   { id: 'life_25', name: '二十年的陪伴', desc: '触发 25 个客户人生线节点', icon: '🌈', tier: 'silver' },
   { id: 'clean_record', name: '如水清白', desc: '走完 240 个月零违规', icon: '💧', tier: 'gold' },
@@ -84,6 +88,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'ng_plus', name: '二周目来客', desc: '开启第二周目', icon: '🔄', tier: 'hidden' },
   // R4 卷七新增 2 枚
   { id: 'ngplus_clear', name: '二周目通关·来客', desc: '完成卷七「二周目来客」全部 8 章', icon: '🪞', tier: 'gold' },
+  { id: 'torch_passed', name: '薪火相传', desc: '完成卷八「薪火」全部 8 章（一周目传承线）', icon: '🔥', tier: 'gold' },
   { id: 'seal_master', name: '题词缝合者', desc: '隐藏成就：全库题库与知识图谱零孤儿（缝合率 100%）', icon: '🧵', tier: 'hidden' },
   // B3 批次新增 6 枚（口碑/经营玩法）
   { id: 'referral_5', name: '口碑相传', desc: '客户转介绍 5 位新客户', icon: '📣', tier: 'bronze' },
@@ -119,7 +124,8 @@ export function checkAchievements(s: AchievementSnapshot): AchievementState[] {
     done('study_100', s.studyActions >= 100, `学习 ${s.studyActions}/100 次`),
     done('quest_half', s.questsDone >= 37, `主线 ${s.questsDone}/37 章`),
     done('quest_all', s.questsDone >= (s.questsTotal ?? 74), `主线 ${s.questsDone}/${s.questsTotal ?? 74} 章`),
-    done('ngplus_clear', (s.questsTotal ?? 0) >= 82 && s.questsDone >= 82, `卷七来客 ${Math.min(s.questsDone, 82)}/82 章`),
+    done('ngplus_clear', s.playthrough >= 2 && (s.volume7Done ?? 0) >= 8, `卷七来客 ${s.volume7Done ?? 0}/8 章`),
+    done('torch_passed', (s.volume8Done ?? 0) >= 8, `卷八薪火 ${s.volume8Done ?? 0}/8 章`),
     done('seal_master', true), // 全库缝合率 100% 由 content:check 机器闸保证（R4 后恒成立）
     done('life_10', s.lifelinesDone >= 10, `人生线 ${s.lifelinesDone}/10`),
     done('life_25', s.lifelinesDone >= 25, `人生线 ${s.lifelinesDone}/25`),

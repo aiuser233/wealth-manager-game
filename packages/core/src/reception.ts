@@ -307,6 +307,39 @@ const NEED_POOL: ReceptionNeed[] = [
     preferCategory: 'wealth_mgmt',
     intentRatio: 0.2,
   },
+  {
+    tag: 'pension_inherit',
+    surface: '我爸走了，他那个个人养老金账户里还有钱，我们做子女的到底能不能领、怎么领？',
+    probes: [
+      { text: '账户里现在是多少？之前有没有指定过受益人？', reveal: '大概十几万，受益人没指定过，全凭记忆填的。', trustDelta: 2, proDelta: 0.5 },
+      { text: '家里现在急着用钱吗？这笔钱短期要不要动？', reveal: '要还一笔房贷，但听说养老钱领出来要交税？', trustDelta: 1, proDelta: 0.4 },
+    ],
+    hidden: '个人养老金账户可依法继承，但领取环节有税：先查余额与受益人登记，算清"现在领 vs 持有到退休"的税差与流动性代价。',
+    preferCategory: 'wealth_mgmt',
+    intentRatio: 0.4,
+  },
+  {
+    tag: 'pet_family',
+    surface: '我平时最放心不下的就是家里那只猫，人出事了它怎么办？有没有能顾上它的安排？',
+    probes: [
+      { text: '平时是谁在管它？有备选接手的人吗？', reveal: '就我一个，朋友都住得远，真出事了怕没人管。', trustDelta: 2, proDelta: 0.5 },
+      { text: '您考虑过把"它"写进自己的保障和身后安排里吗？', reveal: '没想过，但确实该想想，它才是我最想留下的牵挂。', trustDelta: 2, proDelta: 0.6 },
+    ],
+    hidden: '宠物不是法律意义上的"继承人"，但可用"保险年金+指定受托+生前委托"组合为它留一笔托管与照护资金，兼顾保障缺口与身后安排。',
+    preferCategory: 'insurance',
+    intentRatio: 0.15,
+  },
+  {
+    tag: 'newcitizen_house',
+    surface: '我们一家三口刚来这座城市，攒了点钱，想问问首套房首付怎么备最稳？会不会被坑？',
+    probes: [
+      { text: '你们目前月现金流大概多少？手上活钱有多少？', reveal: '每月到手两万多，存款十几万，想留点应急的。', trustDelta: 2, proDelta: 0.5 },
+      { text: '首付是全现金还是准备用消费贷凑？', reveal: '朋友说可以贷出来补首付，这样划算吗？', trustDelta: 2, proDelta: 0.5 },
+    ],
+    hidden: '新市民首套房的三笔钱：首付合规来源（消费贷补首付有政策与利率双风险）、留足 6-12 月应急金、月供压在现金流 40% 内，先稳后省。',
+    preferCategory: 'other',
+    intentRatio: 0.3,
+  },
 ];
 
 export class Reception {
