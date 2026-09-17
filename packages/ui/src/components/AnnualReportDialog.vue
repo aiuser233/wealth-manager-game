@@ -14,7 +14,7 @@ function close() {
 </script>
 
 <template>
-  <div v-if="rep" class="mask" @click.self="close">
+  <div v-if="rep" class="mask" role="dialog" aria-modal="true" aria-label="年度总结" @click.self="close">
     <div class="report panel">
       <div class="head">
         <span class="firework">🎆</span>

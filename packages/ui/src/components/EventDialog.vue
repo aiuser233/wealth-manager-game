@@ -15,7 +15,7 @@ function riskTag(risk?: string): string {
 </script>
 
 <template>
-  <div v-if="state.modal?.kind === 'event' && ev" class="mask">
+  <div v-if="state.modal?.kind === 'event' && ev" class="mask" role="dialog" aria-modal="true" aria-label="随机事件">
     <div class="panel ev">
       <div class="head">
         <span class="tag">随机事件</span>

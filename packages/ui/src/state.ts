@@ -35,10 +35,34 @@ export interface ActionScene {
 /** 行情终端的"距上次查看"口径 */
 export type QuoteScope = 'day' | 'week' | 'month' | 'since_view';
 
-const cal = new GameCalendar('2006-01-02', '2027-06-30');
+export const MARKET_START_DATE: IsoDate = '2000-01-03';
+export const GAME_START_DATE: IsoDate = '2006-01-02';
+export const GAME_END_DATE: IsoDate = '2027-06-30';
+export const PUBLIC_BETA_VERSION = '0.2.0-beta.1';
+export const SAVE_SCHEMA_VERSION = 3;
+
+const cal = new GameCalendar(MARKET_START_DATE, GAME_END_DATE);
+
+/**
+ * 从行情起点静默演算到目标日期。历史行情与玩家生涯分离：预热阶段没有挂载
+ * Game hooks，因此不会把入职前的新闻、月结或剧情写进玩家状态。
+ */
+function createMarketWithHistory(seed: number, targetDate: IsoDate = GAME_START_DATE) {
+  const sim = new MarketSim(
+    contentBundle.factors, contentBundle.industries, contentBundle.events,
+    contentBundle.releases, cal, seed, eraDrift, eraLevel,
+  );
+  const targetIndex = cal.indexOf(targetDate);
+  if (targetIndex < 0) throw new Error(`行情日期 ${targetDate} 超出日历范围`);
+  const history: MarketSnapshot[] = [];
+  while (sim.cursor <= targetIndex) history.push(sim.stepToNext());
+  return { sim, history };
+}
 
 export const state = reactive({
   screen: 'workbench' as 'workbench' | 'market' | 'clients' | 'help' | 'exam' | 'gallery' | 'system' | 'archive' | 'trainer' | 'lecturer' | 'team' | 'ach',
+  systemView: 'dossier' as 'save' | 'settings' | 'dossier',
+  runtimeError: '' as string,
   started: false,
   seed: 42,
   playerSeedText: '',
@@ -148,11 +172,10 @@ export function getGame(): Game {
 }
 
 export function newGame(seed: number, name: string, gender: 'm' | 'f') {
-  const sim = new MarketSim(
-    contentBundle.factors, contentBundle.industries, contentBundle.events,
-    contentBundle.releases, cal, seed, eraDrift, eraLevel,
-  );
+  const { sim, history } = createMarketWithHistory(seed);
   game = new Game(sim, cal, seed, contentBundle.clients);
+  game.snapHistory = history;
+  game.lastSnap = history[history.length - 1] ?? null;
   gameRef.current = game;
   game.products = contentBundle.products;
   game.team = new TeamSystem();
@@ -282,7 +305,9 @@ export function saveToSlot(slot: number): boolean {
 export function serializeNow(): string {
   const g = getGame();
   return JSON.stringify({
-    version: 2,
+    version: SAVE_SCHEMA_VERSION,
+    schemaVersion: SAVE_SCHEMA_VERSION,
+    gameVersion: PUBLIC_BETA_VERSION,
     savedAt: new Date().toISOString(),
     seed: state.seed,
     date: g.date,
@@ -304,7 +329,7 @@ export function serializeNow(): string {
       sentiment: g.sim.sentiment,
       cursor: g.sim.cursor,
     },
-    /** K 线历史（snapHistory 环形缓冲） */
+    /** 只保存近期 K 线；完整历史在读档时由 seed 确定性重建，避免存档膨胀。 */
     snapHistory: g.snapHistory.slice(-120),
     clients: g.clients.map((c) => ({ ...c, holdings: c.holdings.map((h) => ({ ...h })) })),
     news: state.news.slice(0, 30),
@@ -340,7 +365,7 @@ function refreshCaches() {
   state.apUsed = game.apUsed;
   state.apMax = game.apMax;
   state.gameDate = game.date;
-  // 各口径基准全部从 K 线历史缓冲（snapHistory，近 120 日）推导：
+  // 各口径基准全部从完整 K 线历史缓冲（snapHistory）推导：
   // 当日=昨收（倒数第 2 个）；周=上周五（当前本周第 1 个交易日之前）；月=上月末
   const hist = game.snapHistory;
   const cur = hist[hist.length - 1];
@@ -1026,6 +1051,8 @@ export function computeFinalEnding() {
     aum: g.player.aum,
     seasonScore: g.recentSeasonScore(),
     avgTrust,
+    professional: g.player.attrs.pro,
+    salesPower: g.player.attrs.sales,
     questsDone,
     questsTotal,
     lifelinesDone: qe.lifelinesDone(),
@@ -1786,17 +1813,32 @@ function fmtMoneyCN(n: number): string {
 
 // ================= 存档系统 =================
 
-/** 从存档 JSON 恢复游戏（引擎状态机重放到 cursor） */
+export function validateSaveData(data: unknown): { ok: true } | { ok: false; error: string } {
+  if (!data || typeof data !== 'object') return { ok: false, error: '存档不是有效对象。' };
+  const save = data as Record<string, any>;
+  const version = Number(save.schemaVersion ?? save.version ?? 1);
+  if (!Number.isFinite(version) || version < 1) return { ok: false, error: '存档版本无效。' };
+  if (version > SAVE_SCHEMA_VERSION) return { ok: false, error: `该存档来自更新版本（v${version}），请先更新游戏。` };
+  if (!Number.isFinite(Number(save.seed))) return { ok: false, error: '存档缺少有效的随机种子。' };
+  if (typeof save.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(save.date)) return { ok: false, error: '存档日期格式错误。' };
+  if (cal.indexOf(save.date as IsoDate) < 0) return { ok: false, error: `存档日期 ${save.date} 超出游戏日历。` };
+  if (!save.player || typeof save.player !== 'object') return { ok: false, error: '存档缺少玩家数据。' };
+  if (!save.market || typeof save.market !== 'object') return { ok: false, error: '存档缺少行情状态。' };
+  return { ok: true };
+}
+
+/** 从存档 JSON 恢复游戏（按保存日期重放市场状态机，并兼容旧 cursor 口径） */
 export function loadGameFromSave(data: any) {
-  const sim = new MarketSim(
-    contentBundle.factors, contentBundle.industries, contentBundle.events,
-    contentBundle.releases, cal, data.seed ?? 42, eraDrift, eraLevel,
-  );
+  const validation = validateSaveData(data);
+  if (!validation.ok) throw new Error(validation.error);
+  // 每次读档前留一份可恢复现场；导入坏档或误读档时不会覆盖玩家唯一退路。
+  if (state.started && gameRef.current) storage.set('fm_save_backup', serializeNow());
+  // 以保存的 ISO 日期定位，而不是沿用旧版从 2006 起算的 cursor；这样旧存档在
+  // 行情日历扩展到 2000 后仍会落在正确的游戏日期。
+  const savedDate = (typeof data.date === 'string' ? data.date : GAME_START_DATE) as IsoDate;
+  const { sim, history: replayedHistory } = createMarketWithHistory(data.seed ?? 42, savedDate);
   const g = new Game(sim, cal, data.seed ?? 42, contentBundle.clients);
   g.products = contentBundle.products;
-  // 重放市场状态机
-  const target = data.market?.cursor ?? 0;
-  while (sim.cursor < target) sim.stepToNext();
   // 直接覆盖数值状态（存档里的状态优先，重放保证一致性）
   if (data.market?.factorState) Object.assign(sim.factorState, data.market.factorState);
   if (data.market?.industryState) Object.assign(sim.industryState, data.market.industryState);
@@ -1848,8 +1890,11 @@ export function loadGameFromSave(data: any) {
   state.baseSnap = { day: null, week: null, month: null, since_view: null };
   state.selectedClientId = g.clients[0]?.id ?? '';
   state.memoryHint = '';
-  // K 线历史恢复
-  g.snapHistory = Array.isArray(data.snapHistory) ? data.snapHistory.slice(-120) : [];
+  // 完整行情由 seed 重建；存档中的近期快照覆盖同日重放值，兼容旧版本数值口径。
+  const savedHistory = Array.isArray(data.snapHistory) ? data.snapHistory as MarketSnapshot[] : [];
+  const savedByDate = new Map(savedHistory.map((snap) => [snap.date, snap]));
+  g.snapHistory = replayedHistory.map((snap) => savedByDate.get(snap.date) ?? snap);
+  g.lastSnap = g.snapHistory[g.snapHistory.length - 1] ?? null;
   // 接待会话中间态恢复
   if (data.reception) {
     state.reception = data.reception;

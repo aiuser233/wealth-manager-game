@@ -61,6 +61,18 @@ describe('judgeEnding 六结局判定', () => {
     expect(r.id).toBe('division_gm');
   });
 
+  it('同为高信任主管：销售管理取向进总经理，显著专业取向进独立顾问', () => {
+    const manager = judgeEnding({ ...base, grade: 4, avgTrust: 65, professional: 60, salesPower: 80 });
+    const expert = judgeEnding({ ...base, grade: 4, avgTrust: 65, professional: 100, salesPower: 50 });
+    expect(manager.id).toBe('division_gm');
+    expect(expert.id).toBe('independent');
+  });
+
+  it('专业与销售均衡的高职级玩家进入支行管理路线', () => {
+    const r = judgeEnding({ ...base, grade: 4, avgTrust: 65, professional: 80, salesPower: 70 });
+    expect(r.id).toBe('branch_manager');
+  });
+
   it('职级 2-3 → 支行行长', () => {
     const r = judgeEnding({ ...base, grade: 2, avgTrust: 30 });
     expect(r.id).toBe('branch_manager');

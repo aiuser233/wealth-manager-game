@@ -9,7 +9,7 @@ const results = computed(() => (g.value ? g.value.promotionCheck() : []));
 </script>
 
 <template>
-  <div v-if="g" class="mask">
+  <div v-if="g" class="mask" role="dialog" aria-modal="true" aria-label="晋升评审">
     <div class="panel promo">
       <div class="head"><h3>职业发展 · 晋升评审</h3><span class="dim">当前职级：{{ g.gradeName() }}</span></div>
       <div class="reqs">

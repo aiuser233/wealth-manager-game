@@ -1,235 +1,107 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { contentBundle } from '@fm/content';
 import { state, gameReady, getGame, markViewed, fmtPct, pctClass } from '../state';
 import KLineChart from './KLineChart.vue';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
-
-/** K 线走势作为独立子视图（总览/K线 二选一整页切换），不再挤占行情表空间 */
 const view = ref<'overview' | 'kline'>('overview');
-
-const scopes = [
-  { id: 'day', label: '当日' },
-  { id: 'week', label: '本周' },
-  { id: 'month', label: '本月' },
-  { id: 'since_view', label: '距上次查看' },
-] as const;
-
+const industryFamily = ref('all');
+const scopes = [{ id: 'day', label: '当日' }, { id: 'week', label: '本周' }, { id: 'month', label: '本月' }, { id: 'since_view', label: '距上次' }] as const;
+const indexNames: Record<string, string> = { idx_main: 'A 股主板', idx_300: '玄商 300', idx_500: '玄证 500', idx_growth: '玄创板', idx_hk: '恒生（架空）', idx_us: '纳指（架空）' };
+const families = [
+  { id: 'all', name: '涨跌榜' }, { id: 'financial_realestate', name: '金融地产' },
+  { id: 'cyclical', name: '周期资源' }, { id: 'consumer', name: '消费' },
+  { id: 'pharma', name: '医药' }, { id: 'tech', name: '科技成长' }, { id: 'utility', name: '稳定公用' },
+];
 onMounted(() => markViewed());
 
-/** 计算某口径相对基准的涨跌：数据源统一用 game.snapHistory（近 120 交易日 K 线缓冲，
- *  读档后也恢复），避免依赖会话内存 snapCache（推进时间后为空 → 涨跌列全 '--'） */
-function changeOf(key: 'indices' | 'industries' | 'factors', id: string, scope: string): number | undefined {
+function changeOf(key: 'indices' | 'industries' | 'factors', id: string, scope = state.quoteScope): number | undefined {
   const cur = g.value?.lastSnap;
   if (!cur) return undefined;
   const hist = g.value?.snapHistory ?? [];
   const nBack = scope === 'since_view' ? 0 : scope === 'day' ? 1 : scope === 'week' ? 5 : 21;
-  const base = scope === 'since_view'
-    ? state.baseSnap.since_view
-    : hist.length > nBack ? hist[hist.length - 1 - nBack] : null;
+  const base = scope === 'since_view' ? state.baseSnap.since_view : hist.length > nBack ? hist[hist.length - 1 - nBack] : null;
   if (!base || base.date === cur.date) return undefined;
-  const a = base[key]?.[id];
-  const b = cur[key]?.[id];
+  const a = base[key]?.[id], b = cur[key]?.[id];
   if (a === undefined || b === undefined) return undefined;
   return (b / a - 1) * 100;
 }
 
-const indexNames: Record<string, string> = {
-  idx_main: 'A 股主板综指',
-  idx_300: '玄商 300',
-  idx_500: '玄证 500',
-  idx_growth: '玄创板',
-  idx_hk: '恒生（架空）',
-  idx_us: '纳指（架空）',
-};
-
 const factorDisplay = computed(() => {
-  const s = g.value?.lastSnap;
-  if (!s) return [];
-  const defs: Array<{ id: string; name: string; fmt: (v: number) => string }> = [
-    { id: 'rate10y', name: '10Y 国债', fmt: (v) => (v * 100).toFixed(2) + '%' },
-    { id: 'lpr_5y', name: '5Y LPR', fmt: (v) => (v * 100).toFixed(2) + '%' },
-    { id: 'fed_rate', name: '美联储利率', fmt: (v) => (v * 100).toFixed(2) + '%' },
-    { id: 'us10y', name: '美债 10Y', fmt: (v) => (v * 100).toFixed(2) + '%' },
-    { id: 'fx_cny', name: '人民币汇率', fmt: (v) => v.toFixed(3) },
-    { id: 'usd_idx', name: '美元指数', fmt: (v) => v.toFixed(1) },
-    { id: 'gold', name: '黄金', fmt: (v) => v.toFixed(0) },
-    { id: 'oil', name: '原油', fmt: (v) => v.toFixed(1) },
-    { id: 'vix', name: 'VIX', fmt: (v) => v.toFixed(1) },
-    { id: 'housing', name: '房价指数', fmt: (v) => v.toFixed(0) },
-  ];
-  return defs.map((d) => ({ ...d, value: s.factors[d.id] }));
+  const snap = g.value?.lastSnap;
+  if (!snap) return [];
+  const defs = [
+    ['rate10y', '10Y 国债', (v: number) => `${(v * 100).toFixed(2)}%`], ['lpr_5y', '5Y LPR', (v: number) => `${(v * 100).toFixed(2)}%`],
+    ['fed_rate', '联邦基金', (v: number) => `${(v * 100).toFixed(2)}%`], ['us10y', '美债 10Y', (v: number) => `${(v * 100).toFixed(2)}%`],
+    ['fx_cny', '人民币汇率', (v: number) => v.toFixed(3)], ['usd_idx', '美元指数', (v: number) => v.toFixed(1)],
+    ['gold', '黄金', (v: number) => v.toFixed(0)], ['oil', '原油', (v: number) => v.toFixed(1)],
+    ['vix', 'VIX', (v: number) => v.toFixed(1)], ['housing', '房价指数', (v: number) => v.toFixed(0)],
+  ] as const;
+  return defs.map(([id, name, fmt]) => ({ id, name, value: snap.factors[id], fmt }));
 });
-
-const familyNames: Record<string, string> = {
-  financial_realestate: '金融地产',
-  cyclical: '周期资源',
-  consumer: '消费',
-  pharma: '医药',
-  tech: '科技成长',
-  utility: '稳定公用',
-};
-
-/** 指数 mini 走势（从 K 线历史缓冲取近 40 个点的指数序列，画 sparkline） */
+const industryRows = computed(() => {
+  const rows = contentBundle.industries.filter((item) => industryFamily.value === 'all' || item.family === industryFamily.value)
+    .map((item) => ({ ...item, shortName: item.name.replace(/指数$/, ''), change: changeOf('industries', item.id), value: g.value?.lastSnap?.industries[item.id] }))
+    .sort((a, b) => (b.change ?? -Infinity) - (a.change ?? -Infinity));
+  return industryFamily.value !== 'all' || rows.length <= 14 ? rows : [...rows.slice(0, 7), ...rows.slice(-7).reverse()];
+});
 function sparkPath(id: string): string {
-  const hist = g.value?.snapHistory ?? [];
-  if (hist.length < 2) return '';
-  const pts = hist.slice(-40).map((s) => s.indices[id]).filter((v) => v !== undefined) as number[];
+  const pts = (g.value?.snapHistory ?? []).slice(-40).map((snap) => snap.indices[id]).filter((v): v is number => v !== undefined);
   if (pts.length < 2) return '';
-  const min = Math.min(...pts);
-  const max = Math.max(...pts);
-  const span = Math.max(0.0001, max - min);
-  const W = 88;
-  const H = 22;
-  return pts.map((v, i) => {
-    const x = (i / (pts.length - 1)) * W;
-    const y = H - ((v - min) / span) * H;
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
+  const min = Math.min(...pts), max = Math.max(...pts), span = Math.max(.0001, max - min);
+  return pts.map((v, i) => `${i ? 'L' : 'M'}${((i / (pts.length - 1)) * 96).toFixed(1)},${(26 - ((v - min) / span) * 24).toFixed(1)}`).join(' ');
 }
-const sparkIds = ['idx_main', 'idx_300', 'idx_500', 'idx_growth'];
 </script>
 
 <template>
-  <div v-if="g" class="wrap">
-    <!-- 视图切换：总览（指数/行业/新闻）与 K 线走势整页二选一，互不遮挡 -->
-    <div class="bar">
-      <div class="view-tabs">
-        <button :class="{ active: view === 'overview' }" @click="view = 'overview'">行情总览</button>
-        <button :class="{ active: view === 'kline' }" @click="view = 'kline'">K 线走势</button>
+  <div v-if="g" class="terminal">
+    <header class="terminal-head">
+      <div><div class="eyebrow">MARKET DESK · {{ g.lastSnap?.date ?? '--' }}</div><h2>行情终端 <span>架空模拟数据</span></h2></div>
+      <div class="head-actions">
+        <div v-if="view === 'overview'" class="segmented scope-switch"><button v-for="s in scopes" :key="s.id" :class="{ active: state.quoteScope === s.id }" @click="state.quoteScope = s.id">{{ s.label }}</button></div>
+        <div class="segmented view-switch"><button :class="{ active: view === 'overview' }" @click="view = 'overview'">总览</button><button :class="{ active: view === 'kline' }" @click="view = 'kline'">历史走势</button></div>
       </div>
-      <div class="scopes" v-if="view === 'overview'">
-        <button v-for="s in scopes" :key="s.id" :class="{ active: state.quoteScope === s.id }" @click="state.quoteScope = s.id">
-          {{ s.label }}
-        </button>
-      </div>
-      <span class="dim">数据日：{{ g.lastSnap?.date ?? '--' }} · 行情为架空模拟</span>
-    </div>
-
-    <!-- K 线走势（独立整页：宽基/行业选择器 + 近 60/120 日折线） -->
-    <template v-if="view === 'kline'">
-      <KLineChart />
-    </template>
-
-    <template v-else>
-    <div class="cols">
-      <!-- 宽基指数 -->
-      <section class="panel">
-        <h3>指数</h3>
-        <table>
-          <thead><tr><th>名称</th><th>点位</th><th>{{ scopes.find((s) => s.id === state.quoteScope)!.label }}</th><th>近 40 日</th></tr></thead>
-          <tbody>
-            <tr v-for="(v, id) in g.lastSnap?.indices" :key="id">
-              <td>{{ indexNames[id] ?? id }}</td>
-              <td class="num">{{ v.toFixed(0) }}</td>
-              <td class="num" :class="pctClass(changeOf('indices', id as string, state.quoteScope))">{{ fmtPct(changeOf('indices', id as string, state.quoteScope)) }}</td>
-              <td class="spark-cell">
-                <svg v-if="sparkIds.includes(id as string)" width="88" height="22" class="spark">
-                  <path :d="sparkPath(id as string)" fill="none" :stroke="pctClass(changeOf('indices', id as string, state.quoteScope)) === 'up' ? '#c0564a' : '#4a8a5a'" stroke-width="1.4" />
-                </svg>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- 利率与宏观 -->
-      <section class="panel">
-        <h3>利率与全球</h3>
-        <table>
-          <thead><tr><th>指标</th><th>数值</th></tr></thead>
-          <tbody>
-            <tr v-for="f in factorDisplay" :key="f.id">
-              <td>{{ f.name }}</td>
-              <td class="num">{{ f.value !== undefined ? f.fmt(f.value) : '--' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </div>
-
-    <!-- 31 行业热力 -->
-    <section class="panel heat">
-      <h3>行业涨跌榜（31 行业）</h3>
-      <div v-for="(fam, fid) in familyNames" :key="fid" class="fam">
-        <div class="fam-name dim">{{ fam }}</div>
-        <div class="fam-items">
-          <div v-for="ind in contentIndustries(fid)" :key="ind.id" class="cell" :class="cellClass(changeOf('industries', ind.id, state.quoteScope))">
-            <span class="cname">{{ shortName(ind.name) }}</span>
-            <span class="cpct">{{ fmtPct(changeOf('industries', ind.id, state.quoteScope)) }}</span>
+    </header>
+    <KLineChart v-if="view === 'kline'" class="view-body" />
+    <div v-else class="dashboard view-body">
+      <div class="primary-column">
+        <section class="market-card indices-card">
+          <div class="section-title"><div><span class="kicker">主要市场</span><h3>宽基指数</h3></div><span class="section-note">{{ scopes.find((s) => s.id === state.quoteScope)?.label }}涨跌</span></div>
+          <div class="index-grid">
+            <article v-for="(value, id) in g.lastSnap?.indices" :key="id" class="index-tile">
+              <div class="index-top"><span>{{ indexNames[id] ?? id }}</span><b :class="pctClass(changeOf('indices', id as string))">{{ fmtPct(changeOf('indices', id as string)) }}</b></div>
+              <div class="index-value">{{ value.toFixed(0) }}</div>
+              <svg viewBox="0 0 96 28" preserveAspectRatio="none" aria-hidden="true"><path :d="sparkPath(id as string)" fill="none" :class="['spark-line', pctClass(changeOf('indices', id as string))]" /></svg>
+            </article>
           </div>
-        </div>
+        </section>
+        <section class="market-card industry-card">
+          <div class="section-title industry-title"><div><span class="kicker">SECTOR PULSE</span><h3>行业强弱</h3></div><div class="family-filter"><button v-for="item in families" :key="item.id" :class="{ active: industryFamily === item.id }" @click="industryFamily = item.id">{{ item.name }}</button></div></div>
+          <div class="industry-list">
+            <div v-for="row in industryRows" :key="row.id" class="industry-row">
+              <div class="industry-name"><span class="dot" :class="pctClass(row.change)"></span>{{ row.shortName }}</div>
+              <div class="industry-bar"><i :class="pctClass(row.change)" :style="{ width: `${Math.min(100, Math.max(4, Math.abs(row.change ?? 0) * 14))}%` }"></i></div>
+              <span class="industry-value dim">{{ row.value?.toFixed(0) ?? '--' }}</span><b :class="pctClass(row.change)">{{ fmtPct(row.change) }}</b>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
-
-    <!-- 新闻流 -->
-    <section class="panel news">
-      <h3>《A 国证券报》新闻流</h3>
-      <div class="news-list">
-        <p v-for="(n, i) in state.news.slice(0, 40)" :key="i"><span class="dim">{{ n.date }}</span> <b>{{ n.title }}</b> — {{ n.body }}</p>
-        <p v-if="state.news.length === 0" class="dim">暂无新闻。</p>
-      </div>
-    </section>
-    </template>
+      <aside class="side-column">
+        <section class="market-card macro-card"><div class="section-title"><div><span class="kicker">MACRO BOARD</span><h3>利率与全球</h3></div></div><div class="macro-grid"><div v-for="f in factorDisplay" :key="f.id" class="macro-item"><span>{{ f.name }}</span><b>{{ f.value !== undefined ? f.fmt(f.value) : '--' }}</b></div></div></section>
+        <section class="market-card news-card">
+          <div class="section-title"><div><span class="kicker">LIVE FEED</span><h3>市场快讯</h3></div><span class="news-count">{{ state.news.length }}</span></div>
+          <div class="news-list"><article v-for="(n, i) in state.news.slice(0, 20)" :key="`${n.date}-${i}`"><time>{{ n.date }}</time><h4>{{ n.title }}</h4><p>{{ n.body }}</p></article><div v-if="state.news.length === 0" class="empty-news"><span>◌</span><p>当前没有新的市场快讯</p></div></div>
+        </section>
+      </aside>
+    </div>
   </div>
 </template>
 
-<script lang="ts">
-import { contentBundle } from '@fm/content';
-
-function shortName(n: string): string {
-  return n.replace(/指数$/, '');
-}
-export default {
-  methods: {
-    contentIndustries(family: string) {
-      return contentBundle.industries.filter((i) => i.family === family);
-    },
-    cellClass(v: number | undefined) {
-      if (v === undefined || !isFinite(v)) return { flat: true };
-      return v >= 0 ? { pos: true } : { neg: true };
-    },
-  },
-};
-</script>
-
 <style scoped>
-.wrap { height: 100%; display: flex; flex-direction: column; gap: 10px; }
-.bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.view-tabs { display: flex; gap: 6px; }
-.view-tabs button { font-size: 13px; padding: 5px 14px; font-weight: 600; }
-.view-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.kline-toggle { white-space: nowrap; font-size: 12px; padding: 3px 10px; }
-.scopes { display: flex; gap: 6px; }
-.scopes button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-.cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
-.panel { padding: 12px 14px; overflow: hidden; }
-h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-dim); font-weight: 600; }
-
-table {
-  /* sparkline cell */ width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--bg2); }
-th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
-.num { font-variant-numeric: tabular-nums; }
-
-.heat { flex: 0 0 auto; }
-.fam { margin-bottom: 8px; }
-.fam-name { font-size: 12px; margin-bottom: 4px; }
-.fam-items { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
-.cell {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 8px; border-radius: 4px; font-size: 12px;
-  background: var(--bg2); color: var(--text-dim);
-}
-.cell.pos { background: rgba(255, 90, 90, 0.14); color: var(--up); }
-.cell.neg { background: rgba(61, 207, 142, 0.12); color: var(--down); }
-.cell.flat { color: var(--text-dim); }
-.cname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cpct { font-variant-numeric: tabular-nums; }
-
-.news { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.news-list { flex: 1; overflow-y: auto; line-height: 1.8; font-size: 13px; }
-.spark-cell { width: 92px; }
-.spark { display: block; }
+.terminal{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px}.terminal-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:2px 2px 0}.eyebrow,.kicker{color:#6781aa;font-size:10px;font-weight:700;letter-spacing:.14em}h2{margin-top:2px;font-size:20px;line-height:1.2;letter-spacing:.02em}h2 span{margin-left:8px;color:var(--text-dim);font-size:11px;font-weight:400}.head-actions{display:flex;align-items:center;gap:10px}.segmented{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:8px;background:rgba(8,13,25,.52)}.segmented button{min-height:28px;padding:3px 11px;border:0;border-radius:5px;background:transparent;color:var(--text-dim);font-size:12px}.segmented button.active{background:#2f64be;color:#fff;box-shadow:0 2px 8px rgba(16,45,96,.45)}.view-switch button{font-weight:600}.view-body{flex:1;min-height:0}.dashboard{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);gap:10px}.primary-column,.side-column{min-height:0;display:grid;gap:10px}.primary-column{grid-template-rows:auto minmax(0,1fr)}.side-column{grid-template-rows:auto minmax(0,1fr)}
+.market-card{min-height:0;padding:13px 14px;overflow:hidden;border:1px solid rgba(59,76,111,.72);border-radius:11px;background:linear-gradient(145deg,rgba(27,38,62,.96),rgba(20,29,48,.96));box-shadow:0 8px 24px rgba(2,7,18,.12)}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.section-title h3{margin-top:1px;font-size:14px;font-weight:650}.section-note{color:var(--text-dim);font-size:11px}.index-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.index-tile{position:relative;min-width:0;padding:9px 10px 7px;overflow:hidden;border:1px solid rgba(58,76,112,.56);border-radius:8px;background:rgba(10,17,31,.34)}.index-top{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-dim);white-space:nowrap}.index-top b{font-variant-numeric:tabular-nums}.index-value{margin-top:3px;font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}.index-tile svg{position:absolute;right:8px;bottom:7px;width:72px;height:20px;opacity:.72}.spark-line{stroke-width:1.6;vector-effect:non-scaling-stroke}.spark-line.up{stroke:var(--up)}.spark-line.down{stroke:var(--down)}
+.industry-card,.news-card{display:flex;flex-direction:column}.industry-title{flex-wrap:wrap}.family-filter{display:flex;max-width:76%;gap:3px;overflow-x:auto;scrollbar-width:none}.family-filter button{min-height:24px;flex:0 0 auto;padding:2px 8px;border-color:transparent;background:transparent;color:var(--text-dim);font-size:11px}.family-filter button.active{border-color:rgba(79,140,255,.4);background:rgba(79,140,255,.13);color:#a9c7ff}.industry-list{min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;column-gap:22px;overflow-y:auto;padding-right:3px}.industry-row{min-width:0;display:grid;grid-template-columns:72px minmax(30px,1fr) 48px 58px;align-items:center;gap:7px;min-height:31px;border-bottom:1px solid rgba(48,63,93,.5);font-size:11px}.industry-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dot{display:inline-block;width:5px;height:5px;margin-right:6px;border-radius:50%;background:var(--text-dim)}.dot.up{background:var(--up)}.dot.down{background:var(--down)}.industry-bar{height:3px;overflow:hidden;border-radius:3px;background:rgba(71,86,116,.35)}.industry-bar i{display:block;height:100%;border-radius:inherit}.industry-bar i.up{background:var(--up)}.industry-bar i.down{background:var(--down)}.industry-value,.industry-row b{text-align:right;font-variant-numeric:tabular-nums}
+.macro-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 14px}.macro-item{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(48,63,93,.5);font-size:11px;color:var(--text-dim)}.macro-item b{color:var(--text);font-size:12px;font-variant-numeric:tabular-nums}.news-count{display:grid;place-items:center;min-width:22px;height:22px;border-radius:11px;background:rgba(79,140,255,.14);color:#91b8ff;font-size:10px}.news-list{min-height:0;flex:1;overflow-y:auto;padding-right:5px}.news-list article{position:relative;padding:1px 0 11px 15px;margin-bottom:10px;border-left:1px solid #34435f}.news-list article:before{content:'';position:absolute;left:-3px;top:4px;width:5px;height:5px;border-radius:50%;background:#5c8de2}.news-list time{color:#647796;font-size:10px}.news-list h4{margin:2px 0 3px;font-size:12px;line-height:1.35}.news-list p{color:var(--text-dim);font-size:11px;line-height:1.5}.empty-news{height:100%;min-height:90px;display:grid;place-content:center;justify-items:center;color:var(--text-dim);font-size:11px}.empty-news span{font-size:28px;opacity:.5}
+@media(max-width:900px){.dashboard{grid-template-columns:minmax(0,1fr) 280px}.index-grid{grid-template-columns:repeat(2,1fr)}.industry-list{grid-template-columns:1fr}}@media(max-width:767px){.terminal{height:auto}.terminal-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%;flex-wrap:wrap}.dashboard{display:block}.primary-column,.side-column{display:block}.market-card{margin-bottom:10px}.index-grid{grid-template-columns:repeat(2,1fr)}.industry-list{max-height:340px}.family-filter{max-width:100%}.news-list{max-height:360px}}
 </style>

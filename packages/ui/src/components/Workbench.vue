@@ -59,6 +59,15 @@ const kpi = computed(() => {
   ];
 });
 
+const currentObjective = computed(() => {
+  if (state.appointments.length > 0) return { title: '优先接待预约客户', text: `${state.appointments[0].clientName}正在等候，完成接待可推进客户关系。`, action: '接待客户' };
+  if (apLeft.value <= 0) return { title: '完成本帧结算', text: '行动点已经用完，结算后市场、客户和剧情会继续推进。', action: '点击底部结算' };
+  const gaps = kpi.value.filter((item) => item.target > 0).map((item) => ({ ...item, ratio: item.done / item.target })).sort((a, b) => a.ratio - b.ratio);
+  const weakest = gaps[0];
+  if (weakest && weakest.ratio < .8) return { title: `本月重点：补足${weakest.label}`, text: `当前完成 ${Math.round(weakest.ratio * 100)}%，可通过接待、外拓和客户经营寻找机会。`, action: '建议接待或外拓' };
+  return { title: '经营长期信任', text: 'KPI进度平稳，可学习、复盘或售后，积累专业与客户口碑。', action: '自由安排' };
+});
+
 function onAct(a: ActionType) {
   doAction(a, ACTION_NAMES[a]);
 }
@@ -152,6 +161,7 @@ function openPromotion() {
         </div>
         <span class="ap">AP <b>{{ apLeft }}</b> / {{ state.apMax }}</span>
       </div>
+      <div class="objective"><div><span class="objective-label">当前目标</span><b>{{ currentObjective.title }}</b><p>{{ currentObjective.text }}</p></div><span class="objective-action">{{ currentObjective.action }}</span></div>
       <div class="actions">
         <button class="reception-btn" :disabled="apLeft <= 0 || !!state.reception" title="面对面接待客户：挖潜需求、推荐产品" @click="onReception">
           🤝 接待客户（对话）
@@ -272,6 +282,9 @@ h3 { font-size: 15px; }
 .logs { grid-column: 2; grid-row: 3; }
 .ap b { color: var(--accent); font-size: 16px; }
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.objective { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 11px; padding: 9px 11px; border: 1px solid rgba(79, 140, 255, .28); border-radius: 8px; background: rgba(79, 140, 255, .07); }
+.objective-label { display: block; margin-bottom: 2px; color: #7797ce; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+.objective b { font-size: 12px; }.objective p { margin-top: 2px; color: var(--text-dim); font-size: 10px; line-height: 1.45; }.objective-action { flex: 0 0 auto; color: #9ebcff; font-size: 10px; }
 .result { flex: 1; overflow-y: auto; border-top: 1px dashed var(--line); padding-top: 10px; line-height: 1.7; }
 .result p.latest { color: #fff; }
 .frame-ctrl { display: flex; gap: 4px; }

@@ -25,6 +25,11 @@ interface BotRunResult {
   promotedAt: Record<number, string>; // grade -> date
   diedOfStress: boolean;
   dealCount: number;
+  finalPro: number;
+  finalSales: number;
+  avgTrust: number;
+  seasonScore: number;
+  endingReasons: string[];
   /** P6 六结局判定（bot 无剧情引擎，主线按满额计） */
   endingId: EndingId;
 }
@@ -41,7 +46,7 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
   const result: BotRunResult = {
     seed, strategy, finalGrade: 0, finalAum: 0, totalIncome: 0,
     finalStress: 0, finalEnergy: 0, certs: 0, promotedAt: {}, diedOfStress: false, dealCount: 0,
-    endingId: 'plain_retire',
+    endingId: 'plain_retire', finalPro: 0, finalSales: 0, avgTrust: 0, seasonScore: 0, endingReasons: [],
   };
 
   // 行动池按策略加权
@@ -116,10 +121,14 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
   result.finalStress = game.player.attrs.stress;
   result.finalEnergy = game.player.energy;
   result.certs = game.player.certs.length;
+  result.finalPro = game.player.attrs.pro;
+  result.finalSales = game.player.attrs.sales;
   // P6 六结局判定（bot 不跑剧情/人生线，questsDone 按总数、trust 用客户均值）
   const avgTrust = game.clients.length
     ? game.clients.reduce((a, c) => a + c.trust, 0) / game.clients.length
     : 0;
+  result.avgTrust = avgTrust;
+  result.seasonScore = game.recentSeasonScore();
   const judge = judgeEnding({
     violations: game.violations,
     stress: game.player.attrs.stress,
@@ -128,11 +137,14 @@ function runBot(seed: number, strategy: Strategy): BotRunResult {
     aum: game.player.aum,
     seasonScore: game.recentSeasonScore(),
     avgTrust,
+    professional: game.player.attrs.pro,
+    salesPower: game.player.attrs.sales,
     questsDone: 60,
     questsTotal: 60,
     lifelinesDone: 0,
   });
   result.endingId = result.diedOfStress ? 'burnout' : judge.id;
+  result.endingReasons = judge.reasons;
   return result;
 }
 
@@ -156,6 +168,7 @@ for (const strat of strategies) {
   console.log(`【策略 ${strat}】`);
   console.log(`  终局职级分布: ${JSON.stringify(gradeDist)} (0见习 1普通 2贵宾 3私行 4主管)`);
   console.log(`  平均 AUM: ${fmt(avg((r) => r.finalAum))}，平均成交 ${avg((r) => r.dealCount).toFixed(0)} 笔`);
+  console.log(`  路线指标: 专业 ${avg((r) => r.finalPro).toFixed(0)} / 销售 ${avg((r) => r.finalSales).toFixed(0)} / 信任 ${avg((r) => r.avgTrust).toFixed(0)} / 考核 ${avg((r) => r.seasonScore).toFixed(0)}`);
   console.log(`  晋升普通: ${promo1.length}/${N} 局（年份分布 ${mode(promo1)}）`);
   console.log(`  晋升贵宾: ${promo2.length}/${N} 局（年份分布 ${mode(promo2)}）`);
   console.log(`  过劳结局: ${runs.filter((r) => r.diedOfStress).length}/${N}`);

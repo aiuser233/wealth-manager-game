@@ -30,7 +30,7 @@ function riskClass(level: number): string {
 </script>
 
 <template>
-  <div v-if="s && g" class="mask">
+  <div v-if="s && g" class="mask" role="dialog" aria-modal="true" aria-label="客户接待">
     <div class="panel dialog">
       <div class="head">
         <Avatar :seed="s.clientId" :size="44" />

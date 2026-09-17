@@ -189,7 +189,7 @@ export class Game {
   lastSnap: MarketSnapshot | null = null;
   /** 上次查看行情的快照（用于"距上次查看"涨跌） */
   lastViewedSnap: MarketSnapshot | null = null;
-  /** 快照历史（环形，供 K 线图绘制）：最近 120 个交易日 */
+  /** 快照历史（供行情终端绘制完整历史 K 线，容量覆盖 2000—2027） */
   snapHistory: MarketSnapshot[] = [];
 
   constructor(sim: MarketSim, cal: any, seed: number, clients: ClientDef[]) {
@@ -203,10 +203,10 @@ export class Game {
     return this.cal.at(Math.max(0, this.sim.cursor - 1));
   }
 
-  /** K 线历史入环形缓冲（上限 120 交易日） */
+  /** K 线历史入缓冲；上限只用于防止异常日历无限占用内存。 */
   private pushSnapHistory(snap: MarketSnapshot) {
     this.snapHistory.push(snap);
-    if (this.snapHistory.length > 120) this.snapHistory.shift();
+    if (this.snapHistory.length > 10_000) this.snapHistory.shift();
   }
 
   /** 推进 n 个交易日（执行完今日行动后调用） */

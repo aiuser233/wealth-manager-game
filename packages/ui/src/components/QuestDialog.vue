@@ -41,7 +41,7 @@ const gradeLabel = (g?: string): string => {
 </script>
 
 <template>
-  <div v-if="d" class="mask" @click="d.phase === 'dialogue' && questNext()">
+  <div v-if="d" class="mask" role="dialog" aria-modal="true" aria-label="主线剧情" @click="d.phase === 'dialogue' && questNext()">
     <div class="panel story" @click.stop>
       <div class="head">
         <span class="vol">{{ volLabel }}</span>

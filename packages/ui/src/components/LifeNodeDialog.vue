@@ -10,7 +10,7 @@ const clientName = computed(() => {
 </script>
 
 <template>
-  <div v-if="node" class="mask">
+  <div v-if="node" class="mask" role="dialog" aria-modal="true" aria-label="客户人生事件">
     <div class="panel life">
       <div class="head">
         <span class="tag">客户人生线</span>

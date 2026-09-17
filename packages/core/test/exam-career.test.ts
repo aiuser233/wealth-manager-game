@@ -1,15 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { Rng, buildPaper, gradePaper, EXAM_DEFS, examWindowDates, monthlyKpiScore, kpiGradeName, monthlyBonus, isOpeningSeason, checkPromotion, PROMOTION_PATH } from '../src/index';
-import { examBankAll } from '../../../content/src/index';
+import { examBankAll, EXAM_BANK_DEDUPE_STATS } from '../../../content/src/index';
 
 describe('考试系统', () => {
-  it('题库覆盖全部 6 个科目且各科目 ≥ 20 题', () => {
+  it('题库覆盖全部科目且唯一题库存满足各科组卷下限', () => {
     for (const exam of EXAM_DEFS) {
       const n = examBankAll.filter((q) => q.subject === exam.id).length;
-      expect(n).toBeGreaterThanOrEqual(20);
+      expect(n).toBeGreaterThanOrEqual(exam.question_count[0]);
     }
     const ids = new Set(examBankAll.map((q) => q.id));
     expect(ids.size).toBe(examBankAll.length); // id 无重复
+  });
+  it('公测题池不存在内容完全重复题', () => {
+    const fingerprints = examBankAll.map((q) => JSON.stringify([q.stem.trim(), q.options, q.answer, q.explanation.trim()]));
+    expect(new Set(fingerprints).size).toBe(examBankAll.length);
+    expect(EXAM_BANK_DEDUPE_STATS.source).toBeGreaterThan(EXAM_BANK_DEDUPE_STATS.playable);
+    expect(EXAM_BANK_DEDUPE_STATS.removed).toBeGreaterThan(1_000);
   });
   it('抽卷：题量在区间内、无重复、题型交错', () => {
     const rng = new Rng(7);

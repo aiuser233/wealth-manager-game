@@ -13,7 +13,8 @@
     "dev": "npm run dev -w @fm/ui",
     "build": "npm run build -w @fm/ui",
     "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/ui --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude \"e2e/**\"",
+    "test:e2e": "playwright test",
     "sim": "npm run sim -w @fm/tools",
     "bot": "npm run bot -w @fm/tools",
     "content:lint": "tsx tools/content-tools/build.mts",
@@ -21,6 +22,7 @@
     "collect": "tsx tools/collect-server.mts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "typescript": "5.9.3",
     "vitest": "3.0.0"
   },

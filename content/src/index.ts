@@ -1,4 +1,4 @@
-import type { ContentBundle } from '@fm/core';
+import type { ContentBundle, ExamQuestion } from '@fm/core';
 import { factors } from './factors';
 import { industries } from './industries';
 import { releases } from './releases';
@@ -82,8 +82,37 @@ import { NG_PLUS_QUESTS } from './quests7';
 import { VOLUME8_QUESTS } from './quests8';
 import { LIFELINES_FULL, WANG_LIFELINE, LI_LIFELINE, CHENGJIQING_LIFELINE } from './lifelines';
 
-/** 全量题库（廿七批合计） */
-export const examBankAll = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43, ...examBank44, ...examBank45, ...examBank46, ...examBank47, ...examBank48, ...examBank49, ...examBank50, ...examBank51];
+/**
+ * 全量公测题池。扩产批次曾产生“id 不同、内容完全相同”的题目；这里按
+ * 题干+选项+答案+解析生成内容指纹，稳定保留最早版本。源批次暂不物理删除，
+ * 便于后续人工审校追溯。
+ */
+const examBankRaw = [...examBank, ...examBank2, ...examBank3, ...examBank4, ...examBank5, ...examBank6, ...examBank7, ...examBank8, ...examBank9, ...examBank10, ...examBank11, ...examBank12, ...examBank13, ...examBank14, ...examBank15, ...examBank16, ...examBank17, ...examBank18, ...examBank19, ...examBank20, ...examBank21, ...examBank22, ...examBank23, ...examBank24, ...examBank25, ...examBank26, ...examBank27, ...examBank28, ...examBank29, ...examBank30, ...examBank31, ...examBank32, ...examBank33, ...examBank34, ...examBank35, ...examBank36, ...examBank37, ...examBank38, ...examBank39, ...examBank40, ...examBank41, ...examBank42, ...examBank43, ...examBank44, ...examBank45, ...examBank46, ...examBank47, ...examBank48, ...examBank49, ...examBank50, ...examBank51];
+
+function questionFingerprint(question: (typeof examBankRaw)[number]): string {
+  return JSON.stringify([question.stem.trim(), question.options, question.answer, question.explanation.trim()]);
+}
+
+const questionByFingerprint = new Map<string, ExamQuestion>();
+export const examBankAll: ExamQuestion[] = [];
+for (const question of examBankRaw) {
+  const fingerprint = questionFingerprint(question);
+  const retained = questionByFingerprint.get(fingerprint);
+  if (retained) {
+    // 重复题可能被不同批次挂到不同知识词条；合并标签，去重不破坏知识图谱覆盖。
+    retained.knowledge_tags = [...new Set([...retained.knowledge_tags, ...question.knowledge_tags])];
+    continue;
+  }
+  const playable = { ...question, knowledge_tags: [...question.knowledge_tags] } as ExamQuestion;
+  questionByFingerprint.set(fingerprint, playable);
+  examBankAll.push(playable);
+}
+
+export const EXAM_BANK_DEDUPE_STATS = {
+  source: examBankRaw.length,
+  playable: examBankAll.length,
+  removed: examBankRaw.length - examBankAll.length,
+} as const;
 
 /** 知识库全量（八批合计） */
 const debriefAll = [...DEBRIEF_CARDS, ...debriefCardsDeep, ...debriefCardsDeep2, ...debriefCardsDeep3, ...debriefCardsDeep4, ...debriefCardsDeep5];

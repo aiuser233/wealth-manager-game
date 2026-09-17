@@ -3,9 +3,13 @@ import { computed, ref } from 'vue';
 import { state, gameReady, getGame, myCerts, startExam, submitExam, quitExam, answerSingle, toggleMulti, wrongBook, dailyQuestion, finishDaily, weakSpotRadar, cramForExam, cramActive, checkPracticeAnswer, clearPracticeFeedback, lastPracticePaper, startWrongRedo, redoAnswerSingle, redoToggleMulti, redoCheck, redoNext, quitRedo, redoHistory } from '../state';
 import { storage } from '../storage';
 import { EXAM_DEFS } from '@fm/core';
+import { examBankAll } from '@fm/content';
+import { passesReviewGate } from '../packs';
 
 const g = computed(() => (gameReady.value ? getGame() : null));
 const certs = computed(() => myCerts());
+function approvedCount(subject: string) { return examBankAll.filter((q) => q.subject === subject && passesReviewGate(q)).length; }
+function formalReady(subject: string, minimum: number) { return approvedCount(subject) >= minimum; }
 
 const paper = computed(() => state.examPaper);
 const q = computed(() => paper.value?.questions[state.examIdx]);
@@ -165,6 +169,7 @@ function formatAnswer(qv: { type: string; answer: number | number[] }): string {
     <!-- 考试列表 -->
     <div v-if="state.examScreen === 'list'" class="panel list full">
       <div class="head"><h3>考试中心</h3><span class="dim">每年 3 / 6 / 9 / 12 月开考 · 报名费从工资扣除</span></div>
+      <div class="review-notice">公测说明：正式考只使用人工双审通过的题目；审校完成前请使用模考或练习，不影响学习记录。</div>
       <div class="certs">
         <h4>已持证书（{{ certs.length }}）</h4>
         <p v-if="certs.length === 0" class="dim">还没有证书。证书是晋升硬门槛，加油！</p>
@@ -271,7 +276,8 @@ function formatAnswer(qv: { type: string; answer: number | number[] }): string {
           </div>
           <div class="op">
             <span v-if="certs.includes(e.name)" class="gold">已通过 ✓</span>
-            <button v-if="!certs.includes(e.name)" class="primary" @click="startExam(e.id, 'formal')">进入考场</button>
+            <button v-if="!certs.includes(e.name) && formalReady(e.id, e.question_count[0])" class="primary" @click="startExam(e.id, 'formal')">进入考场</button>
+            <span v-else-if="!certs.includes(e.name)" class="reviewing">正式题审校中</span>
             <button class="ghost-btn" @click="startExam(e.id, 'mock')" title="不限时模拟：与正式考同卷同判分但不发证书、不耗精力，成绩作为冲刺押题来源">模考</button>
             <button class="ghost-btn" @click="startExam(e.id, 'practice')" title="不限时练习：每题即时判对错并看解析，刷题减压，错题入错题本">练习</button>
           </div>
@@ -417,6 +423,8 @@ h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .expl { font-size: 12px; }
 .mode-tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
 .mode-tag.formal { background: rgba(240, 180, 41, 0.15); color: var(--gold); }
+.review-notice { padding: 8px 11px; border: 1px solid rgba(240, 180, 41, .3); border-radius: 7px; background: rgba(240, 180, 41, .07); color: #c8ad68; font-size: 11px; line-height: 1.55; }
+.reviewing { padding: 4px 7px; border-radius: 5px; background: rgba(139, 152, 184, .1); color: var(--text-dim); font-size: 10px; }
 .mode-tag.mock { background: rgba(79, 140, 255, 0.15); color: var(--accent); }
 .mode-tag.practice { background: rgba(61, 207, 142, 0.15); color: var(--down); }
 .dot.rightDot { background: var(--down); border-color: var(--down); color: #fff; }

@@ -5,6 +5,16 @@ import { initStorage } from './storage';
 import { state, newGame, computeFinalEnding, loadGameFromSave, serializeNow, getGame } from './state';
 import * as CONTENT from '@fm/content';
 
+// 公测兜底：异步异常不再只留一个白屏或控制台错误，交给 App 显示可恢复提示。
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    state.runtimeError = event.message || '页面发生未知错误。';
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    state.runtimeError = event.reason instanceof Error ? event.reason.message : String(event.reason ?? '异步操作失败。');
+  });
+}
+
 // 开发期调试桥（仅 dev 构建注入，生产 bundle 剔除）：供浏览器实测快进主线/人生线
 if (import.meta.env.DEV) {
   (window as any).__fm = {
@@ -23,5 +33,10 @@ if (import.meta.env.DEV) {
 initStorage()
   .catch(() => {/* 探测失败时 storage 已有会话内存兜底 */})
   .finally(() => {
-    createApp(App).mount('#app');
+    const app = createApp(App);
+    app.config.errorHandler = (error) => {
+      state.runtimeError = error instanceof Error ? error.message : String(error);
+      console.error(error);
+    };
+    app.mount('#app');
   });

@@ -22,6 +22,10 @@ export interface EndingInput {
   seasonScore: number;
   /** 客户信任均值（0-100） */
   avgTrust: number;
+  /** 最终专业力；用于区分专业独立路线与管理路线（旧存档可缺省） */
+  professional?: number;
+  /** 最终销售力；用于区分业绩/管理路线（旧存档可缺省） */
+  salesPower?: number;
   /** 主线任务完成数 */
   questsDone: number;
   /** 主线任务总数 */
@@ -160,23 +164,35 @@ export function judgeEnding(inp: EndingInput): { id: EndingId; reasons: string[]
     return { id: 'reborn_investor', reasons };
   }
 
-  // 4) 专业线：独立顾问/家办——高信任 + 深耕（不图管理职级）
-  if (inp.avgTrust >= 55 && inp.violations === 0 && inp.questsDone / inp.questsTotal >= QUEST_PRO_RATIO) {
-    reasons.push(`信任均值 ${inp.avgTrust.toFixed(0)} + 零违规 + 主线 ${inp.questsDone}/${inp.questsTotal} → 专业线`);
+  const professional = inp.professional ?? 0;
+  const salesPower = inp.salesPower ?? 0;
+  const hasRouteAttrs = inp.professional !== undefined && inp.salesPower !== undefined;
+  const professionalDominant = hasRouteAttrs && professional >= Math.max(1, salesPower) * 1.8;
+  const managementDominant = !hasRouteAttrs || salesPower >= Math.max(1, professional) * 1.15;
+
+  // 4) 管理线顶峰：高职级+业绩，并且没有形成显著的专业路线优势。
+  // 旧档缺少两项能力值时 lead=0，沿用原先的管理判定。
+  if (inp.grade >= 4 && inp.seasonScore >= 70 && managementDominant) {
+    reasons.push(`职级 ${inp.grade}（私行团队主管）+ 考核 ${Math.round(inp.seasonScore)} + 管理/业绩取向 → 管理线顶峰`);
+    return { id: 'division_gm', reasons };
+  }
+
+  // 5) 专业线：高信任+深耕；已到管理顶层时还需专业力显著领先销售力，
+  // 避免所有高信任玩家都被同一个高优先级结局吞掉。
+  const questRatio = inp.questsTotal > 0 ? inp.questsDone / inp.questsTotal : 0;
+  if (inp.avgTrust >= 55 && inp.violations === 0 && questRatio >= QUEST_PRO_RATIO && (inp.grade < 4 || professionalDominant)) {
+    const ratio = salesPower > 0 ? professional / salesPower : professional;
+    reasons.push(`信任均值 ${inp.avgTrust.toFixed(0)} + 零违规 + 主线 ${inp.questsDone}/${inp.questsTotal} + 专业/销售 ${ratio.toFixed(2)} → 专业线`);
     return { id: 'independent', reasons };
   }
 
-  // 5) 管理线：职级 + 业绩
-  if (inp.grade >= 4 && inp.seasonScore >= 70) {
-    reasons.push(`职级 ${inp.grade}（私行团队主管）+ 考核 ${Math.round(inp.seasonScore)} → 管理线顶峰`);
-    return { id: 'division_gm', reasons };
-  }
+  // 6) 管理线：达到中高职级但未满足顶峰条件
   if (inp.grade >= 2) {
     reasons.push(`职级 ${inp.grade} → 管理线`);
     return { id: 'branch_manager', reasons };
   }
 
-  // 6) 平凡退休：活着走完了二十年，但留不下波澜
+  // 7) 平凡退休：活着走完了二十年，但留不下波澜
   reasons.push(`职级 ${inp.grade}、信任 ${inp.avgTrust.toFixed(0)} → 平凡退休`);
   return { id: 'plain_retire', reasons };
 }

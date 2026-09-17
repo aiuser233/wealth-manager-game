@@ -10,7 +10,7 @@ const step = computed(() => tutorial.value);
 </script>
 
 <template>
-  <div v-if="step" class="mask" @click.stop>
+  <div v-if="step" class="mask" role="dialog" aria-modal="true" aria-label="新手引导" @click.stop>
     <div class="box panel">
       <div class="head">
         <span class="idx">{{ step.idx + 1 }} / 5</span>
